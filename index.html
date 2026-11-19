@@ -199,18 +199,21 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
 
   function queue() {
     var live = P.filter(function (p) { return p.court !== 'done'; });
-    // one row per project: its tasks under Lance's name, most overdue first
+    // one row per project with a task under Lance's name. The number on the right is the PROJECT's due date
+    // (the phase due date), the same one the project page shows. A task lane's own date is said beside that
+    // lane. (19 Nov 2026: the row showed the oldest lane date, so 1313 Gavilan Ridge read "106 days late"
+    // from a stale invoice lane while the project itself was 31 days late.)
     var mine = [];
     live.forEach(function (p) {
       var ts = p.tasks.filter(isMine).sort(byDays);
-      if (ts.length) mine.push({ p: p, ts: ts, days: ts[0].days });
+      if (ts.length) mine.push({ p: p, ts: ts, days: p.days != null ? p.days : ts[0].days, fromLane: p.days == null });
     });
     mine.sort(byDays);
     var mineRows = mine.map(function (x) {
       var d = dueText(x.days), paid = x.p.money && x.p.money.due === 0;
       var what = x.ts.map(function (t) {
         var label = LANE[t.lane] || t.lane, td = dueText(t.days);
-        return label + (t.note ? ': ' + t.note : '') + (x.ts.length > 1 && td.t ? ' (' + td.t + ')' : '') + (t.lane === 'Invoice' && paid ? ' [no balance due on record]' : '');
+        return label + (t.note ? ': ' + t.note : '') + (td.t && !(x.fromLane && x.ts.length === 1) ? ' (' + td.t + ')' : '') + (t.lane === 'Invoice' && paid ? ' [no balance due on record]' : '');
       }).join(' · ');
       return row(x.p, x.p.phase + ' · ' + what, d.t || (x.ts[0].date ? x.ts[0].date.toLowerCase() : ''), d.late);
     });
@@ -237,7 +240,7 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
       var bal = (x.p.money || {}).due;
       return row(x.p, 'Invoice ' + x.i.no + ' sent ' + x.i.sent + ', not marked paid' + (bal != null ? ' · balance due ' + usd(bal) : ''), '', false);
     });
-    return section('Needs you', 'projects with ' + taskCount + ' tasks under your name, most overdue first', mineRows) +
+    return section('Needs you', 'projects with ' + taskCount + ' tasks under your name, by project due date', mineRows) +
       section('Emails waiting on a reply', 'a person wrote last and nothing has gone back by email, newest first', waitRows) +
       (shadowRows.length ? section('Jake, in shadow', 'what Jake in 4.0 would do; nothing sent', shadowRows) : '') +
       section('In our court', 'no task under your name', group('ours', function (p) { return !hasMine[p.no]; })) +
