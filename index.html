@@ -467,7 +467,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
       fact('Type', p.type ? esc(p.type) : '<span class="note">Not on record</span>') +
       fact('Client', who(p) ? esc(who(p)) : '<span class="note">Not on record</span>') +
       fact('Phase', phaseTag(p, (p.phase || 'No phase set') + (p.signed ? '' : ' · not signed'))) +
-      fact('Waiting on you', pb ? '<span class="bubs">' + pb + '</span>' : '<span class="note">Nothing</span>') +
+      fact('Needs you', pb ? '<span class="bubs">' + pb + '</span>' : '<span class="note">Nothing</span>') +
       fact('Balance due', bal == null ? '<span class="note">Not on record</span>' : usd(bal) || '$0') +
       fact('Schedule date', p.due ? esc(p.due) : '<span class="note">None</span>') + '</div>';
 
