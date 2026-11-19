@@ -397,7 +397,7 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     rpc('office_login', { p_pin: pin }).then(function (d) {
       b.disabled = false; b.textContent = 'Open'; $('pin').value = '';
       if (d && d.ok) { token = d.token; try { localStorage.setItem(TOKEN_KEY, token); } catch (err) {} return load(); }
-      $('login-err').textContent = d && d.locked ? 'Too many wrong PINs. Try again in 15 minutes.' : d && d.no_pin ? 'No PIN has been set yet.' : 'That PIN is not recognized.';
+      $('login-err').textContent = d && d.hard ? 'Locked after too many wrong PINs. It stays locked until the PIN is set again from the AI PC.' : d && d.locked ? 'Too many wrong PINs. Try again in 15 minutes.' : d && d.no_pin ? 'No PIN has been set yet.' : 'That PIN is not recognized.';
     }).catch(function (err) { b.disabled = false; b.textContent = 'Open'; $('login-err').textContent = 'Could not reach the office (' + err.message + ').'; });
   });
 
