@@ -118,7 +118,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .back { display: inline-block; font-size: .66rem; padding: 4px 0 14px; }
 .sheet { border: 1px solid var(--rule); padding: 24px 18px 12px; }
 .eyebrow { margin-bottom: 14px; }
-.sheet h1 { margin: 0; font-family: var(--sans); font-weight: 300; text-transform: uppercase; letter-spacing: .14em; font-size: clamp(1.45rem, 2.9vw, 2.25rem); line-height: 1.2; text-wrap: balance; overflow-wrap: anywhere; }
+.sheet h1 { margin: 0; font-family: var(--sans); font-weight: 400; text-transform: uppercase; letter-spacing: .14em; font-size: clamp(1.45rem, 2.9vw, 2.25rem); line-height: 1.2; text-wrap: balance; overflow-wrap: anywhere; }
 .city { margin-top: 10px; font-size: .72rem; letter-spacing: .22em; }
 /* the phases as a horizon line with square markers: filled = passed, framed = where it is, open = ahead */
 .path, .pathlab { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
@@ -447,7 +447,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
   // Where the project is along its life, as a path (the phases are the sound part of the schedule).
   // Revision is work on an approved set, so it sits at Approved.
   var PATH = ['In Design', 'Client Review', 'Const. Docs', 'Submitted', 'Backcheck', 'Resubmitted', 'Approved', 'Construction', 'Complete'];
-  var PATH_SHORT = ['Design', 'Review', 'Const. docs', 'Submitted', 'Backcheck', 'Resubmit', 'Approved', 'Build', 'Complete'];
+  var PATH_SHORT = ['Design', 'Review', 'CDs', 'Submitted', 'Backcheck', 'Resubmit', 'Approved', 'Build', 'Complete'];
   function pathBar(p) {
     var i = p.phase === 'Revision' ? PATH.indexOf('Approved') : PATH.indexOf(p.phase);
     if (i < 0) return '';
@@ -469,8 +469,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
       fact('Phase', phaseTag(p, (p.phase || 'No phase set') + (p.signed ? '' : ' · not signed'))) +
       fact('Waiting on you', pb ? '<span class="bubs">' + pb + '</span>' : '<span class="note">Nothing</span>') +
       fact('Balance due', bal == null ? '<span class="note">Not on record</span>' : usd(bal) || '$0') +
-      fact('Schedule date', p.due ? esc(p.due) : '<span class="note">None</span>') + '</div>' +
-      (p.status ? '<p class="status">' + esc(p.status) + '</p>' : '');
+      fact('Schedule date', p.due ? esc(p.due) : '<span class="note">None</span>') + '</div>';
 
     // 1. what needs Lance: each thing waiting on him, longest wait first, with the two taps that clear it
     var others = p.tasks.filter(function (t) { return !isMine(t); });
@@ -503,8 +502,6 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     ASKS.questions.filter(function (q) { return q.proj_no === p.no && q.state === 'answered'; }).forEach(function (q) {
       need += '<div class="item"><div class="head"><span>' + esc(cap(q.agent)) + ' asked: ' + esc(q.body) + '</span><span>' + esc(stamp(q.answered_at)) + '</span></div><div class="body">You answered: ' + para(q.answer || '') + '</div></div>';
     });
-    if (p.latest) need += '<div class="item"><div class="head"><b>Latest from Jake</b><span></span></div><div class="body">' + esc(p.latest) + '</div></div>';
-    if (p.remarks) need += '<div class="item"><div class="head"><b>Your remarks</b><span></span></div><div class="body">' + esc(p.remarks) + '</div></div>';
     h += sec('Needs you', need || '<p class="note">Nothing is waiting on you on this project.</p>', 'lead need');
 
     // 1b. what Jake would do (shadow: nothing is sent)
@@ -543,23 +540,32 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     var checked = (p.shadow || []).filter(function (x) { return x.mode === 'answered'; });
     h += sec('Shadow check: Jake against what you sent', checked.map(shadowItem).join(''), 'lead');
     h += '<div class="below">Reference</div>';
+    // Lance's rule: information is shown once, in the right place. Everything about money is in one section,
+    // in the order it happens: what was agreed, what was added, what was invoiced, what is still owed.
     var f = p.fees, m = p.money, money = '';
+    if (p.scope) money += '<p>' + esc(p.scope) + (p.sqft ? ' <span class="note">' + esc(p.sqft) + ' sq ft</span>' : '') + '</p>';
+    var lines = [];
+    if (f) {
+      lines = [['Site consult', f.consult], ['Design', f.design], ['Plans', f.plans], ['Permitting', f.permitting], ['Construction', f.construction]]
+        .filter(function (x) { return x[1]; }).map(function (x) { return [x[0], usd(x[1])]; });
+      if (f.total != null) lines.push(['Contract total', usd(f.total), ' total']);
+    }
+    if (m && m.add_services) lines.push(['Added services so far', usd(m.add_services)]);
+    if (m && m.value != null && (!f || f.total == null || m.add_services || m.value !== f.total)) lines.push(['Total value', usd(m.value), ' total']);
+    if (lines.length) money += kv(lines);
+    if (f) money += '<p class="note" style="margin-top:8px">Site consult: ' + esc(p.consult) + '. Permitting: ' + esc(p.permitting) + '.' + (f.hourly ? ' Added services at ' + usd(f.hourly) + ' an hour.' : '') + '</p>';
     if (m) {
-      var tot = [];
-      if (m.due != null) tot.push(['Balance due', usd(m.due), ' total']);
-      if (m.value != null) tot.push(['Total value', usd(m.value)]);
-      if (m.add_services) tot.push(['Added services so far', usd(m.add_services)]);
-      money += kv(tot);
       money += m.invoices.map(function (i) {
         return '<div class="item"><div class="head"><b>Invoice ' + esc(i.no) + '</b><span' + (i.paid ? '' : ' class="late"') + '>' + esc(i.paid ? 'paid ' + i.paid : 'not marked paid') + '</span></div>' +
           '<div class="body">sent ' + esc(i.sent || '?') + (i.amount != null ? ' · ' + usd(i.amount) + ' received' : '') + '</div></div>';
       }).join('');
+      if (m.due != null) money += '<div style="margin-top:10px">' + kv([['Balance due', usd(m.due) || '$0', ' total']]) + '</div>';
     }
     h += sec('Mail', (p.mail || []).map(function (m) {
       return '<div class="tl"><span class="d">' + esc(day(m.when)) + '</span><span><span class="p">' + esc(m.who) + '</span>' +
         '<div class="n">' + esc(m.subject) + (m.files ? ' · ' + m.files + (m.files === 1 ? ' file' : ' files') : '') + '</div></span></div>';
     }).join('') + ((p.mail || []).length ? '<p class="note" style="margin-top:8px">The 15 most recent emails, from the last 90 days. Read-only. Texts and calls are not here yet.</p>' : ''));
-    h += sec('Billing', money);
+    h += sec('Financial', money);
     if (p.permit) {
       var pm = p.permit;
       h += sec('Permit', kv([['City', pm.city], ['Record', pm.record || 'none yet'], ['Stage', [pm.stage, pm.round ? 'round ' + pm.round : ''].filter(Boolean).join(', ')],
@@ -579,18 +585,15 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
       if (fl.city_rounds.length || fl.city_loose) rows.push(['City comments', (fl.city_rounds.join(', ') || '') + (fl.city_loose ? (fl.city_rounds.length ? ' + ' : '') + fl.city_loose + ' loose PDFs' : '')]);
       h += sec('Files', kv(rows) + '<p class="note" style="margin-top:8px">Names and dates only, from the 18 Nov inventory. Files do not open from here yet.</p>');
     }
-    var contract = '';
-    if (p.scope) contract += '<p>' + esc(p.scope) + '</p>';
-    if (p.sqft) contract += '<p class="note">' + esc(p.sqft) + ' sq ft</p>';
-    if (f) {
-      var lines = [['Site consult', f.consult], ['Design', f.design], ['Plans', f.plans], ['Permitting', f.permitting], ['Construction', f.construction]]
-        .filter(function (x) { return x[1]; }).map(function (x) { return [x[0], usd(x[1])]; });
-      if (f.total != null) lines.push(['Contract total', usd(f.total), ' total']);
-      contract += kv(lines) + '<p class="note" style="margin-top:8px">Site consult: ' + esc(p.consult) + '. Permitting: ' + esc(p.permitting) + '.' + (f.hourly ? ' Added services at ' + usd(f.hourly) + ' an hour.' : '') + '</p>';
-    }
-    h += sec('Contract', contract);
-    var tl = p.timeline, shown = state.allTimeline ? tl : tl.slice(0, 12);
-    h += sec('History', shown.map(function (e) {
+    // Where the project stands and how it got here, together: the status, the latest note, his remarks, then
+    // the dated history (without repeating the entry that is the status).
+    var now = '';
+    var at = p.timeline.filter(function (e) { return p.status && e.note && e.note.replace(/\s*-\s*JAKE \d\d\/\d\d\/\d\d\s*$/, '') === p.status; })[0];
+    if (p.status) now += '<div class="tl"><span class="d">' + esc(at ? day(at.when) : 'Now') + '</span><span><span class="p">Status' + (p.phase ? ' · ' + esc(p.phase) : '') + '</span><div class="n" style="color:var(--ink)">' + esc(p.status) + '</div></span></div>';
+    if (p.latest) now += '<div class="tl"><span class="d"></span><span><span class="p">Latest note</span><div class="n">' + esc(p.latest) + '</div></span></div>';
+    if (p.remarks) now += '<div class="tl"><span class="d"></span><span><span class="p">Your remarks</span><div class="n">' + esc(p.remarks) + '</div></span></div>';
+    var tl = p.timeline.filter(function (e) { return e !== at; }), shown = state.allTimeline ? tl : tl.slice(0, 12);
+    h += sec('Status and history', now + shown.map(function (e) {
       return '<div class="tl"><span class="d">' + esc(day(e.when)) + '</span><span>' + (e.phase ? '<span class="p">' + esc(e.phase) + '</span>' : '') +
         (e.note ? '<div class="n">' + esc(e.note) + '</div>' : '') + '</span></div>';
     }).join('') + (tl.length > shown.length ? '<button class="text more" id="more" type="button">Show all ' + tl.length + ' entries</button>' : ''));
