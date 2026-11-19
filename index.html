@@ -365,8 +365,9 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
   function actItem(a) {
     var h = '<div class="item act"><div class="head"><b>Change to the schedule</b><span>' + esc(stamp(a.proposed_at)) + '</span></div>' + actLines(a);
     if (a.state === 'proposed') h += CFG ? '<div class="marks"><button class="go" type="button" data-act="approve" data-id="' + a.id + '">Do it</button> <button class="text quiet" type="button" data-act="cancel" data-id="' + a.id + '">Cancel</button></div>' : '';
-    else if (a.state === 'approved') h += '<div class="body note">' + esc(a.result || 'Approved. Writing it to the schedule…') + '</div>';
-    else if (a.state === 'done') h += '<div class="body ok">' + esc(a.result || 'Changed on the schedule.') + (a.finished_at ? ' ' + esc(stamp(a.finished_at)) : '') + '</div>';
+    else if (a.state === 'approved') h += '<div class="body note">' + esc(a.result || 'Writing it to the schedule…') + '</div>';
+    else if (a.state === 'done') h += '<div class="body ok">' + esc(a.result || 'Changed on the schedule.') + (a.finished_at ? ' ' + esc(stamp(a.finished_at)) : '') +
+      (a.undone_by ? ' Undone since.' : (CFG ? ' <button class="text quiet" type="button" data-act="undo" data-id="' + a.id + '">Undo</button>' : '')) + '</div>';
     else if (a.state === 'failed') h += '<div class="body late">' + esc(a.result || 'Not changed.') + '</div>';
     return h + '</div>';
   }
@@ -725,14 +726,16 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
       if (JSON.stringify(ACTS) !== before && !typing) render();
     }).catch(function () {});
   }
-  // Do it / Cancel on a proposed schedule change. After Do it, watch until the worker reports done or failed.
+  // Undo on a schedule change that was written (and Do it / Cancel, kept for a change Jake did not make
+  // on Lance's word). Then watch until the worker reports done or failed.
   var actWatch = null;
   function decideAct(id, decision) {
     state.actMsg = '';
     rpc('office_act', { p_token: token, p_id: id, p_decision: decision }).then(function (d) {
       if (d && d.ok && d.saved) {
-        ACTS.forEach(function (a) { if (a.id === id) { a.state = decision === 'approve' ? 'approved' : 'cancelled'; a.decided_at = new Date().toISOString(); } });
-        if (decision === 'approve' && !actWatch) {
+        if (decision !== 'undo') ACTS.forEach(function (a) { if (a.id === id) { a.state = decision === 'approve' ? 'approved' : 'cancelled'; a.decided_at = new Date().toISOString(); } });
+        if (decision === 'undo') { ACTS.forEach(function (a) { if (a.id === id) a.undone_by = -1; }); loadActs(); }
+        if (decision !== 'cancel' && !actWatch) {
           var until = Date.now() + 4 * 60 * 1000;
           actWatch = setInterval(function () {
             if (Date.now() > until || !ACTS.some(function (a) { return a.state === 'approved'; })) { clearInterval(actWatch); actWatch = null; return; }
