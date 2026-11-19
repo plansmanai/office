@@ -57,7 +57,11 @@ button.text { background: none; border: 0; padding: 0; font: inherit; font-weigh
 .brand span { color: var(--muted); font-size: 12px; text-align: right; }
 #q { width: 100%; margin-top: 10px; padding: 11px 12px; font: inherit; color: var(--ink); background: var(--surface);
      border: 1px solid var(--line); border-radius: 6px; }
-#q::placeholder, textarea::placeholder { color: var(--muted); }
+#q::placeholder, textarea::placeholder, #ask-text::placeholder { color: var(--muted); }
+#ask { display: flex; gap: 8px; margin-top: 8px; }
+#ask-text { flex: 1; min-width: 0; padding: 11px 12px; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+#ask-said .item { padding: 10px 0 2px; }
+#ask-said .note { margin-top: 4px; }
 .nav { display: flex; gap: 22px; margin-top: 12px; border-bottom: 1px solid var(--line); }
 .nav a { padding: 8px 0 9px; color: var(--muted); font-weight: 700; border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .nav a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }
@@ -148,6 +152,11 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
   <div class="pane" id="list">
     <div class="brand"><b>PLANSMAN</b><span id="read"></span></div>
     <input id="q" type="search" placeholder="Find an address, number or name" autocomplete="off" aria-label="Find a project">
+    <form id="ask" hidden>
+      <input id="ask-text" type="text" placeholder="Ask the office" autocomplete="off" aria-label="Ask the office">
+      <button class="go" id="ask-btn" type="submit">Ask</button>
+    </form>
+    <div id="ask-said"></div>
     <nav class="nav" aria-label="Views"><a href="#queue" id="nav-queue">Queue</a><a href="#projects" id="nav-projects">All projects</a></nav>
     <div id="listbody"></div>
     <p class="foot" id="foot"></p>
@@ -190,14 +199,23 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
 
   function queue() {
     var live = P.filter(function (p) { return p.court !== 'done'; });
+    // one row per project: its tasks under Lance's name, most overdue first
     var mine = [];
-    live.forEach(function (p) { p.tasks.forEach(function (t) { if (isMine(t)) mine.push({ p: p, t: t, days: t.days }); }); });
+    live.forEach(function (p) {
+      var ts = p.tasks.filter(isMine).sort(byDays);
+      if (ts.length) mine.push({ p: p, ts: ts, days: ts[0].days });
+    });
     mine.sort(byDays);
     var mineRows = mine.map(function (x) {
-      var d = dueText(x.t.days), label = LANE[x.t.lane] || x.t.lane;
-      return row(x.p, label + (x.t.note ? ': ' + x.t.note : ' (' + x.p.phase + ')'), d.t || (x.t.date ? x.t.date.toLowerCase() : ''), d.late);
+      var d = dueText(x.days), paid = x.p.money && x.p.money.due === 0;
+      var what = x.ts.map(function (t) {
+        var label = LANE[t.lane] || t.lane, td = dueText(t.days);
+        return label + (t.note ? ': ' + t.note : '') + (x.ts.length > 1 && td.t ? ' (' + td.t + ')' : '') + (t.lane === 'Invoice' && paid ? ' [no balance due on record]' : '');
+      }).join(' · ');
+      return row(x.p, x.p.phase + ' · ' + what, d.t || (x.ts[0].date ? x.ts[0].date.toLowerCase() : ''), d.late);
     });
     var hasMine = {}; mine.forEach(function (x) { hasMine[x.p.no] = 1; });
+    var taskCount = mine.reduce(function (n, x) { return n + x.ts.length; }, 0);
     var waiting = [];
     P.forEach(function (p) { (p.waiting || []).forEach(function (w) { waiting.push({ p: p, w: w, days: w.days }); }); });
     waiting.sort(byDays);
@@ -219,7 +237,7 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
       var bal = (x.p.money || {}).due;
       return row(x.p, 'Invoice ' + x.i.no + ' sent ' + x.i.sent + ', not marked paid' + (bal != null ? ' · balance due ' + usd(bal) : ''), '', false);
     });
-    return section('Needs you', 'tasks under your name, most overdue first', mineRows) +
+    return section('Needs you', 'projects with ' + taskCount + ' tasks under your name, most overdue first', mineRows) +
       section('Emails waiting on a reply', 'a person wrote last and nothing has gone back by email, newest first', waitRows) +
       (deskRows.length ? section('Front desk, in shadow', 'what the 4.0 desk would do; nothing sent', deskRows) : '') +
       section('In our court', 'no task under your name', group('ours', function (p) { return !hasMine[p.no]; })) +
@@ -270,11 +288,12 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
 
     // 1. what needs Lance
     var mine = p.tasks.filter(isMine), others = p.tasks.filter(function (t) { return !isMine(t); });
-    var need = mine.map(function (t) { return taskItem(t, false); }).join('');
-    (p.waiting || []).forEach(function (w) {
+    var need = '';
+    (p.waiting || []).forEach(function (w) {               // a person waiting comes before a dated task
       need += '<div class="item"><div class="head"><b>Email from ' + esc(w.who) + ', no reply yet</b><span>' + esc(ago(w.days)) + '</span></div>' +
         '<div class="body">' + esc(w.subject) + (w.snippet ? '<div class="note" style="margin-top:4px">' + esc(w.snippet) + '</div>' : '') + '</div></div>';
     });
+    need += mine.slice().sort(byDays).map(function (t) { return taskItem(t, false); }).join('');
     if (p.latest) need += '<div class="item"><div class="head"><b>Latest from the front desk</b><span></span></div><div class="body">' + esc(p.latest) + '</div></div>';
     if (p.remarks) need += '<div class="item"><div class="head"><b>Your remarks</b><span></span></div><div class="body">' + esc(p.remarks) + '</div></div>';
     ((p.money || {}).invoices || []).forEach(function (i) {
@@ -326,7 +345,7 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     h += sec('Mail', (p.mail || []).map(function (m) {
       return '<div class="tl"><span class="d">' + esc(day(m.when)) + '</span><span><span class="p">' + esc(m.who) + '</span>' +
         '<div class="n">' + esc(m.subject) + (m.files ? ' · ' + m.files + (m.files === 1 ? ' file' : ' files') : '') + '</div></span></div>';
-    }).join('') + ((p.mail || []).length ? '<p class="note" style="margin-top:8px">Email from the last 30 days, read-only. Texts and calls are not here yet.</p>' : ''));
+    }).join('') + ((p.mail || []).length ? '<p class="note" style="margin-top:8px">The 15 most recent emails, from the last 90 days. Read-only. Texts and calls are not here yet.</p>' : ''));
     h += sec('Billing', money);
     if (p.permit) {
       var pm = p.permit;
@@ -369,6 +388,12 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     var q = state.q.trim().toLowerCase();
     $('listbody').innerHTML = q ? projects(P.filter(function (p) { return matches(p, q); })) : (state.view === 'projects' ? projects(P) : queue());
     ['queue', 'projects'].forEach(function (v) { if (state.view === v && !q) $('nav-' + v).setAttribute('aria-current', 'page'); else $('nav-' + v).removeAttribute('aria-current'); });
+    var asked = SAID.filter(function (s) { return s.proj_no === 'office'; }).slice(0, 2);
+    $('ask-said').innerHTML = asked.map(function (s) {
+      return '<div class="item"><div class="head"><b>You asked</b><span>' + esc(stamp(s.created_at)) + '</span></div><div class="body">' + para(s.body) + '</div>' +
+        (s.reply ? '<div class="draft"><div class="lbl">Front desk</div>' + para(s.reply) + '</div>'
+                 : '<div class="body note">' + (s.state === 'working' ? 'The front desk is working on it…' : 'Waiting for the front desk to pick it up…') + '</div>') + '</div>';
+    }).join('');
     var p = state.no && BY[state.no];
     $('detail').innerHTML = p ? project(p) : '<div class="blank">Pick a project on the left.</div>';
     document.body.setAttribute('data-show', p ? 'detail' : 'list');
@@ -443,12 +468,24 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     var out = $('out');
     if (out) out.addEventListener('click', function () { var t = token; token = null; try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} rpc('office_logout', { p_token: t }).catch(function () {}); showLogin(''); });
     $('login').hidden = true; $('shell').hidden = false;
+    $('ask').hidden = !CFG;
     route();
     if (pending()) watchReplies();
   }
   $('q').addEventListener('input', function (e) {
     state.q = e.target.value;
     if (state.q.trim() && state.no && window.matchMedia('(max-width: 959px)').matches) location.hash = '#' + state.view; else render();
+  });
+  $('ask').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var text = $('ask-text').value.trim(), b = $('ask-btn');
+    if (!text || b.disabled) return;
+    b.disabled = true;
+    rpc('office_tell', { p_token: token, p_proj: 'office', p_text: text }).then(function (d) {
+      b.disabled = false;
+      if (d && d.ok && d.saved) { SAID.unshift(d.instruction); $('ask-text').value = ''; watchReplies(); render(); }
+      else { $('ask-text').placeholder = d && d.ok ? 'Not saved: ' + (d.why || 'try again') : 'Signed out. Reload and enter the PIN.'; }
+    }).catch(function () { b.disabled = false; $('ask-text').placeholder = 'Could not reach the office. Try again.'; });
   });
   window.addEventListener('hashchange', function () { if (DATA) route(); });
   $('login').addEventListener('submit', function (e) {
