@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<title>Plansman Office</title>
+<title>Plansman Dashboard</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap">
 <style>
@@ -142,7 +142,7 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
 
 <form id="login" hidden>
   <b>PLANSMAN</b>
-  <p>The office. Enter your PIN.</p>
+  <p>Dashboard. Enter your PIN.</p>
   <input id="pin" type="password" inputmode="numeric" autocomplete="one-time-code" aria-label="PIN">
   <button class="go" id="pin-btn" type="submit">Open</button>
   <div class="err" id="login-err" role="alert"></div>
@@ -153,7 +153,7 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     <div class="brand"><b>PLANSMAN</b><span id="read"></span></div>
     <input id="q" type="search" placeholder="Find an address, number or name" autocomplete="off" aria-label="Find a project">
     <form id="ask" hidden>
-      <input id="ask-text" type="text" placeholder="Ask the office" autocomplete="off" aria-label="Ask the office">
+      <input id="ask-text" type="text" placeholder="Ask the team" autocomplete="off" aria-label="Ask the team">
       <button class="go" id="ask-btn" type="submit">Ask</button>
     </form>
     <div id="ask-said"></div>
@@ -220,9 +220,9 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     P.forEach(function (p) { (p.waiting || []).forEach(function (w) { waiting.push({ p: p, w: w, days: w.days }); }); });
     waiting.sort(byDays);
     var waitRows = waiting.map(function (x) { return row(x.p, x.w.who + ': ' + x.w.subject, ago(x.w.days), false); });
-    var deskRows = [];
-    P.forEach(function (p) { (p.desk || []).forEach(function (x) {
-      if (x.mode === 'waiting') deskRows.push(row(p, (x.needs_lance ? 'Needs you: ' : 'No action for you: ') + x.next_step, day(x.received), false));
+    var shadowRows = [];
+    P.forEach(function (p) { (p.shadow || []).forEach(function (x) {
+      if (x.mode === 'waiting') shadowRows.push(row(p, (x.needs_lance ? 'Needs you: ' : 'No action for you: ') + x.next_step, day(x.received), false));
     }); });
     function group(court, extra) {
       return live.filter(function (p) { return p.court === court && (!extra || extra(p)); }).sort(byDays).map(function (p) {
@@ -239,7 +239,7 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     });
     return section('Needs you', 'projects with ' + taskCount + ' tasks under your name, most overdue first', mineRows) +
       section('Emails waiting on a reply', 'a person wrote last and nothing has gone back by email, newest first', waitRows) +
-      (deskRows.length ? section('Front desk, in shadow', 'what the 4.0 desk would do; nothing sent', deskRows) : '') +
+      (shadowRows.length ? section('Jake, in shadow', 'what Jake in 4.0 would do; nothing sent', shadowRows) : '') +
       section('In our court', 'no task under your name', group('ours', function (p) { return !hasMine[p.no]; })) +
       section('Unpaid invoices', '', unpaidRows) +
       section('Waiting on the client', '', group('client')) +
@@ -267,7 +267,7 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
       esc([t.date, td.t].filter(Boolean).join(' · ')) + '</span></div>' + (t.note ? '<div class="body">' + esc(t.note) + '</div>' : '') + '</div>';
   }
   function para(t) { return esc(t).replace(/\n/g, '<br>'); }
-  function deskItem(x) {
+  function shadowItem(x) {
     var h = '<div class="item"><div class="head"><b>' + esc(x.from || 'Message') + ': ' + esc(x.subject || '') + '</b><span>' + esc(day(x.received)) + '</span></div>';
     h += '<div class="body">' + esc(x.what_happened) + '</div>';
     h += '<div class="body"><b>' + (x.needs_lance ? 'Needs you. ' : 'Does not need you. ') + '</b>' + esc(x.why) + '</div>';
@@ -275,7 +275,7 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     if (x.phase_suggestion) h += '<div class="body"><b>Phase would become: </b>' + esc(x.phase_suggestion) + '</div>';
     if (x.draft_reply) h += '<div class="draft"><div class="lbl">Draft reply (not sent)</div>' + para(x.draft_reply) + '</div>';
     if (x.actual_reply) h += '<div class="draft real"><div class="lbl">What you sent, ' + esc(day(x.actual_reply_at)) + '</div>' + para(x.actual_reply) + '</div>';
-    if (x.missing && x.missing.length) h += '<div class="body note">The desk could not find: ' + esc(x.missing.join('; ')) + '</div>';
+    if (x.missing && x.missing.length) h += '<div class="body note">Jake could not find: ' + esc(x.missing.join('; ')) + '</div>';
     return h + '</div>';
   }
   function project(p) {
@@ -294,16 +294,16 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
         '<div class="body">' + esc(w.subject) + (w.snippet ? '<div class="note" style="margin-top:4px">' + esc(w.snippet) + '</div>' : '') + '</div></div>';
     });
     need += mine.slice().sort(byDays).map(function (t) { return taskItem(t, false); }).join('');
-    if (p.latest) need += '<div class="item"><div class="head"><b>Latest from the front desk</b><span></span></div><div class="body">' + esc(p.latest) + '</div></div>';
+    if (p.latest) need += '<div class="item"><div class="head"><b>Latest from Jake</b><span></span></div><div class="body">' + esc(p.latest) + '</div></div>';
     if (p.remarks) need += '<div class="item"><div class="head"><b>Your remarks</b><span></span></div><div class="body">' + esc(p.remarks) + '</div></div>';
     ((p.money || {}).invoices || []).forEach(function (i) {
       if (i.sent && !i.paid) need += '<div class="item"><div class="head"><b>Invoice ' + esc(i.no) + ' not marked paid</b><span>sent ' + esc(i.sent) + '</span></div></div>';
     });
     h += sec('Needs you', need || '<p class="note">Nothing is under your name on this project.</p>', 'lead need');
 
-    // 1b. what the front desk would do (shadow: nothing is sent)
-    var live = (p.desk || []).filter(function (x) { return x.mode === 'waiting'; });
-    h += sec('Front desk, in shadow', live.map(deskItem).join('') + (live.length ? '<p class="note" style="margin-top:8px">Written by the 4.0 front desk as a trial. Nothing was sent to anyone.</p>' : ''), 'lead need');
+    // 1b. what Jake would do (shadow: nothing is sent)
+    var live = (p.shadow || []).filter(function (x) { return x.mode === 'waiting'; });
+    h += sec('Jake, in shadow', live.map(shadowItem).join('') + (live.length ? '<p class="note" style="margin-top:8px">Written by Jake in 4.0 as a trial. Nothing was sent to anyone.</p>' : ''), 'lead need');
 
     // 2. his line to the team
     var said = SAID.filter(function (s) { return s.proj_no === p.no; });
@@ -311,24 +311,24 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     if (CFG) {
       tell += '<form id="tell"><textarea id="tell-text" placeholder="What should happen next on this job?" aria-label="Instruction to the team">' + esc(state.draft[p.no] || '') + '</textarea>' +
         '<div class="bar"><button class="go" id="tell-btn" type="submit"' + (state.sending ? ' disabled' : '') + '>' + (state.sending ? 'Saving…' : 'Tell the team') + '</button>' +
-        '<span id="tell-msg">' + esc(state.tellMsg || 'The front desk answers here. It can look things up and draft; it cannot send or change anything yet.') + '</span></div></form>';
+        '<span id="tell-msg">' + esc(state.tellMsg || 'Jake answers here. He can look things up and draft; he cannot send or change anything yet.') + '</span></div></form>';
     } else {
       tell += '<p class="note">Your instruction box goes here on the plansman.ai version. This private preview cannot save anything.</p>';
     }
     if (said.length) tell += '<div class="said">' + said.map(function (s) {
       var h2 = '<div class="item"><div class="head"><b>You said</b><span>' + esc(stamp(s.created_at)) + '</span></div><div class="body">' + para(s.body) + '</div>';
-      if (s.reply) h2 += '<div class="draft"><div class="lbl">Front desk' + (s.replied_at ? ', ' + esc(stamp(s.replied_at)) : '') + '</div>' + para(s.reply) + '</div>';
-      else h2 += '<div class="body note">' + (s.state === 'working' ? 'The front desk is working on it…' : 'Waiting for the front desk to pick it up…') + '</div>';
+      if (s.reply) h2 += '<div class="draft"><div class="lbl">Jake' + (s.replied_at ? ', ' + esc(stamp(s.replied_at)) : '') + '</div>' + para(s.reply) + '</div>';
+      else h2 += '<div class="body note">' + (s.state === 'working' ? 'Jake is working on it…' : 'Waiting for Jake to pick it up…') + '</div>';
       return h2 + '</div>';
     }).join('') + '</div>';
     h += sec('Tell the team', tell, 'lead tell');
 
     // 3. what the team has
-    h += sec('With the team', others.map(function (t) { return taskItem(t, true); }).join(''), 'lead');
+    h += sec('Who has what', others.map(function (t) { return taskItem(t, true); }).join(''), 'lead');
 
     // reference, below
-    var checked = (p.desk || []).filter(function (x) { return x.mode === 'answered'; });
-    h += sec('Shadow check: the desk against what you sent', checked.map(deskItem).join(''), 'lead');
+    var checked = (p.shadow || []).filter(function (x) { return x.mode === 'answered'; });
+    h += sec('Shadow check: Jake against what you sent', checked.map(shadowItem).join(''), 'lead');
     h += '<div class="below">Reference</div>';
     var f = p.fees, m = p.money, money = '';
     if (m) {
@@ -391,8 +391,8 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     var asked = SAID.filter(function (s) { return s.proj_no === 'office'; }).slice(0, 2);
     $('ask-said').innerHTML = asked.map(function (s) {
       return '<div class="item"><div class="head"><b>You asked</b><span>' + esc(stamp(s.created_at)) + '</span></div><div class="body">' + para(s.body) + '</div>' +
-        (s.reply ? '<div class="draft"><div class="lbl">Front desk</div>' + para(s.reply) + '</div>'
-                 : '<div class="body note">' + (s.state === 'working' ? 'The front desk is working on it…' : 'Waiting for the front desk to pick it up…') + '</div>') + '</div>';
+        (s.reply ? '<div class="draft"><div class="lbl">Jake</div>' + para(s.reply) + '</div>'
+                 : '<div class="body note">' + (s.state === 'working' ? 'Jake is working on it…' : 'Waiting for Jake to pick it up…') + '</div>') + '</div>';
     }).join('');
     var p = state.no && BY[state.no];
     $('detail').innerHTML = p ? project(p) : '<div class="blank">Pick a project on the left.</div>';
@@ -429,7 +429,7 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
       if (!d.data) { showLogin('Nothing has been published to the app yet.'); return; }
       SAID = d.instructions || [];
       start(d.data, 'Sheets read ' + d.read_at);
-    }).catch(function (e) { showLogin('Could not reach the office (' + e.message + ').'); });
+    }).catch(function (e) { showLogin('Could not reach the dashboard (' + e.message + ').'); });
   }
   function tell(no) {
     var text = (state.draft[no] || '').trim();
@@ -439,7 +439,7 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
       state.sending = false;
       if (!d || !d.ok) { state.tellMsg = 'Signed out. Reload and enter the PIN; your text is still here.'; }
       else if (!d.saved) { state.tellMsg = 'Not saved: ' + (d.why || 'unknown reason') + '.'; }
-      else { SAID.unshift(d.instruction); state.draft[no] = ''; state.tellMsg = 'Sent to the front desk. The answer appears here, usually within a minute.'; watchReplies(); }
+      else { SAID.unshift(d.instruction); state.draft[no] = ''; state.tellMsg = 'Sent to Jake. The answer appears here, usually within a minute.'; watchReplies(); }
       render();
     }).catch(function (e) { state.sending = false; state.tellMsg = 'Not saved (' + e.message + '). Your text is still here.'; render(); });
   }
@@ -485,7 +485,7 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
       b.disabled = false;
       if (d && d.ok && d.saved) { SAID.unshift(d.instruction); $('ask-text').value = ''; watchReplies(); render(); }
       else { $('ask-text').placeholder = d && d.ok ? 'Not saved: ' + (d.why || 'try again') : 'Signed out. Reload and enter the PIN.'; }
-    }).catch(function () { b.disabled = false; $('ask-text').placeholder = 'Could not reach the office. Try again.'; });
+    }).catch(function () { b.disabled = false; $('ask-text').placeholder = 'Could not reach the dashboard. Try again.'; });
   });
   window.addEventListener('hashchange', function () { if (DATA) route(); });
   $('login').addEventListener('submit', function (e) {
@@ -496,7 +496,7 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
       b.disabled = false; b.textContent = 'Open'; $('pin').value = '';
       if (d && d.ok) { token = d.token; try { localStorage.setItem(TOKEN_KEY, token); } catch (err) {} return load(); }
       $('login-err').textContent = d && d.hard ? 'Locked after too many wrong PINs. It stays locked until the PIN is set again from the AI PC.' : d && d.locked ? 'Too many wrong PINs. Try again in 15 minutes.' : d && d.no_pin ? 'No PIN has been set yet.' : 'That PIN is not recognized.';
-    }).catch(function (err) { b.disabled = false; b.textContent = 'Open'; $('login-err').textContent = 'Could not reach the office (' + err.message + ').'; });
+    }).catch(function (err) { b.disabled = false; b.textContent = 'Open'; $('login-err').textContent = 'Could not reach the dashboard (' + err.message + ').'; });
   });
 
   var embedded = null;
