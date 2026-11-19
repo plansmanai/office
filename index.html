@@ -170,6 +170,7 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     if (days === 0) return { t: 'due today', late: true };
     return { t: 'due in ' + days + (days === 1 ? ' day' : ' days'), late: false };
   }
+  function ago(days) { return days === 0 ? 'today' : days === 1 ? 'yesterday' : days + ' days ago'; }
   var LANE = { Invoice: 'Invoice', Design: 'Design', Arch: 'Drafting', Engin: 'Engineering', T24: 'Title 24', Consult: 'Consult', Permit: 'Permit' };
   function isMine(t) { return t.who.toLowerCase() === 'lance'; }
   function who(p) { return p.company && p.contact ? p.company + ' (' + p.contact + ')' : (p.company || p.contact || ''); }
@@ -193,6 +194,10 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
       return row(x.p, label + (x.t.note ? ': ' + x.t.note : ' (' + x.p.phase + ')'), d.t || (x.t.date ? x.t.date.toLowerCase() : ''), d.late);
     });
     var hasMine = {}; mine.forEach(function (x) { hasMine[x.p.no] = 1; });
+    var waiting = [];
+    P.forEach(function (p) { (p.waiting || []).forEach(function (w) { waiting.push({ p: p, w: w, days: w.days }); }); });
+    waiting.sort(byDays);
+    var waitRows = waiting.map(function (x) { return row(x.p, x.w.who + ': ' + x.w.subject, ago(x.w.days), false); });
     function group(court, extra) {
       return live.filter(function (p) { return p.court === court && (!extra || extra(p)); }).sort(byDays).map(function (p) {
         var d = dueText(p.days);
@@ -207,6 +212,7 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
       return row(x.p, 'Invoice ' + x.i.no + ' sent ' + x.i.sent + ', not marked paid' + (bal != null ? ' · balance due ' + usd(bal) : ''), '', false);
     });
     return section('Needs you', 'tasks under your name, most overdue first', mineRows) +
+      section('Emails waiting on a reply', 'a person wrote last and nothing has gone back by email, newest first', waitRows) +
       section('In our court', 'no task under your name', group('ours', function (p) { return !hasMine[p.no]; })) +
       section('Unpaid invoices', '', unpaidRows) +
       section('Waiting on the client', '', group('client')) +
@@ -244,6 +250,10 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     // 1. what needs Lance
     var mine = p.tasks.filter(isMine), others = p.tasks.filter(function (t) { return !isMine(t); });
     var need = mine.map(function (t) { return taskItem(t, false); }).join('');
+    (p.waiting || []).forEach(function (w) {
+      need += '<div class="item"><div class="head"><b>Email from ' + esc(w.who) + ', no reply yet</b><span>' + esc(ago(w.days)) + '</span></div>' +
+        '<div class="body">' + esc(w.subject) + (w.snippet ? '<div class="note" style="margin-top:4px">' + esc(w.snippet) + '</div>' : '') + '</div></div>';
+    });
     if (p.latest) need += '<div class="item"><div class="head"><b>Latest from the front desk</b><span></span></div><div class="body">' + esc(p.latest) + '</div></div>';
     if (p.remarks) need += '<div class="item"><div class="head"><b>Your remarks</b><span></span></div><div class="body">' + esc(p.remarks) + '</div></div>';
     ((p.money || {}).invoices || []).forEach(function (i) {
@@ -283,6 +293,10 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
           '<div class="body">sent ' + esc(i.sent || '?') + (i.amount != null ? ' · ' + usd(i.amount) + ' received' : '') + '</div></div>';
       }).join('');
     }
+    h += sec('Mail', (p.mail || []).map(function (m) {
+      return '<div class="tl"><span class="d">' + esc(day(m.when)) + '</span><span><span class="p">' + esc(m.who) + '</span>' +
+        '<div class="n">' + esc(m.subject) + (m.files ? ' · ' + m.files + (m.files === 1 ? ' file' : ' files') : '') + '</div></span></div>';
+    }).join('') + ((p.mail || []).length ? '<p class="note" style="margin-top:8px">Email from the last 30 days, read-only. Texts and calls are not here yet.</p>' : ''));
     h += sec('Billing', money);
     if (p.permit) {
       var pm = p.permit;
