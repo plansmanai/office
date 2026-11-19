@@ -193,6 +193,25 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .more { padding: 10px 0 4px; }
 .blank { color: var(--muted); padding: 90px 0; text-align: center; font-weight: 300; letter-spacing: .3em; text-transform: uppercase; font-size: .8rem; }
 
+/* the row, three lines: number and address (black bar when it waits on him) / counters, then phase / what is needed */
+.rows { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 12px; border: 0; }
+.row { display: block; position: relative; padding: 0; border: 1px solid var(--rule); }
+.row:last-child { border-bottom: 1px solid var(--rule); }
+.rhead { display: flex; align-items: baseline; gap: 14px; padding: 9px 14px 9px 17px; border-bottom: 1px solid var(--rule); }
+.row.need .rhead { background: var(--ink); color: var(--on-ink); border-bottom-color: var(--ink); }
+.row .no, .row .addr { font-size: 15.5px; font-weight: 500; line-height: 1.35; color: inherit; margin: 0; vertical-align: baseline; }
+.row .no { letter-spacing: .05em; flex: none; min-width: 2.9em; font-variant-numeric: tabular-nums; }
+.row .addr { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+.rtags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 11px 14px 0 17px; }
+.rtags .ph { margin: 0; }
+.rtags .when { padding: 0 0 0 4px; }
+.row .what { display: -webkit-box; margin: 0; padding: 8px 14px 12px 17px; font-size: 14.5px; }
+.row .rtags:last-child { padding-bottom: 12px; }
+.row::before { z-index: 1; }
+@media (hover: hover) { .row:hover { background: var(--soft); } }
+.row[aria-current="true"] { background: var(--sand); outline: 1px solid var(--ink); outline-offset: 2px; }
+/* the phase is third in the order, so it is a frame, not a fill */
+.ph { background: transparent; color: var(--ink); border-color: var(--ink); }
 @media (min-width: 720px) { .facts { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 1280px) { .facts { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 @media (max-width: 719px) {
@@ -291,10 +310,16 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     return w;
   }
   function phaseTag(p, text) { return '<b class="ph c-' + esc(p.court || 'unknown') + '">' + esc(text || p.phase || 'No phase') + '</b>'; }
+  // A row is three lines, in the order Lance reads them:
+  //   1. the project number and the address, equally strong, in the black bar when something waits on him
+  //   2. how long it has waited (the coloured counters), then the phase
+  //   3. one line saying what is needed
   function row(p, what, when, late, phase, bubs, stripe) {
-    return '<a class="row' + (stripe ? ' s' + stripe : '') + '" href="#p-' + esc(p.no) + '"' + (state.no === p.no ? ' aria-current="true"' : '') + '><span class="addr"><span class="no">' + esc(p.no) + '</span>' + esc(p.address) + '</span>' +
-      (bubs ? '<span class="bubs">' + bubs + '</span>' : '<span class="when' + (late ? ' late' : '') + '">' + esc(when || '') + '</span>') +
-      '<span class="what">' + (phase ? phaseTag(p, phase) : '') + esc(what || '') + '</span></a>';
+    var need = !!(bubs && bubs.trim());
+    return '<a class="row' + (need ? ' need' : '') + (stripe ? ' s' + stripe : '') + '" href="#p-' + esc(p.no) + '"' + (state.no === p.no ? ' aria-current="true"' : '') + '>' +
+      '<span class="rhead"><span class="no">' + esc(p.no) + '</span><span class="addr">' + esc(p.address) + '</span></span>' +
+      '<span class="rtags">' + (need ? bubs : '') + (phase ? phaseTag(p, phase) : '') + (when ? '<span class="when' + (late ? ' late' : '') + '">' + esc(when) + '</span>' : '') + '</span>' +
+      (what ? '<span class="what">' + esc(what) + '</span>' : '') + '</a>';
   }
   function section(title, hint, rows, extra) {
     return '<h2>' + esc(title) + ' <span class="n">' + rows.length + '</span>' + (hint ? '<small>' + esc(hint) + '</small>' : '') + '</h2>' + (extra || '') + '<div class="rows">' +
