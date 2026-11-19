@@ -292,12 +292,15 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     if (CFG) {
       tell += '<form id="tell"><textarea id="tell-text" placeholder="What should happen next on this job?" aria-label="Instruction to the team">' + esc(state.draft[p.no] || '') + '</textarea>' +
         '<div class="bar"><button class="go" id="tell-btn" type="submit"' + (state.sending ? ' disabled' : '') + '>' + (state.sending ? 'Saving…' : 'Tell the team') + '</button>' +
-        '<span id="tell-msg">' + esc(state.tellMsg || 'Saved on this project. No desk acts on it yet.') + '</span></div></form>';
+        '<span id="tell-msg">' + esc(state.tellMsg || 'The front desk answers here. It can look things up and draft; it cannot send or change anything yet.') + '</span></div></form>';
     } else {
       tell += '<p class="note">Your instruction box goes here on the plansman.ai version. This private preview cannot save anything.</p>';
     }
     if (said.length) tell += '<div class="said">' + said.map(function (s) {
-      return '<div class="item"><div class="head"><b>You said</b><span>' + esc(stamp(s.created_at)) + ' · ' + esc(s.state) + '</span></div><div class="body">' + esc(s.body) + '</div></div>';
+      var h2 = '<div class="item"><div class="head"><b>You said</b><span>' + esc(stamp(s.created_at)) + '</span></div><div class="body">' + para(s.body) + '</div>';
+      if (s.reply) h2 += '<div class="draft"><div class="lbl">Front desk' + (s.replied_at ? ', ' + esc(stamp(s.replied_at)) : '') + '</div>' + para(s.reply) + '</div>';
+      else h2 += '<div class="body note">' + (s.state === 'working' ? 'The front desk is working on it…' : 'Waiting for the front desk to pick it up…') + '</div>';
+      return h2 + '</div>';
     }).join('') + '</div>';
     h += sec('Tell the team', tell, 'lead tell');
 
@@ -411,9 +414,25 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
       state.sending = false;
       if (!d || !d.ok) { state.tellMsg = 'Signed out. Reload and enter the PIN; your text is still here.'; }
       else if (!d.saved) { state.tellMsg = 'Not saved: ' + (d.why || 'unknown reason') + '.'; }
-      else { SAID.unshift(d.instruction); state.draft[no] = ''; state.tellMsg = 'Saved. No desk acts on it yet.'; }
+      else { SAID.unshift(d.instruction); state.draft[no] = ''; state.tellMsg = 'Sent to the front desk. The answer appears here, usually within a minute.'; watchReplies(); }
       render();
     }).catch(function (e) { state.sending = false; state.tellMsg = 'Not saved (' + e.message + '). Your text is still here.'; render(); });
+  }
+  // While an instruction has no reply yet, ask for replies every 8 seconds (for at most 10 minutes).
+  var watching = null, watchUntil = 0;
+  function pending() { return SAID.some(function (s) { return !s.reply && (s.state === 'saved' || s.state === 'working'); }); }
+  function watchReplies() {
+    watchUntil = Date.now() + 10 * 60 * 1000;
+    if (watching || !CFG) return;
+    watching = setInterval(function () {
+      if (!pending() || Date.now() > watchUntil || !token) { clearInterval(watching); watching = null; return; }
+      rpc('office_replies', { p_token: token }).then(function (d) {
+        if (!d || !d.ok) return;
+        var before = JSON.stringify(SAID), typing = document.activeElement && document.activeElement.id === 'tell-text';
+        SAID = d.instructions || SAID;
+        if (JSON.stringify(SAID) !== before && !typing) render();
+      }).catch(function () {});
+    }, 8000);
   }
   function start(data, readLine) {
     DATA = data; P = data.projects; BY = {};
@@ -425,6 +444,7 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     if (out) out.addEventListener('click', function () { var t = token; token = null; try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} rpc('office_logout', { p_token: t }).catch(function () {}); showLogin(''); });
     $('login').hidden = true; $('shell').hidden = false;
     route();
+    if (pending()) watchReplies();
   }
   $('q').addEventListener('input', function (e) {
     state.q = e.target.value;
