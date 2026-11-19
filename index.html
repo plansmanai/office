@@ -103,6 +103,10 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
 .item .head span { color: var(--muted); font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .item .body { color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
 .need .item .body { color: var(--ink); font-size: 15px; }
+.item .body + .body { margin-top: 5px; }
+.draft { margin-top: 8px; padding: 10px 12px; background: var(--soft); border-radius: 6px; font-size: 15px; overflow-wrap: anywhere; }
+.draft.real { background: none; border: 1px solid var(--line); }
+.draft .lbl { font-size: 11px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
 .tell textarea { width: 100%; min-height: 84px; padding: 11px 12px; font: inherit; color: var(--ink); background: var(--bg);
                  border: 1px solid var(--line); border-radius: 6px; resize: vertical; }
 .tell .bar { display: flex; align-items: center; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
@@ -198,6 +202,10 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     P.forEach(function (p) { (p.waiting || []).forEach(function (w) { waiting.push({ p: p, w: w, days: w.days }); }); });
     waiting.sort(byDays);
     var waitRows = waiting.map(function (x) { return row(x.p, x.w.who + ': ' + x.w.subject, ago(x.w.days), false); });
+    var deskRows = [];
+    P.forEach(function (p) { (p.desk || []).forEach(function (x) {
+      if (x.mode === 'waiting') deskRows.push(row(p, (x.needs_lance ? 'Needs you: ' : 'No action for you: ') + x.next_step, day(x.received), false));
+    }); });
     function group(court, extra) {
       return live.filter(function (p) { return p.court === court && (!extra || extra(p)); }).sort(byDays).map(function (p) {
         var d = dueText(p.days);
@@ -213,6 +221,7 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     });
     return section('Needs you', 'tasks under your name, most overdue first', mineRows) +
       section('Emails waiting on a reply', 'a person wrote last and nothing has gone back by email, newest first', waitRows) +
+      (deskRows.length ? section('Front desk, in shadow', 'what the 4.0 desk would do; nothing sent', deskRows) : '') +
       section('In our court', 'no task under your name', group('ours', function (p) { return !hasMine[p.no]; })) +
       section('Unpaid invoices', '', unpaidRows) +
       section('Waiting on the client', '', group('client')) +
@@ -239,6 +248,18 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     return '<div class="item"><div class="head"><b>' + esc((LANE[t.lane] || t.lane) + (showWho ? ': ' + t.who : '')) + '</b><span' + (td.late ? ' class="late"' : '') + '>' +
       esc([t.date, td.t].filter(Boolean).join(' · ')) + '</span></div>' + (t.note ? '<div class="body">' + esc(t.note) + '</div>' : '') + '</div>';
   }
+  function para(t) { return esc(t).replace(/\n/g, '<br>'); }
+  function deskItem(x) {
+    var h = '<div class="item"><div class="head"><b>' + esc(x.from || 'Message') + ': ' + esc(x.subject || '') + '</b><span>' + esc(day(x.received)) + '</span></div>';
+    h += '<div class="body">' + esc(x.what_happened) + '</div>';
+    h += '<div class="body"><b>' + (x.needs_lance ? 'Needs you. ' : 'Does not need you. ') + '</b>' + esc(x.why) + '</div>';
+    h += '<div class="body"><b>Next: </b>' + esc(x.next_step) + '</div>';
+    if (x.phase_suggestion) h += '<div class="body"><b>Phase would become: </b>' + esc(x.phase_suggestion) + '</div>';
+    if (x.draft_reply) h += '<div class="draft"><div class="lbl">Draft reply (not sent)</div>' + para(x.draft_reply) + '</div>';
+    if (x.actual_reply) h += '<div class="draft real"><div class="lbl">What you sent, ' + esc(day(x.actual_reply_at)) + '</div>' + para(x.actual_reply) + '</div>';
+    if (x.missing && x.missing.length) h += '<div class="body note">The desk could not find: ' + esc(x.missing.join('; ')) + '</div>';
+    return h + '</div>';
+  }
   function project(p) {
     var d = dueText(p.days), h = '';
     h += '<a class="back" href="#' + state.view + '">‹ Back</a><div class="sheet">';
@@ -261,6 +282,10 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     });
     h += sec('Needs you', need || '<p class="note">Nothing is under your name on this project.</p>', 'lead need');
 
+    // 1b. what the front desk would do (shadow: nothing is sent)
+    var live = (p.desk || []).filter(function (x) { return x.mode === 'waiting'; });
+    h += sec('Front desk, in shadow', live.map(deskItem).join('') + (live.length ? '<p class="note" style="margin-top:8px">Written by the 4.0 front desk as a trial. Nothing was sent to anyone.</p>' : ''), 'lead need');
+
     // 2. his line to the team
     var said = SAID.filter(function (s) { return s.proj_no === p.no; });
     var tell = '';
@@ -280,6 +305,8 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     h += sec('With the team', others.map(function (t) { return taskItem(t, true); }).join(''), 'lead');
 
     // reference, below
+    var checked = (p.desk || []).filter(function (x) { return x.mode === 'answered'; });
+    h += sec('Shadow check: the desk against what you sent', checked.map(deskItem).join(''), 'lead');
     h += '<div class="below">Reference</div>';
     var f = p.fees, m = p.money, money = '';
     if (m) {
