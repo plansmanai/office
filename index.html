@@ -123,6 +123,10 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
 .item .body { color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
 .need .item .body { color: var(--ink); font-size: 15px; }
 .item .body + .body { margin-top: 5px; }
+.item.act .body { color: var(--ink); font-size: 15px; }
+.item .body.ok { color: var(--ok-ink); font-weight: 700; }
+.arrow { color: var(--muted); }
+.marks button.go { padding: 8px 16px; }
 .marks { margin-top: 6px; display: flex; gap: 18px; align-items: baseline; flex-wrap: wrap; font-size: 15px; }
 .marks button.text { padding: 6px 0; }
 button.text.quiet { color: var(--muted); font-weight: 400; }
@@ -249,6 +253,23 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
   // a thing waiting on him until he answers); rules = standing rules proposed by the team, which count only
   // after his tap (db/010).
   var ASKS = { questions: [], rules: [] };
+  // ACTS: changes Jake has proposed to the schedule. One is written only after Lance taps Do it (db/012).
+  var ACTS = [];
+  var CHANGE_LABEL = { phase: 'Phase', due: 'Due date', status: 'Status note' };
+  function actLines(a) {
+    return ['phase', 'due', 'status'].filter(function (k) { return a.change && a.change[k]; }).map(function (k) {
+      var v = a.change[k];
+      return '<div class="body"><b>' + CHANGE_LABEL[k] + ':</b> ' + esc(v.from || '(blank)') + ' <span class="arrow">to</span> <b>' + esc(v.to || '(blank)') + '</b></div>';
+    }).join('');
+  }
+  function actItem(a) {
+    var h = '<div class="item act"><div class="head"><b>Change to the schedule</b><span>' + esc(stamp(a.proposed_at)) + '</span></div>' + actLines(a);
+    if (a.state === 'proposed') h += CFG ? '<div class="marks"><button class="go" type="button" data-act="approve" data-id="' + a.id + '">Do it</button> <button class="text quiet" type="button" data-act="cancel" data-id="' + a.id + '">Cancel</button></div>' : '';
+    else if (a.state === 'approved') h += '<div class="body note">' + esc(a.result || 'Approved. Writing it to the schedule…') + '</div>';
+    else if (a.state === 'done') h += '<div class="body ok">' + esc(a.result || 'Changed on the schedule.') + (a.finished_at ? ' ' + esc(stamp(a.finished_at)) : '') + '</div>';
+    else if (a.state === 'failed') h += '<div class="body late">' + esc(a.result || 'Not changed.') + '</div>';
+    return h + '</div>';
+  }
   function daysSince(iso) { var t = new Date(iso).getTime(); return isNaN(t) ? null : Math.max(0, Math.floor((Date.now() - t) / 86400000)); }
   function cap(w) { return w ? w.charAt(0).toUpperCase() + w.slice(1) : ''; }
   function questionNeeds(p) {
@@ -256,7 +277,12 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
       return { key: 'question:' + q.id, kind: 'question', qid: q.id, title: cap(q.agent) + ' asks', detail: q.body, why: q.why, days: daysSince(q.asked_at) };
     });
   }
-  function openNeeds(p) { return questionNeeds(p).concat((p.needs || []).filter(function (n) { return !MARKS[n.key]; })); }
+  function actionNeeds(p) {
+    return ACTS.filter(function (a) { return a.proj_no === p.no && a.state === 'proposed'; }).map(function (a) {
+      return { key: 'action:' + a.id, kind: 'action', act: a, title: 'Schedule change waiting for your OK', days: daysSince(a.proposed_at) };
+    });
+  }
+  function openNeeds(p) { return actionNeeds(p).concat(questionNeeds(p), (p.needs || []).filter(function (n) { return !MARKS[n.key]; })); }
   function wait(n) { return n.days == null ? '' : n.days === 0 ? 'since today' : n.days + (n.days === 1 ? ' day' : ' days'); }
   function longest(ns) { var m = -1; ns.forEach(function (n) { if (n.days != null && n.days > m) m = n.days; }); return m; }
   function whoHasWhat(p) {
@@ -341,7 +367,9 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
     var need = open.map(function (n) {
       var h3 = '<div class="item"><div class="head"><b>' + esc(n.title) + '</b><span>' + (n.days != null ? bub(n, (isReply(n) ? 'Reply ' : 'Waiting ') + dtext(n.days)) : '') + '</span></div>';
       if (n.detail) h3 += '<div class="body">' + esc(n.detail) + (n.snippet ? '<div class="note" style="margin-top:4px">' + esc(n.snippet) + '</div>' : '') + '</div>';
-      if (n.kind === 'question') {
+      if (n.kind === 'action') {
+        h3 += actLines(n.act) + (CFG ? '<div class="marks"><button class="go" type="button" data-act="approve" data-id="' + n.act.id + '">Do it</button> <button class="text quiet" type="button" data-act="cancel" data-id="' + n.act.id + '">Cancel</button></div>' : '');
+      } else if (n.kind === 'question') {
         if (n.why) h3 += '<div class="body note">Waiting on this: ' + esc(n.why) + '</div>';
         if (CFG) h3 += '<div class="answer"><textarea data-ans="' + n.qid + '" placeholder="Your answer" aria-label="Your answer">' + esc(state.ans[n.qid] || '') + '</textarea>' +
           '<div class="bar"><button class="go" type="button" data-answer="' + n.qid + '">Answer</button><span class="note">' + esc(state.ansMsg || 'Your answer goes back to the job. If there is a general rule in it, it is proposed to you.') + '</span></div></div>';
@@ -378,7 +406,7 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
     if (CFG) {
       tell += '<form id="tell"><textarea id="tell-text" placeholder="What should happen next on this job?" aria-label="Instruction to the team">' + esc(state.draft[p.no] || '') + '</textarea>' +
         '<div class="bar"><button class="go" id="tell-btn" type="submit"' + (state.sending ? ' disabled' : '') + '>' + (state.sending ? 'Saving…' : 'Tell the team') + '</button>' +
-        '<span id="tell-msg">' + esc(state.tellMsg || 'Jake answers here. He can look things up and draft; he cannot send or change anything yet.') + '</span></div></form>';
+        '<span id="tell-msg">' + esc(state.tellMsg || 'Jake answers here. He can look things up, draft, and change the schedule after your tap. He cannot send anything yet.') + '</span></div></form>';
     } else {
       tell += '<p class="note">Your instruction box goes here on the plansman.ai version. This private preview cannot save anything.</p>';
     }
@@ -388,6 +416,9 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
       else h2 += '<div class="body note">' + (s.state === 'working' ? 'Jake is working on it…' : 'Waiting for Jake to pick it up…') + '</div>';
       return h2 + '</div>';
     }).join('') + '</div>';
+    var acts = ACTS.filter(function (a) { return a.proj_no === p.no && a.state !== 'proposed' && a.state !== 'cancelled'; });
+    if (acts.length) tell += '<div class="said">' + acts.map(actItem).join('') + '</div>';
+    if (state.actMsg) tell += '<p class="note">' + esc(state.actMsg) + '</p>';
     var here = ASKS.rules.filter(function (r) { return r.proj_no === p.no; });
     if (here.length) tell += '<div class="said"><p class="note" style="margin:10px 0 0">' + (here.length === 1 ? 'A rule from what you said here is' : 'Rules from what you said here are') +
       ' waiting for your OK. Approved, the team follows it on every job it applies to.</p>' + here.map(ruleItem).join('') +
@@ -480,6 +511,9 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
     Array.prototype.forEach.call(document.querySelectorAll('#rules [data-rule], #detail [data-rule]'), function (b) {
       b.addEventListener('click', function () { decideRule(b.getAttribute('data-id'), b.getAttribute('data-rule')); });
     });
+    Array.prototype.forEach.call($('detail').querySelectorAll('[data-act]'), function (b) {
+      b.addEventListener('click', function () { decideAct(+b.getAttribute('data-id'), b.getAttribute('data-act')); });
+    });
     Array.prototype.forEach.call($('detail').querySelectorAll('[data-ans]'), function (t) {
       t.addEventListener('input', function () { state.ans[t.getAttribute('data-ans')] = t.value; });
     });
@@ -541,6 +575,34 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
       ASKS = { questions: d.questions || [], rules: d.rules || [] };
       if (JSON.stringify(ASKS) !== before && !typing) render();
     }).catch(function () {});
+    loadActs();
+  }
+  function loadActs() {
+    if (!CFG || !token) return;
+    rpc('office_acts', { p_token: token }).then(function (d) {
+      if (!d || !d.ok) return;
+      var before = JSON.stringify(ACTS), typing = document.activeElement && /^(TEXTAREA|INPUT)$/.test(document.activeElement.tagName);
+      ACTS = d.actions || [];
+      if (JSON.stringify(ACTS) !== before && !typing) render();
+    }).catch(function () {});
+  }
+  // Do it / Cancel on a proposed schedule change. After Do it, watch until the worker reports done or failed.
+  var actWatch = null;
+  function decideAct(id, decision) {
+    state.actMsg = '';
+    rpc('office_act', { p_token: token, p_id: id, p_decision: decision }).then(function (d) {
+      if (d && d.ok && d.saved) {
+        ACTS.forEach(function (a) { if (a.id === id) { a.state = decision === 'approve' ? 'approved' : 'cancelled'; a.decided_at = new Date().toISOString(); } });
+        if (decision === 'approve' && !actWatch) {
+          var until = Date.now() + 4 * 60 * 1000;
+          actWatch = setInterval(function () {
+            if (Date.now() > until || !ACTS.some(function (a) { return a.state === 'approved'; })) { clearInterval(actWatch); actWatch = null; return; }
+            loadActs();
+          }, 5000);
+        }
+      } else { state.actMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN.'; }
+      render();
+    }).catch(function (e) { state.actMsg = 'Not saved (' + e.message + ').'; render(); });
   }
   // Approve or refuse a proposed rule: shown at once, put back if the save fails
   function decideRule(id, decision) {
