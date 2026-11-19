@@ -197,28 +197,34 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
   }
   function byDays(a, b) { return (a.days == null ? 9999 : a.days) - (b.days == null ? 9999 : b.days); }
 
+  // The queue. "Needs you" is every job where the next move is ours (the set is on our table), in the order
+  // Lance asked for on 19 Nov 2026: live jobs first, most overdue first; a job nothing has happened on for
+  // 30+ days goes to the bottom however old its date is. The number on the right is the project's own due
+  // date, the one the project page shows. A task lane never supplies a date: nobody clears a lane when its
+  // work is done (300 Redrock read "122 days late" from two finished lanes; 1313 Gavilan Ridge read 106).
+  var QUIET = 30;
+  function isQuiet(p) { return p.quiet == null || p.quiet > QUIET; }
+  function byLive(a, b) { return (isQuiet(a) - isQuiet(b)) || byDays(a, b); }
+  function whoHasWhat(p) {
+    var by = {}, order = [];
+    p.tasks.forEach(function (t) {
+      if (t.lane === 'Invoice') return;                       // money is in the Invoices section
+      var w = isMine(t) ? 'you' : t.who;
+      if (!by[w]) { by[w] = []; order.push(w); }
+      by[w].push((LANE[t.lane] || t.lane).toLowerCase());
+    });
+    return order.map(function (w) { return w + ': ' + by[w].join(', '); }).join('; ');
+  }
   function queue() {
     var live = P.filter(function (p) { return p.court !== 'done'; });
-    // one row per project with a task under Lance's name. The number on the right is the PROJECT's due date
-    // (the phase due date), the same one the project page shows. A task lane's own date is said beside that
-    // lane. (19 Nov 2026: the row showed the oldest lane date, so 1313 Gavilan Ridge read "106 days late"
-    // from a stale invoice lane while the project itself was 31 days late.)
-    var mine = [];
-    live.forEach(function (p) {
-      var ts = p.tasks.filter(isMine).sort(byDays);
-      if (ts.length) mine.push({ p: p, ts: ts, days: p.days != null ? p.days : ts[0].days, fromLane: p.days == null });
+    var oursRows = live.filter(function (p) { return p.court === 'ours'; }).sort(byLive).map(function (p) {
+      var d = dueText(p.days), w = (p.waiting || [])[0], bits = [p.phase], l = whoHasWhat(p);
+      if (w) bits.push(w.who + ' is waiting on a reply (' + ago(w.days) + ')');
+      if (l) bits.push(l);
+      if (isQuiet(p)) bits.push(p.moved ? 'quiet since ' + day(p.moved) : 'nothing on record this year');
+      else if (p.status) bits.push(p.status);
+      return row(p, bits.join(' · '), d.t, d.late && !isQuiet(p));
     });
-    mine.sort(byDays);
-    var mineRows = mine.map(function (x) {
-      var d = dueText(x.days), paid = x.p.money && x.p.money.due === 0;
-      var what = x.ts.map(function (t) {
-        var label = LANE[t.lane] || t.lane, td = dueText(t.days);
-        return label + (t.note ? ': ' + t.note : '') + (td.t && !(x.fromLane && x.ts.length === 1) ? ' (' + td.t + ')' : '') + (t.lane === 'Invoice' && paid ? ' [no balance due on record]' : '');
-      }).join(' · ');
-      return row(x.p, x.p.phase + ' · ' + what, d.t || (x.ts[0].date ? x.ts[0].date.toLowerCase() : ''), d.late);
-    });
-    var hasMine = {}; mine.forEach(function (x) { hasMine[x.p.no] = 1; });
-    var taskCount = mine.reduce(function (n, x) { return n + x.ts.length; }, 0);
     var waiting = [];
     P.forEach(function (p) { (p.waiting || []).forEach(function (w) { waiting.push({ p: p, w: w, days: w.days }); }); });
     waiting.sort(byDays);
@@ -227,24 +233,29 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     P.forEach(function (p) { (p.shadow || []).forEach(function (x) {
       if (x.mode === 'waiting') shadowRows.push(row(p, (x.needs_lance ? 'Needs you: ' : 'No action for you: ') + x.next_step, day(x.received), false));
     }); });
-    function group(court, extra) {
-      return live.filter(function (p) { return p.court === court && (!extra || extra(p)); }).sort(byDays).map(function (p) {
-        var d = dueText(p.days);
-        var others = p.tasks.filter(function (t) { return !isMine(t); }).map(function (t) { return t.who + ' has ' + (LANE[t.lane] || t.lane).toLowerCase(); });
-        return row(p, p.phase + (others.length ? ' · ' + others.join(', ') : '') + (p.status ? ' · ' + p.status : ''), d.t, d.late);
+    // with the client, at the city, leads: the date is when an answer was expected, so it is never "late" in red
+    function group(court) {
+      return live.filter(function (p) { return p.court === court; }).sort(byDays).map(function (p) {
+        var t = p.days == null ? '' : p.days < 0 ? 'expected ' + ago(-p.days) : p.days === 0 ? 'expected today' : 'expected in ' + p.days + (p.days === 1 ? ' day' : ' days');
+        var l = whoHasWhat(p);
+        return row(p, p.phase + (l ? ' · ' + l : '') + (p.status ? ' · ' + p.status : ''), t, false);
       });
     }
-    var unpaid = [];
-    P.forEach(function (p) { ((p.money || {}).invoices || []).forEach(function (i) { if (i.sent && !i.paid) unpaid.push({ p: p, i: i }); }); });
-    var unpaidRows = unpaid.map(function (x) {
-      var bal = (x.p.money || {}).due;
-      return row(x.p, 'Invoice ' + x.i.no + ' sent ' + x.i.sent + ', not marked paid' + (bal != null ? ' · balance due ' + usd(bal) : ''), '', false);
+    var moneyRows = [], listed = {};
+    P.forEach(function (p) { ((p.money || {}).invoices || []).forEach(function (i) {
+      if (!i.sent || i.paid) return;
+      var bal = (p.money || {}).due; listed[p.no] = 1;
+      moneyRows.push(row(p, 'Invoice ' + i.no + ' sent ' + i.sent + ', not marked paid' + (bal != null ? ' · balance due ' + usd(bal) : ''), '', false));
+    }); });
+    live.forEach(function (p) {
+      if (listed[p.no] || !p.tasks.some(function (t) { return t.lane === 'Invoice'; })) return;
+      var bal = (p.money || {}).due;
+      moneyRows.push(row(p, 'Invoice task open on the schedule · ' + (bal != null ? 'balance due ' + usd(bal) : 'no balance on record for this year'), '', false));
     });
-    return section('Needs you', 'projects with ' + taskCount + ' tasks under your name, by project due date', mineRows) +
+    return section('Needs you', 'the next move is ours: live jobs first, most overdue first; quiet for ' + QUIET + '+ days last', oursRows) +
       section('Emails waiting on a reply', 'a person wrote last and nothing has gone back by email, newest first', waitRows) +
       (shadowRows.length ? section('Jake, in shadow', 'what Jake in 4.0 would do; nothing sent', shadowRows) : '') +
-      section('In our court', 'no task under your name', group('ours', function (p) { return !hasMine[p.no]; })) +
-      section('Unpaid invoices', '', unpaidRows) +
+      section('Invoices', 'sent and not paid, or an invoice task still open', moneyRows) +
       section('Waiting on the client', '', group('client')) +
       section('At the city', '', group('city')) +
       section('Leads', 'not signed', group('lead')) +
@@ -254,7 +265,7 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     var years = {};
     list.forEach(function (p) { var y = '20' + p.no.slice(0, 2); (years[y] = years[y] || []).push(p); });
     return Object.keys(years).sort().reverse().map(function (y) {
-      return section(y, '', years[y].map(function (p) { return row(p, p.no + ' · ' + (p.phase || 'no phase') + (who(p) ? ' · ' + who(p) : ''), '', false); }));
+      return section(y, '', years[y].map(function (p) { var d = p.court === 'ours' ? dueText(p.days) : { t: '', late: false }; return row(p, p.no + ' · ' + (p.phase || 'no phase') + (who(p) ? ' · ' + who(p) : ''), d.t, d.late); }));
     }).join('') || '<div class="empty">No project matches.</div>';
   }
   function matches(p, q) {
