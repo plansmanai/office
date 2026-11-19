@@ -108,6 +108,11 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
 .item .body { color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
 .need .item .body { color: var(--ink); font-size: 15px; }
 .item .body + .body { margin-top: 5px; }
+.marks { margin-top: 6px; display: flex; gap: 18px; align-items: baseline; flex-wrap: wrap; font-size: 15px; }
+.marks button.text { padding: 6px 0; }
+button.text.quiet { color: var(--muted); font-weight: 400; }
+.cleared { margin-top: 6px; }
+.cleared .item .head span { white-space: normal; }
 .draft { margin-top: 8px; padding: 10px 12px; background: var(--soft); border-radius: 6px; font-size: 15px; overflow-wrap: anywhere; }
 .draft.real { background: none; border: 1px solid var(--line); }
 .draft .lbl { font-size: 11px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
@@ -197,18 +202,18 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
   }
   function byDays(a, b) { return (a.days == null ? 9999 : a.days) - (b.days == null ? 9999 : b.days); }
 
-  // The queue. "Needs you" is every job where the next move is ours (the set is on our table), in the order
-  // Lance asked for on 19 Nov 2026: live jobs first, most overdue first; a job nothing has happened on for
-  // 30+ days goes to the bottom however old its date is. The number on the right is the project's own due
-  // date, the one the project page shows. A task lane never supplies a date: nobody clears a lane when its
-  // work is done (300 Redrock read "122 days late" from two finished lanes; 1313 Gavilan Ridge read 106).
-  var QUIET = 30;
-  function isQuiet(p) { return p.quiet == null || p.quiet > QUIET; }
-  function byLive(a, b) { return (isQuiet(a) - isQuiet(b)) || byDays(a, b); }
+  // The queue, by project (Lance, 19 Nov 2026: "i like it being structured by project and then it opens up").
+  // "Needs you" is every project with something waiting on him to move it forward, longest wait first:
+  // "when i say age i mean wait time for advancement". The things themselves (p.needs, built in app/export.py)
+  // are listed when the project opens. Handled / Not my move take one off (MARKS, table office_item_marks).
+  var MARKS = {};
+  function openNeeds(p) { return (p.needs || []).filter(function (n) { return !MARKS[n.key]; }); }
+  function wait(n) { return n.days == null ? '' : n.days === 0 ? 'since today' : n.days + (n.days === 1 ? ' day' : ' days'); }
+  function longest(ns) { var m = -1; ns.forEach(function (n) { if (n.days != null && n.days > m) m = n.days; }); return m; }
   function whoHasWhat(p) {
     var by = {}, order = [];
     p.tasks.forEach(function (t) {
-      if (t.lane === 'Invoice') return;                       // money is in the Invoices section
+      if (t.lane === 'Invoice') return;
       var w = isMine(t) ? 'you' : t.who;
       if (!by[w]) { by[w] = []; order.push(w); }
       by[w].push((LANE[t.lane] || t.lane).toLowerCase());
@@ -216,46 +221,27 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     return order.map(function (w) { return w + ': ' + by[w].join(', '); }).join('; ');
   }
   function queue() {
-    var live = P.filter(function (p) { return p.court !== 'done'; });
-    var oursRows = live.filter(function (p) { return p.court === 'ours'; }).sort(byLive).map(function (p) {
-      var d = dueText(p.days), w = (p.waiting || [])[0], bits = [p.phase], l = whoHasWhat(p);
-      if (w) bits.push(w.who + ' is waiting on a reply (' + ago(w.days) + ')');
-      if (l) bits.push(l);
-      if (isQuiet(p)) bits.push(p.moved ? 'quiet since ' + day(p.moved) : 'nothing on record this year');
-      else if (p.status) bits.push(p.status);
-      return row(p, bits.join(' · '), d.t, d.late && !isQuiet(p));
+    var need = [], inNeed = {};
+    P.forEach(function (p) { var ns = openNeeds(p); if (ns.length) { need.push({ p: p, ns: ns, w: longest(ns) }); inNeed[p.no] = 1; } });
+    need.sort(function (x, y) { return y.w - x.w; });
+    var needRows = need.map(function (x) {
+      var p = x.p, d = dueText(p.days), bits = [p.phase || 'no phase'];
+      if (p.court === 'ours' && d.t) bits[0] += ', ' + d.t;
+      x.ns.forEach(function (n) { bits.push(n.title + (wait(n) ? ' (' + wait(n) + ')' : '')); });
+      return row(p, bits.join(' · '), x.w < 0 ? '' : x.w === 0 ? 'waiting since today' : 'waiting ' + x.w + (x.w === 1 ? ' day' : ' days'), false);
     });
-    var waiting = [];
-    P.forEach(function (p) { (p.waiting || []).forEach(function (w) { waiting.push({ p: p, w: w, days: w.days }); }); });
-    waiting.sort(byDays);
-    var waitRows = waiting.map(function (x) { return row(x.p, x.w.who + ': ' + x.w.subject, ago(x.w.days), false); });
-    var shadowRows = [];
-    P.forEach(function (p) { (p.shadow || []).forEach(function (x) {
-      if (x.mode === 'waiting') shadowRows.push(row(p, (x.needs_lance ? 'Needs you: ' : 'No action for you: ') + x.next_step, day(x.received), false));
-    }); });
+    var live = P.filter(function (p) { return p.court !== 'done' && !inNeed[p.no]; });
     // with the client, at the city, leads: the date is when an answer was expected, so it is never "late" in red
     function group(court) {
       return live.filter(function (p) { return p.court === court; }).sort(byDays).map(function (p) {
         var t = p.days == null ? '' : p.days < 0 ? 'expected ' + ago(-p.days) : p.days === 0 ? 'expected today' : 'expected in ' + p.days + (p.days === 1 ? ' day' : ' days');
         var l = whoHasWhat(p);
-        return row(p, p.phase + (l ? ' · ' + l : '') + (p.status ? ' · ' + p.status : ''), t, false);
+        return row(p, (p.phase || 'no phase') + (l ? ' · ' + l : '') + (p.status ? ' · ' + p.status : ''), court === 'ours' ? '' : t, false);
       });
     }
-    var moneyRows = [], listed = {};
-    P.forEach(function (p) { ((p.money || {}).invoices || []).forEach(function (i) {
-      if (!i.sent || i.paid) return;
-      var bal = (p.money || {}).due; listed[p.no] = 1;
-      moneyRows.push(row(p, 'Invoice ' + i.no + ' sent ' + i.sent + ', not marked paid' + (bal != null ? ' · balance due ' + usd(bal) : ''), '', false));
-    }); });
-    live.forEach(function (p) {
-      if (listed[p.no] || !p.tasks.some(function (t) { return t.lane === 'Invoice'; })) return;
-      var bal = (p.money || {}).due;
-      moneyRows.push(row(p, 'Invoice task open on the schedule · ' + (bal != null ? 'balance due ' + usd(bal) : 'no balance on record for this year'), '', false));
-    });
-    return section('Needs you', 'the next move is ours: live jobs first, most overdue first; quiet for ' + QUIET + '+ days last', oursRows) +
-      section('Emails waiting on a reply', 'a person wrote last and nothing has gone back by email, newest first', waitRows) +
-      (shadowRows.length ? section('Jake, in shadow', 'what Jake in 4.0 would do; nothing sent', shadowRows) : '') +
-      section('Invoices', 'sent and not paid, or an invoice task still open', moneyRows) +
+    var cleared = group('ours');
+    return section('Needs you', 'projects with something waiting on you, longest wait first', needRows) +
+      (cleared.length ? section('Nothing open for you', 'in our court; you marked everything handled or not your move', cleared) : '') +
       section('Waiting on the client', '', group('client')) +
       section('At the city', '', group('city')) +
       section('Leads', 'not signed', group('lead')) +
@@ -300,20 +286,31 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
       (p.due || d.t ? '<div class="due' + (d.late ? ' late' : '') + '">' + esc([p.due ? 'Due ' + p.due : '', d.t].filter(Boolean).join(' · ')) + '</div>' : '') +
       (p.status ? '<p>' + esc(p.status) + '</p>' : '') + '</div>';
 
-    // 1. what needs Lance
-    var mine = p.tasks.filter(isMine), others = p.tasks.filter(function (t) { return !isMine(t); });
-    var need = '';
-    (p.waiting || []).forEach(function (w) {               // a person waiting comes before a dated task
-      need += '<div class="item"><div class="head"><b>Email from ' + esc(w.who) + ', no reply yet</b><span>' + esc(ago(w.days)) + '</span></div>' +
-        '<div class="body">' + esc(w.subject) + (w.snippet ? '<div class="note" style="margin-top:4px">' + esc(w.snippet) + '</div>' : '') + '</div></div>';
-    });
-    need += mine.slice().sort(byDays).map(function (t) { return taskItem(t, false); }).join('');
+    // 1. what needs Lance: each thing waiting on him, longest wait first, with the two taps that clear it
+    var others = p.tasks.filter(function (t) { return !isMine(t); });
+    var open = openNeeds(p), done = (p.needs || []).filter(function (n) { return MARKS[n.key]; });
+    var need = open.map(function (n) {
+      var h3 = '<div class="item"><div class="head"><b>' + esc(n.title) + '</b><span>' + esc(wait(n) ? 'waiting ' + wait(n) : '') + '</span></div>';
+      if (n.detail) h3 += '<div class="body">' + esc(n.detail) + (n.snippet ? '<div class="note" style="margin-top:4px">' + esc(n.snippet) + '</div>' : '') + '</div>';
+      if (CFG) {
+        h3 += state.pick === n.key
+          ? '<div class="marks"><span class="note">Waiting on:</span> ' + ['client', 'city', 'team'].map(function (w) {
+              return '<button class="text" type="button" data-mark="not_mine" data-who="' + w + '" data-key="' + esc(n.key) + '">' + w.charAt(0).toUpperCase() + w.slice(1) + '</button>'; }).join(' ') +
+            ' <button class="text quiet" type="button" data-pick="">Cancel</button></div>'
+          : '<div class="marks"><button class="text" type="button" data-mark="handled" data-key="' + esc(n.key) + '">Handled</button> ' +
+            '<button class="text" type="button" data-pick="' + esc(n.key) + '">Not my move</button></div>';
+      }
+      return h3 + '</div>';
+    }).join('');
+    if (state.markMsg) need += '<p class="note">' + esc(state.markMsg) + '</p>';
+    if (done.length) need += '<div class="cleared">' + done.map(function (n) {
+      var m = MARKS[n.key];
+      return '<div class="item"><div class="head"><span>' + esc(n.title) + ': ' + (m.mark === 'handled' ? 'handled' : 'waiting on the ' + m.waiting_on) + (m.marked_at ? ', ' + esc(stamp(m.marked_at)) : '') + '</span>' +
+        (CFG ? '<button class="text" type="button" data-mark="open" data-key="' + esc(n.key) + '">Put back</button>' : '') + '</div></div>';
+    }).join('') + '</div>';
     if (p.latest) need += '<div class="item"><div class="head"><b>Latest from Jake</b><span></span></div><div class="body">' + esc(p.latest) + '</div></div>';
     if (p.remarks) need += '<div class="item"><div class="head"><b>Your remarks</b><span></span></div><div class="body">' + esc(p.remarks) + '</div></div>';
-    ((p.money || {}).invoices || []).forEach(function (i) {
-      if (i.sent && !i.paid) need += '<div class="item"><div class="head"><b>Invoice ' + esc(i.no) + ' not marked paid</b><span>sent ' + esc(i.sent) + '</span></div></div>';
-    });
-    h += sec('Needs you', need || '<p class="note">Nothing is under your name on this project.</p>', 'lead need');
+    h += sec('Needs you', need || '<p class="note">Nothing is waiting on you on this project.</p>', 'lead need');
 
     // 1b. what Jake would do (shadow: nothing is sent)
     var live = (p.shadow || []).filter(function (x) { return x.mode === 'waiting'; });
@@ -413,6 +410,12 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     document.body.setAttribute('data-show', p ? 'detail' : 'list');
     var more = $('more');
     if (more) more.addEventListener('click', function () { state.allTimeline = true; render(); });
+    Array.prototype.forEach.call($('detail').querySelectorAll('[data-pick]'), function (b) {
+      b.addEventListener('click', function () { state.pick = b.getAttribute('data-pick') || null; render(); });
+    });
+    Array.prototype.forEach.call($('detail').querySelectorAll('[data-mark]'), function (b) {
+      b.addEventListener('click', function () { if (p) mark(p.no, b.getAttribute('data-key'), b.getAttribute('data-mark'), b.getAttribute('data-who')); });
+    });
     var form = $('tell');
     if (form && p) {
       $('tell-text').addEventListener('input', function (e) { state.draft[p.no] = e.target.value; });
@@ -423,7 +426,7 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
     var hsh = (location.hash || '#queue').slice(1), prev = state.no;
     if (hsh.indexOf('p-') === 0 && BY[hsh.slice(2)]) { state.no = hsh.slice(2); }
     else { state.no = null; state.view = hsh === 'projects' ? 'projects' : 'queue'; }
-    if (state.no !== prev) { state.allTimeline = false; state.tellMsg = ''; }
+    if (state.no !== prev) { state.allTimeline = false; state.tellMsg = ''; state.pick = null; state.markMsg = ''; }
     render();
     if (state.no && state.no !== prev) window.scrollTo(0, 0);
   }
@@ -443,7 +446,25 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
       if (!d.data) { showLogin('Nothing has been published to the app yet.'); return; }
       SAID = d.instructions || [];
       start(d.data, 'Sheets read ' + d.read_at);
+      rpc('office_marks', { p_token: token }).then(function (m) {
+        if (!m || !m.ok) return;
+        MARKS = {}; (m.marks || []).forEach(function (x) { MARKS[x.item_key] = x; }); render();
+      }).catch(function () {});
     }).catch(function (e) { showLogin('Could not reach the dashboard (' + e.message + ').'); });
+  }
+  // Handled / Not my move / Put back: shown at once, saved to the record; put right again if the save fails
+  function mark(no, key, what, who) {
+    var before = MARKS[key];
+    if (what === 'open') delete MARKS[key]; else MARKS[key] = { mark: what, waiting_on: who || null, marked_at: new Date().toISOString() };
+    state.pick = null; state.markMsg = ''; render();
+    rpc('office_mark', { p_token: token, p_proj: no, p_key: key, p_mark: what, p_who: who || null }).then(function (d) {
+      if (d && d.ok && d.saved) return;
+      if (before) MARKS[key] = before; else delete MARKS[key];
+      state.markMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN.'; render();
+    }).catch(function (e) {
+      if (before) MARKS[key] = before; else delete MARKS[key];
+      state.markMsg = 'Not saved (' + e.message + ').'; render();
+    });
   }
   function tell(no) {
     var text = (state.draft[no] || '').trim();
