@@ -355,6 +355,10 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
       else h2 += '<div class="body note">' + (s.state === 'working' ? 'Jake is working on it…' : 'Waiting for Jake to pick it up…') + '</div>';
       return h2 + '</div>';
     }).join('') + '</div>';
+    var here = ASKS.rules.filter(function (r) { return r.proj_no === p.no; });
+    if (here.length) tell += '<div class="said"><p class="note" style="margin:10px 0 0">' + (here.length === 1 ? 'A rule from what you said here is' : 'Rules from what you said here are') +
+      ' waiting for your OK. Approved, the team follows it on every job it applies to.</p>' + here.map(ruleItem).join('') +
+      (state.ruleMsg ? '<p class="note">' + esc(state.ruleMsg) + '</p>' : '') + '</div>';
     h += sec('Tell the team', tell, 'lead tell');
 
     // 3. what the team has
@@ -418,6 +422,15 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
     return h + '</div>';
   }
 
+  function ruleItem(r) {
+      var said = (r.lance_words || '').length > 220 ? r.lance_words.slice(0, 220) + '…' : (r.lance_words || '');
+      return '<div class="item"><div class="head"><b>' + esc(r.agent ? 'For ' + cap(r.agent) : 'For everyone') + (r.scope && r.scope !== 'general' ? ' · ' + esc(r.scope.replace(':', ': ')) : '') + '</b><span>' + esc(stamp(r.created_at)) + '</span></div>' +
+        '<div class="body rule">' + esc(r.rule) + '</div>' +
+        (r.applies_when ? '<div class="body note">When: ' + esc(r.applies_when) + '</div>' : '') +
+        (said ? '<div class="body note">From what you said: "' + esc(said) + '"</div>' : '') +
+        '<div class="marks"><button class="text" type="button" data-rule="approve" data-id="' + esc(r.id) + '">Approve</button> ' +
+        '<button class="text" type="button" data-rule="reject" data-id="' + esc(r.id) + '">No</button></div></div>';
+    }
   function render() {
     var q = state.q.trim().toLowerCase();
     $('listbody').innerHTML = q ? projects(P.filter(function (p) { return matches(p, q); })) : (state.view === 'projects' ? projects(P) : queue());
@@ -428,20 +441,12 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
         (s.reply ? '<div class="draft"><div class="lbl">Jake</div>' + para(s.reply) + '</div>'
                  : '<div class="body note">' + (s.state === 'working' ? 'Jake is working on it…' : 'Waiting for Jake to pick it up…') + '</div>') + '</div>';
     }).join('');
-    $('rules').innerHTML = (ASKS.rules.length ? '<h2>Rules waiting for your OK <small>' + ASKS.rules.length + '</small></h2>' + ASKS.rules.map(function (r) {
-      var said = (r.lance_words || '').length > 220 ? r.lance_words.slice(0, 220) + '…' : (r.lance_words || '');
-      return '<div class="item"><div class="head"><b>' + esc(r.agent ? 'For ' + cap(r.agent) : 'For everyone') + (r.scope && r.scope !== 'general' ? ' · ' + esc(r.scope.replace(':', ': ')) : '') + '</b><span>' + esc(stamp(r.created_at)) + '</span></div>' +
-        '<div class="body rule">' + esc(r.rule) + '</div>' +
-        (r.applies_when ? '<div class="body note">When: ' + esc(r.applies_when) + '</div>' : '') +
-        (said ? '<div class="body note">From what you said: "' + esc(said) + '"</div>' : '') +
-        '<div class="marks"><button class="text" type="button" data-rule="approve" data-id="' + esc(r.id) + '">Approve</button> ' +
-        '<button class="text" type="button" data-rule="reject" data-id="' + esc(r.id) + '">No</button></div></div>';
-    }).join('') : '') + (state.ruleMsg ? '<p class="note">' + esc(state.ruleMsg) + '</p>' : '');
-    Array.prototype.forEach.call($('rules').querySelectorAll('[data-rule]'), function (b) {
-      b.addEventListener('click', function () { decideRule(b.getAttribute('data-id'), b.getAttribute('data-rule')); });
-    });
+    $('rules').innerHTML = (ASKS.rules.length ? '<h2>Rules waiting for your OK <small>' + ASKS.rules.length + '</small></h2>' + ASKS.rules.map(ruleItem).join('') : '') + (state.ruleMsg ? '<p class="note">' + esc(state.ruleMsg) + '</p>' : '');
     var p = state.no && BY[state.no];
     $('detail').innerHTML = p ? project(p) : '<div class="blank">Pick a project on the left.</div>';
+    Array.prototype.forEach.call(document.querySelectorAll('#rules [data-rule], #detail [data-rule]'), function (b) {
+      b.addEventListener('click', function () { decideRule(b.getAttribute('data-id'), b.getAttribute('data-rule')); });
+    });
     Array.prototype.forEach.call($('detail').querySelectorAll('[data-ans]'), function (t) {
       t.addEventListener('input', function () { state.ans[t.getAttribute('data-ans')] = t.value; });
     });
