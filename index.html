@@ -402,7 +402,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     need.sort(function (x, y) { return y.w - x.w; });
     var needRows = need.map(function (x) {
       var p = x.p;
-      return row(p, x.ns.map(function (n) { return n.title; }).join(' · '), '', false, p.phase || 'No phase', bubsFor(x.ns) || ' ', worstSev(x.ns));
+      return row(p, x.ns.map(function (n) { return n.summary || n.title; }).join(' · '), '', false, p.phase || 'No phase', bubsFor(x.ns) || ' ', worstSev(x.ns));
     });
     // how the list divides by how long things have waited: one bar, three counts
     var cnt = { r: 0, a: 0, g: 0 };
@@ -489,7 +489,9 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     var open = openNeeds(p), done = (p.needs || []).filter(function (n) { return MARKS[n.key]; });
     var need = open.map(function (n) {
       var h3 = '<div class="item' + (n.days != null ? ' s' + sev(n) : '') + '"><div class="head"><b>' + esc(n.title) + '</b><span>' + (n.days != null ? bub(n, (isReply(n) ? 'Reply ' : 'Waiting ') + dtext(n.days)) : '') + '</span></div>';
-      if (n.detail) h3 += '<div class="body">' + esc(n.detail) + (n.snippet ? '<div class="note" style="margin-top:4px">' + esc(n.snippet) + '</div>' : '') + '</div>';
+      if (n.jake) h3 += '<div class="body">' + esc(n.jake) + '</div>';
+      if (n.by) h3 += '<div class="body note">Needed by ' + esc(n.by) + '</div>';
+      if (n.detail && n.kind !== 'note' || n.kind === 'note') h3 += '<div class="body' + (n.jake ? ' note' : '') + '">' + esc(n.detail) + (n.snippet ? '<div class="note" style="margin-top:4px">' + esc(n.snippet) + '</div>' : '') + '</div>';
       if (n.kind === 'action') {
         h3 += actLines(n.act) + (CFG ? '<div class="marks"><button class="go" type="button" data-act="approve" data-id="' + n.act.id + '">Do it</button> <button class="text quiet" type="button" data-act="cancel" data-id="' + n.act.id + '">Cancel</button></div>' : '');
       } else if (n.kind === 'question') {
@@ -607,7 +609,8 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     var now = '';
     var at = p.timeline.filter(function (e) { return p.status && e.note && e.note.replace(/\s*-\s*JAKE \d\d\/\d\d\/\d\d\s*$/, '') === p.status; })[0];
     if (p.status) now += '<div class="tl"><span class="d">' + esc(at ? day(at.when) : 'Now') + '</span><span><span class="p">Status' + (p.phase ? ' · ' + esc(p.phase) : '') + '</span><div class="n" style="color:var(--ink)">' + esc(p.status) + '</div></span></div>';
-    if (p.latest) now += '<div class="tl"><span class="d"></span><span><span class="p">Latest note</span><div class="n">' + esc(p.latest) + '</div></span></div>';
+    var noteUp = (p.needs || []).some(function (n) { return n.jake || n.kind === 'note'; });
+    if (p.latest && !noteUp) now += '<div class="tl"><span class="d"></span><span><span class="p">Latest note</span><div class="n">' + esc(p.latest) + '</div></span></div>';
     if (p.remarks) now += '<div class="tl"><span class="d"></span><span><span class="p">Your remarks</span><div class="n">' + esc(p.remarks) + '</div></span></div>';
     var tl = p.timeline.filter(function (e) { return e !== at; }), shown = state.allTimeline ? tl : tl.slice(0, 12);
     h += sec('Status and history', now + shown.map(function (e) {
