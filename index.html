@@ -514,7 +514,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     if (CFG) {
       tell += '<form id="tell"><textarea id="tell-text" placeholder="What should happen next on this job?" aria-label="Instruction to the team">' + esc(state.draft[p.no] || '') + '</textarea>' +
         '<div class="bar"><button class="go" id="tell-btn" type="submit"' + (state.sending ? ' disabled' : '') + '>' + (state.sending ? 'Saving…' : 'Tell the team') + '</button>' +
-        '<span id="tell-msg">' + esc(state.tellMsg || 'Jake answers here. He can look things up, draft, and change the schedule after your tap. He cannot send anything yet.') + '</span></div></form>';
+        '<span id="tell-msg">' + esc(state.tellMsg || 'Enter sends. Shift+Enter starts a new line. Jake can look things up, draft, and change the schedule after your tap. He cannot send anything yet.') + '</span></div></form>';
     } else {
       tell += '<p class="note">Your instruction box goes here on the plansman.ai version. This private preview cannot save anything.</p>';
     }
@@ -630,6 +630,9 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     });
     Array.prototype.forEach.call($('detail').querySelectorAll('[data-ans]'), function (t) {
       t.addEventListener('input', function () { state.ans[t.getAttribute('data-ans')] = t.value; });
+      t.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); state.ans[t.getAttribute('data-ans')] = t.value; answerQuestion(+t.getAttribute('data-ans')); }
+      });
     });
     Array.prototype.forEach.call($('detail').querySelectorAll('[data-answer]'), function (b) {
       b.addEventListener('click', function () { answerQuestion(+b.getAttribute('data-answer')); });
@@ -646,6 +649,10 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     var form = $('tell');
     if (form && p) {
       $('tell-text').addEventListener('input', function (e) { state.draft[p.no] = e.target.value; });
+      // Enter sends, the way a message box does; Shift+Enter starts a new line
+      $('tell-text').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); state.draft[p.no] = e.target.value; tell(p.no); }
+      });
       form.addEventListener('submit', function (e) { e.preventDefault(); tell(p.no); });
     }
   }
