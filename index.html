@@ -61,6 +61,10 @@ button.text { background: none; border: 0; padding: 0; font: inherit; font-weigh
 #ask { display: flex; gap: 8px; margin-top: 8px; }
 #ask-text { flex: 1; min-width: 0; padding: 11px 12px; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
 #ask-said .item { padding: 10px 0 2px; }
+#rules .item { padding: 10px 0 6px; }
+#rules .rule { color: var(--ink); font-size: 15px; }
+.answer textarea { width: 100%; min-height: 64px; margin-top: 6px; font: inherit; padding: 9px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--card, #fff); color: var(--ink); box-sizing: border-box; }
+.answer .bar { margin-top: 6px; display: flex; gap: 14px; align-items: baseline; }
 #ask-said .note { margin-top: 4px; }
 .nav { display: flex; gap: 22px; margin-top: 12px; border-bottom: 1px solid var(--line); }
 .nav a { padding: 8px 0 9px; color: var(--muted); font-weight: 700; border-bottom: 2px solid transparent; margin-bottom: -1px; }
@@ -162,6 +166,7 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
       <button class="go" id="ask-btn" type="submit">Ask</button>
     </form>
     <div id="ask-said"></div>
+    <div id="rules"></div>
     <nav class="nav" aria-label="Views"><a href="#queue" id="nav-queue">Queue</a><a href="#projects" id="nav-projects">All projects</a></nav>
     <div id="listbody"></div>
     <p class="foot" id="foot"></p>
@@ -175,7 +180,7 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
   var CFG = window.OFFICE || null;                 // set on the web build: { url, key }
   var TOKEN_KEY = 'plansman_office_token';
   var DATA = null, P = [], BY = {}, SAID = [], token = null;
-  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '' };
+  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '' };
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var usd = function (n) { return n == null ? '' : (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 }); };
@@ -207,7 +212,18 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
   // "when i say age i mean wait time for advancement". The things themselves (p.needs, built in app/export.py)
   // are listed when the project opens. Handled / Not my move take one off (MARKS, table office_item_marks).
   var MARKS = {};
-  function openNeeds(p) { return (p.needs || []).filter(function (n) { return !MARKS[n.key]; }); }
+  // ASKS: what the team has put to Lance. questions = something only he can answer (it sits on the project as
+  // a thing waiting on him until he answers); rules = standing rules proposed by the team, which count only
+  // after his tap (db/010).
+  var ASKS = { questions: [], rules: [] };
+  function daysSince(iso) { var t = new Date(iso).getTime(); return isNaN(t) ? null : Math.max(0, Math.floor((Date.now() - t) / 86400000)); }
+  function cap(w) { return w ? w.charAt(0).toUpperCase() + w.slice(1) : ''; }
+  function questionNeeds(p) {
+    return ASKS.questions.filter(function (q) { return q.proj_no === p.no && q.state === 'open'; }).map(function (q) {
+      return { key: 'question:' + q.id, kind: 'question', qid: q.id, title: cap(q.agent) + ' asks', detail: q.body, why: q.why, days: daysSince(q.asked_at) };
+    });
+  }
+  function openNeeds(p) { return questionNeeds(p).concat((p.needs || []).filter(function (n) { return !MARKS[n.key]; })); }
   function wait(n) { return n.days == null ? '' : n.days === 0 ? 'since today' : n.days + (n.days === 1 ? ' day' : ' days'); }
   function longest(ns) { var m = -1; ns.forEach(function (n) { if (n.days != null && n.days > m) m = n.days; }); return m; }
   function whoHasWhat(p) {
@@ -292,7 +308,11 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
     var need = open.map(function (n) {
       var h3 = '<div class="item"><div class="head"><b>' + esc(n.title) + '</b><span>' + esc(wait(n) ? 'waiting ' + wait(n) : '') + '</span></div>';
       if (n.detail) h3 += '<div class="body">' + esc(n.detail) + (n.snippet ? '<div class="note" style="margin-top:4px">' + esc(n.snippet) + '</div>' : '') + '</div>';
-      if (CFG) {
+      if (n.kind === 'question') {
+        if (n.why) h3 += '<div class="body note">Waiting on this: ' + esc(n.why) + '</div>';
+        if (CFG) h3 += '<div class="answer"><textarea data-ans="' + n.qid + '" placeholder="Your answer" aria-label="Your answer">' + esc(state.ans[n.qid] || '') + '</textarea>' +
+          '<div class="bar"><button class="go" type="button" data-answer="' + n.qid + '">Answer</button><span class="note">' + esc(state.ansMsg || 'Your answer goes back to the job. If there is a general rule in it, it is proposed to you.') + '</span></div></div>';
+      } else if (CFG) {
         h3 += state.pick === n.key
           ? '<div class="marks"><span class="note">Waiting on:</span> ' + ['client', 'city', 'team'].map(function (w) {
               return '<button class="text" type="button" data-mark="not_mine" data-who="' + w + '" data-key="' + esc(n.key) + '">' + w.charAt(0).toUpperCase() + w.slice(1) + '</button>'; }).join(' ') +
@@ -308,6 +328,9 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
       return '<div class="item"><div class="head"><span>' + esc(n.title) + ': ' + (m.mark === 'handled' ? 'handled' : 'waiting on the ' + m.waiting_on) + (m.marked_at ? ', ' + esc(stamp(m.marked_at)) : '') + '</span>' +
         (CFG ? '<button class="text" type="button" data-mark="open" data-key="' + esc(n.key) + '">Put back</button>' : '') + '</div></div>';
     }).join('') + '</div>';
+    ASKS.questions.filter(function (q) { return q.proj_no === p.no && q.state === 'answered'; }).forEach(function (q) {
+      need += '<div class="item"><div class="head"><span>' + esc(cap(q.agent)) + ' asked: ' + esc(q.body) + '</span><span>' + esc(stamp(q.answered_at)) + '</span></div><div class="body">You answered: ' + para(q.answer || '') + '</div></div>';
+    });
     if (p.latest) need += '<div class="item"><div class="head"><b>Latest from Jake</b><span></span></div><div class="body">' + esc(p.latest) + '</div></div>';
     if (p.remarks) need += '<div class="item"><div class="head"><b>Your remarks</b><span></span></div><div class="body">' + esc(p.remarks) + '</div></div>';
     h += sec('Needs you', need || '<p class="note">Nothing is waiting on you on this project.</p>', 'lead need');
@@ -405,8 +428,26 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
         (s.reply ? '<div class="draft"><div class="lbl">Jake</div>' + para(s.reply) + '</div>'
                  : '<div class="body note">' + (s.state === 'working' ? 'Jake is working on it…' : 'Waiting for Jake to pick it up…') + '</div>') + '</div>';
     }).join('');
+    $('rules').innerHTML = (ASKS.rules.length ? '<h2>Rules waiting for your OK <small>' + ASKS.rules.length + '</small></h2>' + ASKS.rules.map(function (r) {
+      var said = (r.lance_words || '').length > 220 ? r.lance_words.slice(0, 220) + '…' : (r.lance_words || '');
+      return '<div class="item"><div class="head"><b>' + esc(r.agent ? 'For ' + cap(r.agent) : 'For everyone') + (r.scope && r.scope !== 'general' ? ' · ' + esc(r.scope.replace(':', ': ')) : '') + '</b><span>' + esc(stamp(r.created_at)) + '</span></div>' +
+        '<div class="body rule">' + esc(r.rule) + '</div>' +
+        (r.applies_when ? '<div class="body note">When: ' + esc(r.applies_when) + '</div>' : '') +
+        (said ? '<div class="body note">From what you said: "' + esc(said) + '"</div>' : '') +
+        '<div class="marks"><button class="text" type="button" data-rule="approve" data-id="' + esc(r.id) + '">Approve</button> ' +
+        '<button class="text" type="button" data-rule="reject" data-id="' + esc(r.id) + '">No</button></div></div>';
+    }).join('') : '') + (state.ruleMsg ? '<p class="note">' + esc(state.ruleMsg) + '</p>' : '');
+    Array.prototype.forEach.call($('rules').querySelectorAll('[data-rule]'), function (b) {
+      b.addEventListener('click', function () { decideRule(b.getAttribute('data-id'), b.getAttribute('data-rule')); });
+    });
     var p = state.no && BY[state.no];
     $('detail').innerHTML = p ? project(p) : '<div class="blank">Pick a project on the left.</div>';
+    Array.prototype.forEach.call($('detail').querySelectorAll('[data-ans]'), function (t) {
+      t.addEventListener('input', function () { state.ans[t.getAttribute('data-ans')] = t.value; });
+    });
+    Array.prototype.forEach.call($('detail').querySelectorAll('[data-answer]'), function (b) {
+      b.addEventListener('click', function () { answerQuestion(+b.getAttribute('data-answer')); });
+    });
     document.body.setAttribute('data-show', p ? 'detail' : 'list');
     var more = $('more');
     if (more) more.addEventListener('click', function () { state.allTimeline = true; render(); });
@@ -450,7 +491,39 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
         if (!m || !m.ok) return;
         MARKS = {}; (m.marks || []).forEach(function (x) { MARKS[x.item_key] = x; }); render();
       }).catch(function () {});
+      loadAsks();
     }).catch(function (e) { showLogin('Could not reach the dashboard (' + e.message + ').'); });
+  }
+  // What the team has put to him: read on load and again while a reply is being waited for
+  function loadAsks() {
+    if (!CFG || !token) return;
+    rpc('office_asks', { p_token: token }).then(function (d) {
+      if (!d || !d.ok) return;
+      var before = JSON.stringify(ASKS), typing = document.activeElement && /^(TEXTAREA|INPUT)$/.test(document.activeElement.tagName);
+      ASKS = { questions: d.questions || [], rules: d.rules || [] };
+      if (JSON.stringify(ASKS) !== before && !typing) render();
+    }).catch(function () {});
+  }
+  // Approve or refuse a proposed rule: shown at once, put back if the save fails
+  function decideRule(id, decision) {
+    var before = ASKS.rules.slice();
+    ASKS.rules = ASKS.rules.filter(function (r) { return r.id !== id; });
+    state.ruleMsg = ''; render();
+    rpc('office_rule', { p_token: token, p_id: id, p_decision: decision }).then(function (d) {
+      if (d && d.ok && d.saved) { state.ruleMsg = decision === 'approve' ? 'Approved. The team follows it from the next job.' : 'Refused. It will not be used.'; render(); return; }
+      ASKS.rules = before; state.ruleMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN.'; render();
+    }).catch(function (e) { ASKS.rules = before; state.ruleMsg = 'Not saved (' + e.message + ').'; render(); });
+  }
+  function answerQuestion(qid) {
+    var text = (state.ans[qid] || '').trim();
+    if (!text) return;
+    rpc('office_answer', { p_token: token, p_id: qid, p_text: text }).then(function (d) {
+      if (d && d.ok && d.saved) {
+        ASKS.questions.forEach(function (q) { if (q.id === qid) { q.state = 'answered'; q.answer = text; q.answered_at = new Date().toISOString(); } });
+        delete state.ans[qid]; state.ansMsg = ''; setTimeout(loadAsks, 45000);
+      } else { state.ansMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN; your answer is still here.'; }
+      render();
+    }).catch(function (e) { state.ansMsg = 'Not saved (' + e.message + '). Your answer is still here.'; render(); });
   }
   // Handled / Not my move / Put back: shown at once, saved to the record; put right again if the save fails
   function mark(no, key, what, who) {
@@ -491,6 +564,7 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
         var before = JSON.stringify(SAID), typing = document.activeElement && document.activeElement.id === 'tell-text';
         SAID = d.instructions || SAID;
         if (JSON.stringify(SAID) !== before && !typing) render();
+        if (JSON.stringify(SAID) !== before) loadAsks();
       }).catch(function () {});
     }, 8000);
   }
