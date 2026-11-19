@@ -29,7 +29,7 @@
    Layout: one column on a phone (list, then a project page); two panes side by side on a wide screen. */
 :root {
   color-scheme: light only;      /* no dark mode: Lance does not like it */
-  --bg: #FCFBF9; --soft: #F4F2ED; --sand: #ECE8DE; --ink: #1B1B19; --muted: #6E695F; --rule: rgba(27, 27, 25, .2);
+  --bg: #FCFBF9; --soft: #F4F2ED; --sand: #ECE8DE; --bar: #E7E5E0; --ink: #1B1B19; --muted: #6E695F; --rule: rgba(27, 27, 25, .2);
   --oak: #B2906B; --oak-ink: #7A5E3C; --sage: #4F6B66; --long: #9A3B2E;
   --new-bg: rgba(79, 107, 102, .11); --old-bg: rgba(178, 144, 107, .17); --long-bg: rgba(154, 59, 46, .1);
   --on-ink: #FCFBF9; --surface: #FCFBF9; --line: var(--rule); --late: var(--long); --ok-ink: var(--sage);
@@ -139,6 +139,9 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .fact .v { margin-top: 7px; font-size: 15.5px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .fact .v .bubs { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; }
 .fact .v .ph { margin: 0; }
+.fact { min-width: 0; }
+.fact .v .bub { font-size: .56rem; letter-spacing: .08em; padding: 3px 6px 2px 7px; }
+.sheet h1 .hno { margin-right: .55em; white-space: nowrap; }
 .status { margin: 22px 0 6px; font-family: var(--serif); font-weight: 500; font-size: 1.36rem; line-height: 1.35; overflow-wrap: anywhere; max-width: 44rem; }
 .sec { padding: 22px 0 18px; border-top: 1px solid var(--rule); margin-top: 8px; }
 .sec h3 { margin: 0 0 12px; }
@@ -198,7 +201,9 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .row { display: block; position: relative; padding: 0; border: 1px solid var(--rule); }
 .row:last-child { border-bottom: 1px solid var(--rule); }
 .rhead { display: flex; align-items: baseline; gap: 14px; padding: 9px 14px 9px 17px; border-bottom: 1px solid var(--rule); }
-.row.need .rhead { background: var(--ink); color: var(--on-ink); border-bottom-color: var(--ink); }
+/* the bar is a quiet warm grey; the one black bar on the screen is the project that is open */
+.row.need .rhead { background: var(--bar); color: var(--ink); border-bottom-color: var(--rule); }
+.row[aria-current="true"] .rhead { background: var(--ink); color: var(--on-ink); border-bottom-color: var(--ink); }
 .row .no, .row .addr { font-size: 15.5px; font-weight: 500; line-height: 1.35; color: inherit; margin: 0; vertical-align: baseline; }
 .row .no { letter-spacing: .05em; flex: none; min-width: 2.9em; font-variant-numeric: tabular-nums; }
 .row .addr { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
@@ -209,7 +214,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .row .rtags:last-child { padding-bottom: 12px; }
 .row::before { z-index: 1; }
 @media (hover: hover) { .row:hover { background: var(--soft); } }
-.row[aria-current="true"] { background: var(--sand); outline: 1px solid var(--ink); outline-offset: 2px; }
+.row[aria-current="true"] { background: var(--soft); border-color: var(--ink); }
 /* the phase is third in the order, so it is a frame, not a fill */
 .ph { background: transparent; color: var(--ink); border-color: var(--ink); }
 @media (min-width: 720px) { .facts { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
@@ -455,11 +460,11 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     var d = dueText(p.days), h = '';
     h += '<a class="back" href="#' + state.view + '">‹ Back</a><div class="sheet">';
     var cut = p.address.indexOf(','), street = cut > 0 ? p.address.slice(0, cut) : p.address, city = cut > 0 ? p.address.slice(cut + 1).trim() : '';
-    h += (p.type ? '<div class="eyebrow">' + esc(p.type) + '</div>' : '') + '<h1>' + esc(street) + '</h1>' + (city ? '<div class="city">' + esc(city) + '</div>' : '');
+    h += '<h1><span class="hno">' + esc(p.no) + '</span>' + esc(street) + '</h1>' + (city ? '<div class="city">' + esc(city) + '</div>' : '');
     var pb = bubsFor(openNeeds(p)), bal = (p.money || {}).due;
     function fact(k, v) { return '<div class="fact"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>'; }
     h += pathBar(p) + '<div class="facts">' +
-      fact('Project no.', esc(p.no)) +
+      fact('Type', p.type ? esc(p.type) : '<span class="note">Not on record</span>') +
       fact('Client', who(p) ? esc(who(p)) : '<span class="note">Not on record</span>') +
       fact('Phase', phaseTag(p, (p.phase || 'No phase set') + (p.signed ? '' : ' · not signed'))) +
       fact('Waiting on you', pb ? '<span class="bubs">' + pb + '</span>' : '<span class="note">Nothing</span>') +
