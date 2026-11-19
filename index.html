@@ -16,17 +16,20 @@
 :root {
   --bg: #f4f6f7; --surface: #ffffff; --ink: #1c2328; --muted: #5d6a73; --line: #dbe1e5;
   --accent: #14779f; --late: #b23d17; --soft: #e9eef1; --on-accent: #ffffff;
+  --ok-bg: #dcefdf; --ok-ink: #1b5a2a; --warn-bg: #fbe8c2; --warn-ink: #6b4703; --bad-bg: #f9d9cd; --bad-ink: #8a2a0b; --phase: #0d6b5a;
   --font: "Lato", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #12171a; --surface: #1a2125; --ink: #e7ecef; --muted: #96a3ac; --line: #2a343a;
     --accent: #58b6dc; --late: #f0906a; --soft: #222b30; --on-accent: #0c1114; color-scheme: dark;
+    --ok-bg: #1d3a26; --ok-ink: #a9dcb3; --warn-bg: #43350f; --warn-ink: #f1cf7a; --bad-bg: #4d2114; --bad-ink: #f6b39c; --phase: #5fcfae;
   }
 }
 :root[data-theme="dark"] {
   --bg: #12171a; --surface: #1a2125; --ink: #e7ecef; --muted: #96a3ac; --line: #2a343a;
   --accent: #58b6dc; --late: #f0906a; --soft: #222b30; --on-accent: #0c1114; color-scheme: dark;
+    --ok-bg: #1d3a26; --ok-ink: #a9dcb3; --warn-bg: #43350f; --warn-ink: #f1cf7a; --bad-bg: #4d2114; --bad-ink: #f6b39c; --phase: #5fcfae;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -74,6 +77,14 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
 .rows { display: grid; }
 .row { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
 .row .addr { font-weight: 700; overflow-wrap: anywhere; }
+.no { color: var(--muted); font-weight: 400; margin-right: 7px; font-variant-numeric: tabular-nums; }
+.ph { color: var(--phase); font-weight: 900; letter-spacing: .02em; margin-right: 8px; }
+.bubs { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; padding-top: 1px; }
+.bub { display: inline-block; font-size: 13px; font-weight: 700; line-height: 1.5; padding: 1px 10px; border-radius: 999px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bub.g { background: var(--ok-bg); color: var(--ok-ink); }
+.bub.a { background: var(--warn-bg); color: var(--warn-ink); }
+.bub.r { background: var(--bad-bg); color: var(--bad-ink); }
+.stand .bubs { flex-direction: row; justify-content: flex-start; margin-top: 6px; }
 .row .when { color: var(--muted); font-size: 13px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; padding-top: 2px; }
 .row .when.late { color: var(--late); font-weight: 700; }
 .row .what { grid-column: 1 / -1; color: var(--muted); font-size: 14px; overflow-wrap: anywhere;
@@ -88,7 +99,7 @@ h2 small { font-weight: 400; letter-spacing: 0; text-transform: none; font-size:
 .sheet h1 { margin: 0; font-size: 23px; line-height: 1.2; font-weight: 900; text-wrap: balance; overflow-wrap: anywhere; }
 .sheet .sub { color: var(--muted); margin-top: 4px; font-size: 14px; }
 .stand { margin-top: 16px; padding: 12px 14px; background: var(--soft); border-radius: 6px; }
-.stand .phase { font-size: 19px; font-weight: 900; }
+.stand .phase { font-size: 19px; font-weight: 900; color: var(--phase); letter-spacing: .02em; }
 .stand .due { color: var(--muted); font-size: 14px; }
 .stand .due.late { color: var(--late); font-weight: 700; }
 .stand p { margin: 8px 0 0; overflow-wrap: anywhere; }
@@ -197,9 +208,31 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
   var LANE = { Invoice: 'Invoice', Design: 'Design', Arch: 'Drafting', Engin: 'Engineering', T24: 'Title 24', Consult: 'Consult', Permit: 'Permit' };
   function isMine(t) { return t.who.toLowerCase() === 'lance'; }
   function who(p) { return p.company && p.contact ? p.company + ' (' + p.contact + ')' : (p.company || p.contact || ''); }
-  function row(p, what, when, late) {
-    return '<a class="row" href="#p-' + esc(p.no) + '"' + (state.no === p.no ? ' aria-current="true"' : '') + '><span class="addr">' + esc(p.address) +
-      '</span><span class="when' + (late ? ' late' : '') + '">' + esc(when || '') + '</span><span class="what">' + esc(what || '') + '</span></a>';
+  // One clock everywhere: days WAITING. Lance, 19 Nov 2026: "i've never separated days waiting against due
+  // date... everything should just be based on how long its been sitting". Colors by how long, in one place:
+  // [amber from, red from], in days. A person waiting on a reply turns sooner than work does.
+  var SEV = { reply: [2, 4], other: [7, 14] };
+  function isReply(n) { return n.kind === 'email' || n.kind === 'question'; }
+  function sev(n) { var t = SEV[isReply(n) ? 'reply' : 'other']; return n.days >= t[1] ? 'r' : n.days >= t[0] ? 'a' : 'g'; }
+  function dtext(d) { return d === 0 ? 'today' : d + (d === 1 ? ' day' : ' days'); }
+  function bub(n, label) { return '<span class="bub ' + sev(n) + '">' + esc(label) + '</span>'; }
+  // The bubbles for a project: the worst wait governs (and sets the order of the list); when a person is
+  // waiting on a reply, their wait gets its own bubble, since it is a different clock from the work.
+  function bubsFor(ns) {
+    var timed = ns.filter(function (n) { return n.days != null; }), worst = null, person = null;
+    timed.forEach(function (n) {
+      if (!worst || n.days > worst.days) worst = n;
+      if (isReply(n) && (!person || n.days > person.days)) person = n;
+    });
+    if (!worst) return '';
+    var h = isReply(worst) ? '' : bub(worst, 'Waiting ' + dtext(worst.days));
+    if (person) h += bub(person, 'Reply ' + dtext(person.days));
+    return h;
+  }
+  function row(p, what, when, late, phase, bubs) {
+    return '<a class="row" href="#p-' + esc(p.no) + '"' + (state.no === p.no ? ' aria-current="true"' : '') + '><span class="addr"><span class="no">' + esc(p.no) + '</span>' + esc(p.address) + '</span>' +
+      (bubs ? '<span class="bubs">' + bubs + '</span>' : '<span class="when' + (late ? ' late' : '') + '">' + esc(when || '') + '</span>') +
+      '<span class="what">' + (phase ? '<b class="ph">' + esc(phase) + '</b>' : '') + esc(what || '') + '</span></a>';
   }
   function section(title, hint, rows) {
     return '<h2>' + esc(title) + ' <small>' + rows.length + (hint ? ' · ' + esc(hint) : '') + '</small></h2><div class="rows">' +
@@ -241,10 +274,8 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
     P.forEach(function (p) { var ns = openNeeds(p); if (ns.length) { need.push({ p: p, ns: ns, w: longest(ns) }); inNeed[p.no] = 1; } });
     need.sort(function (x, y) { return y.w - x.w; });
     var needRows = need.map(function (x) {
-      var p = x.p, d = dueText(p.days), bits = [p.phase || 'no phase'];
-      if (p.court === 'ours' && d.t) bits[0] += ', ' + d.t;
-      x.ns.forEach(function (n) { bits.push(n.title + (wait(n) ? ' (' + wait(n) + ')' : '')); });
-      return row(p, bits.join(' · '), x.w < 0 ? '' : x.w === 0 ? 'waiting since today' : 'waiting ' + x.w + (x.w === 1 ? ' day' : ' days'), false);
+      var p = x.p;
+      return row(p, x.ns.map(function (n) { return n.title; }).join(' · '), '', false, p.phase || 'No phase', bubsFor(x.ns) || ' ');
     });
     var live = P.filter(function (p) { return p.court !== 'done' && !inNeed[p.no]; });
     // with the client, at the city, leads: the date is when an answer was expected, so it is never "late" in red
@@ -252,7 +283,7 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
       return live.filter(function (p) { return p.court === court; }).sort(byDays).map(function (p) {
         var t = p.days == null ? '' : p.days < 0 ? 'expected ' + ago(-p.days) : p.days === 0 ? 'expected today' : 'expected in ' + p.days + (p.days === 1 ? ' day' : ' days');
         var l = whoHasWhat(p);
-        return row(p, (p.phase || 'no phase') + (l ? ' · ' + l : '') + (p.status ? ' · ' + p.status : ''), court === 'ours' ? '' : t, false);
+        return row(p, [l, p.status].filter(Boolean).join(' · '), court === 'ours' ? '' : t, false, p.phase || 'No phase');
       });
     }
     var cleared = group('ours');
@@ -267,7 +298,7 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
     var years = {};
     list.forEach(function (p) { var y = '20' + p.no.slice(0, 2); (years[y] = years[y] || []).push(p); });
     return Object.keys(years).sort().reverse().map(function (y) {
-      return section(y, '', years[y].map(function (p) { var d = p.court === 'ours' ? dueText(p.days) : { t: '', late: false }; return row(p, p.no + ' · ' + (p.phase || 'no phase') + (who(p) ? ' · ' + who(p) : ''), d.t, d.late); }));
+      return section(y, '', years[y].map(function (p) { return row(p, who(p), '', false, p.phase || 'No phase', bubsFor(openNeeds(p))); }));
     }).join('') || '<div class="empty">No project matches.</div>';
   }
   function matches(p, q) {
@@ -297,16 +328,18 @@ button.text.quiet { color: var(--muted); font-weight: 400; }
   function project(p) {
     var d = dueText(p.days), h = '';
     h += '<a class="back" href="#' + state.view + '">‹ Back</a><div class="sheet">';
-    h += '<h1>' + esc(p.address) + '</h1><div class="sub">' + esc([p.no, p.type, who(p)].filter(Boolean).join(' · ')) + '</div>';
+    h += '<h1><span class="no">' + esc(p.no) + '</span>' + esc(p.address) + '</h1><div class="sub">' + esc([p.type, who(p)].filter(Boolean).join(' · ')) + '</div>';
+    var pb = bubsFor(openNeeds(p));
     h += '<div class="stand"><div class="phase">' + esc(p.phase || 'No phase set') + (p.signed ? '' : ' (not signed)') + '</div>' +
-      (p.due || d.t ? '<div class="due' + (d.late ? ' late' : '') + '">' + esc([p.due ? 'Due ' + p.due : '', d.t].filter(Boolean).join(' · ')) + '</div>' : '') +
+      (pb ? '<div class="bubs">' + pb + '</div>' : '') +
+      (p.due ? '<div class="due" style="margin-top:6px">Due date on the schedule: ' + esc(p.due) + '</div>' : '') +
       (p.status ? '<p>' + esc(p.status) + '</p>' : '') + '</div>';
 
     // 1. what needs Lance: each thing waiting on him, longest wait first, with the two taps that clear it
     var others = p.tasks.filter(function (t) { return !isMine(t); });
     var open = openNeeds(p), done = (p.needs || []).filter(function (n) { return MARKS[n.key]; });
     var need = open.map(function (n) {
-      var h3 = '<div class="item"><div class="head"><b>' + esc(n.title) + '</b><span>' + esc(wait(n) ? 'waiting ' + wait(n) : '') + '</span></div>';
+      var h3 = '<div class="item"><div class="head"><b>' + esc(n.title) + '</b><span>' + (n.days != null ? bub(n, (isReply(n) ? 'Reply ' : 'Waiting ') + dtext(n.days)) : '') + '</span></div>';
       if (n.detail) h3 += '<div class="body">' + esc(n.detail) + (n.snippet ? '<div class="note" style="margin-top:4px">' + esc(n.snippet) + '</div>' : '') + '</div>';
       if (n.kind === 'question') {
         if (n.why) h3 += '<div class="body note">Waiting on this: ' + esc(n.why) + '</div>';
