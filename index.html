@@ -187,6 +187,8 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .draft.mail textarea { display: block; width: 100%; min-height: 3em; margin: -6px -8px; padding: 6px 8px; box-sizing: content-box; border: 0; outline: 1px dashed var(--muted);
   background: var(--soft); resize: none; overflow: hidden; font: inherit; font-size: 15.5px; line-height: 1.5; color: var(--ink); }
 .draft.mail .body, .draft.mail .note { margin-top: 10px; }
+textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8px; border: 0; outline: 1px dashed var(--muted); background: var(--soft); resize: none; overflow: hidden;
+  font: inherit; font-size: 15.5px; line-height: 1.5; color: var(--ink); }
 .draft .lbl { margin-bottom: 8px; font-size: .56rem; }
 .tell textarea { width: 100%; min-height: 92px; padding: 12px 13px; resize: vertical; }
 .answer textarea { width: 100%; min-height: 64px; margin-top: 10px; padding: 10px 11px; }
@@ -259,7 +261,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261119-225400";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261119-225705";</script>
 </head>
 <body>
 
@@ -295,7 +297,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
   var CFG = window.OFFICE || null;                 // set on the web build: { url, key }
   var TOKEN_KEY = 'plansman_office_token';
   var DATA = null, P = [], BY = {}, SAID = [], token = null;
-  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null };
+  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null };
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var usd = function (n) { return n == null ? '' : (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 }); };
@@ -716,12 +718,17 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
       var mine = r.learned_from === 'lance_said' || r.learned_from === 'answer';      // his own words, as against a team member's reason
       var whom = (r.agent ? 'For ' + cap(r.agent) : 'For everyone') + (r.scope && r.scope !== 'general' ? ' · ' + esc(r.scope.replace(':', ': ')) : '');
       return '<div class="item"><div class="head"><b>' + (r.retire_only ? 'Retire this rule? ' : r.replaces_rule ? 'Replace a rule · ' : '') + esc(whom) + '</b><span>' + esc(stamp(r.created_at)) + '</span></div>' +
-        '<div class="body rule">' + esc(r.rule) + '</div>' +
+        (state.editRule === r.id
+          ? '<textarea class="ruletext" data-rule-text="' + esc(r.id) + '" aria-label="The rule">' + esc(state.ruleText[r.id] != null ? state.ruleText[r.id] : r.rule) + '</textarea>'
+          : '<div class="body rule">' + esc(r.rule) + '</div>') +
         (r.applies_when ? '<div class="body note">When: ' + esc(r.applies_when) + '</div>' : '') +
         (r.replaces_rule && !r.retire_only ? '<div class="body note">It replaces: ' + esc(r.replaces_rule) + '</div>' : '') +
         (said ? '<div class="body note">' + (mine ? 'From what you said: "' + esc(said) + '"' : (r.retire_only ? 'Why retire it: ' : 'Why: ') + esc(said)) + '</div>' : '') +
         '<div class="marks"><button class="text" type="button" data-rule="approve" data-id="' + esc(r.id) + '">' + (r.retire_only ? 'Retire' : 'Approve') + '</button> ' +
-        '<button class="text" type="button" data-rule="reject" data-id="' + esc(r.id) + '">' + (r.retire_only ? 'Keep' : 'No') + '</button></div></div>';
+        (r.retire_only ? '' : state.editRule === r.id
+          ? '<button class="text quiet" type="button" data-rule="cancel" data-id="' + esc(r.id) + '">Cancel</button> '
+          : '<button class="text" type="button" data-rule="edit" data-id="' + esc(r.id) + '">Edit</button> ') +
+        (state.editRule === r.id ? '' : '<button class="text" type="button" data-rule="reject" data-id="' + esc(r.id) + '">' + (r.retire_only ? 'Keep' : 'No') + '</button>') + '</div></div>';
     }
   function render() {
     var q = state.q.trim().toLowerCase();
@@ -744,6 +751,11 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     });
     Array.prototype.forEach.call(document.querySelectorAll('#detail [data-draft], #listbody [data-draft]'), function (b) {
       b.addEventListener('click', function () { decideDraft(+b.getAttribute('data-id'), b.getAttribute('data-draft')); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-rule-text]'), function (t) {
+      var fitR = function () { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; };
+      fitR();
+      t.addEventListener('input', function () { state.ruleText[t.getAttribute('data-rule-text')] = t.value; fitR(); });
     });
     Array.prototype.forEach.call(document.querySelectorAll('#detail [data-draft-text], #listbody [data-draft-text]'), function (t) {
       var fit = function () { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; };
@@ -848,7 +860,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
   }
   // A phone keeps the page it loaded. When a newer page has been published, load it (never while he is typing).
   function checkBuild() {
-    if (!CFG || !window.BUILD || typing() || state.editDraft) return;
+    if (!CFG || !window.BUILD || typing() || state.editDraft || state.editRule) return;
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
       if (v && v.build && v.build !== window.BUILD) location.replace(location.pathname + '?v=' + encodeURIComponent(v.build) + location.hash);
     }).catch(function () {});
@@ -924,11 +936,23 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
   }
   // Approve or refuse a proposed rule: shown at once, put back if the save fails
   function decideRule(id, decision) {
+    // Edit: the rule's own words become typeable where they are; Approve then saves his wording
+    if (decision === 'edit') {
+      var r0 = ASKS.rules.filter(function (r) { return r.id === id; })[0];
+      state.editRule = id; if (r0 && state.ruleText[id] == null) state.ruleText[id] = r0.rule; render();
+      var t = document.querySelector('[data-rule-text="' + id + '"]'); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); }
+      return;
+    }
+    if (decision === 'cancel') { state.editRule = null; delete state.ruleText[id]; render(); return; }
+    var mine = state.editRule === id && decision === 'approve' ? (state.ruleText[id] || '').trim() : null;
+    if (state.editRule === id && decision === 'approve' && !mine) { state.ruleMsg = 'The rule is empty.'; render(); return; }
+    state.editRule = null;
     var before = ASKS.rules.slice();
     ASKS.rules = ASKS.rules.filter(function (r) { return r.id !== id; });
     state.ruleMsg = ''; render();
-    rpc('office_rule', { p_token: token, p_id: id, p_decision: decision }).then(function (d) {
-      if (d && d.ok && d.saved) { state.ruleMsg = decision === 'approve' ? 'Approved. The team follows it from the next job.' : 'Refused. It will not be used.'; render(); return; }
+    rpc('office_rule', { p_token: token, p_id: id, p_decision: decision, p_text: mine }).then(function (d) {
+      if (d && d.ok && d.saved) { delete state.ruleText[id]; state.ruleMsg = decision === 'approve' ? (mine ? 'Approved in your words. The team follows it from the next job.' : 'Approved. The team follows it from the next job.') : 'Refused. It will not be used.'; render(); return; }
+      if (mine) { state.editRule = id; }
       ASKS.rules = before; state.ruleMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN.'; render();
     }).catch(function (e) { ASKS.rules = before; state.ruleMsg = 'Not saved (' + e.message + ').'; render(); });
   }
