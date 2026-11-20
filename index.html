@@ -7,6 +7,9 @@
 <meta name="color-scheme" content="light only">
 <title>Plansman Dashboard</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="P4"><meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&display=swap">
 <style>
@@ -72,6 +75,8 @@ input:focus, textarea:focus { border-color: var(--ink); outline: none; }
 /* list pane */
 .brand { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--ink); }
 .brand span { color: var(--muted); font-size: 12px; text-align: right; }
+#notify { margin-top: 14px; padding: 12px 14px; border: 1px solid var(--rule); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+#notify span { flex: 1; min-width: 180px; font-size: 14px; color: var(--muted); }
 #notice { margin-top: 14px; padding: 12px 14px; border: 1px solid var(--long); color: var(--long); font-size: 15.5px; }
 #q { width: 100%; margin-top: 16px; padding: 12px 13px; }
 #ask { display: flex; gap: 8px; margin-top: 8px; }
@@ -271,7 +276,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261120-132905";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261120-143557";</script>
 </head>
 <body>
 
@@ -294,6 +299,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       <button class="go" id="ask-btn" type="submit">Ask</button>
     </form>
     <div id="ask-said"></div>
+    <div id="notify" hidden></div>
     <div id="rules"></div>
     <div id="decisions"></div>
     <nav class="nav" aria-label="Views"><a href="#queue" id="nav-queue">Queue</a><a href="#projects" id="nav-projects">All projects</a></nav>
@@ -926,6 +932,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       loadAsks();
       loadDrafts();
       loadDecisions();
+      notifySetup();
       if (!window.__draftPoll) window.__draftPoll = setInterval(loadDrafts, 20000);
       if (!window.__decPoll) window.__decPoll = setInterval(loadDecisions, 60000);
     }).catch(function (e) { showLogin('Could not reach the dashboard (' + e.message + ').'); });
@@ -1038,6 +1045,44 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       } else { state.actMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN.'; }
       render();
     }).catch(function (e) { state.actMsg = 'Not saved (' + e.message + ').'; render(); });
+  }
+  // Notifications on his phone (Lance, 20 Nov 2026: "I love the idea of the notification taking me right to the
+  // project page"). P4 on the home screen asks once; each phone that says yes is saved (db/034, core/notify.py).
+  function b64key(s) {
+    var p = '='.repeat((4 - s.length % 4) % 4), raw = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')), out = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+  function notifySetup() {
+    var box = $('notify');
+    if (!CFG || !CFG.push || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('sw.js').then(function (reg) {
+      var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+      if (!('PushManager' in window) || !('Notification' in window)) {
+        if (/iPhone|iPad/.test(navigator.userAgent) && !standalone) {
+          box.innerHTML = '<span>To get notifications, open P4 from its icon on your home screen. If it opens in Safari, delete the icon and add it again from the Share menu.</span>';
+          box.hidden = false;
+        }
+        return;
+      }
+      return reg.pushManager.getSubscription().then(function (sub) {
+        if (sub && Notification.permission === 'granted') { save(sub); box.hidden = true; return; }
+        if (Notification.permission === 'denied') {
+          box.innerHTML = '<span>Notifications are turned off for P4 in your phone\'s settings.</span>'; box.hidden = false; return;
+        }
+        box.innerHTML = '<span>Get a notification when Jake has news. Tapping it opens the project.</span><button class="go" type="button" id="notify-on">Turn on</button>';
+        box.hidden = false;
+        $('notify-on').addEventListener('click', function () {
+          Notification.requestPermission().then(function (p) {
+            if (p !== 'granted') { box.innerHTML = '<span>Notifications stay off.</span>'; return; }
+            return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64key(CFG.push) }).then(function (s) {
+              return save(s).then(function () { box.innerHTML = '<span>Notifications are on.</span>'; setTimeout(function () { box.hidden = true; }, 4000); });
+            });
+          }).catch(function (e) { box.innerHTML = '<span>Could not turn them on (' + esc(e.message) + ').</span>'; });
+        });
+      });
+    }).catch(function () {});
+    function save(sub) { return rpc('office_push_subscribe', { p_token: token, p_sub: sub.toJSON(), p_agent: navigator.userAgent.slice(0, 200) }).catch(function () {}); }
   }
   // Jake's decisions: read on load and every minute while the page is open
   function loadDecisions() {
