@@ -69,6 +69,7 @@ input:focus, textarea:focus { border-color: var(--ink); outline: none; }
 /* list pane */
 .brand { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--ink); }
 .brand span { color: var(--muted); font-size: 12px; text-align: right; }
+#notice { margin-top: 14px; padding: 12px 14px; border: 1px solid var(--long); color: var(--long); font-size: 15.5px; }
 #q { width: 100%; margin-top: 16px; padding: 12px 13px; }
 #ask { display: flex; gap: 8px; margin-top: 8px; }
 #ask-text { flex: 1; min-width: 0; padding: 12px 13px; }
@@ -267,7 +268,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261120-073621";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261120-113819";</script>
 </head>
 <body>
 
@@ -283,6 +284,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
 <div class="shell" id="shell" hidden>
   <div class="pane" id="list">
     <div class="brand"><b>Plansman</b><span id="read"></span></div>
+    <div id="notice" hidden></div>
     <input id="q" type="search" placeholder="Find an address, number or name" autocomplete="off" aria-label="Find a project">
     <form id="ask" hidden>
       <input id="ask-text" type="text" placeholder="Ask the team" autocomplete="off" aria-label="Ask the team">
@@ -1157,6 +1159,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     DATA = data; P = data.projects; BY = {};
     P.forEach(function (p) { BY[p.no] = p; });
     $('read').textContent = readLine;
+    $('notice').hidden = !data.notice; $('notice').textContent = data.notice || '';
     $('foot').innerHTML = CFG ? 'Jake changes the schedule only when you tell him to. Nothing goes out until you tap Send. <button class="text" id="out" type="button">Sign out</button>'
                               : 'Read-only private preview. Tapping changes nothing.';
     var out = $('out');
