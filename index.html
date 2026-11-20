@@ -261,7 +261,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261120-064952";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261120-065636";</script>
 </head>
 <body>
 
@@ -639,9 +639,9 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       ' waiting for your OK. Approved, the team follows it on every job it applies to.</p>' + here.map(ruleItem).join('') +
       (state.ruleMsg ? '<p class="note">' + esc(state.ruleMsg) + '</p>' : '') + '</div>';
     if (CFG) {
-      tell += '<form id="tell"><textarea id="tell-text" placeholder="What should happen next on this job?" aria-label="Instruction to the team">' + esc(state.draft[p.no] || '') + '</textarea>' +
-        '<div class="bar"><button class="go" id="tell-btn" type="submit"' + (state.sending ? ' disabled' : '') + '>' + (state.sending ? 'Saving…' : 'Tell the team') + '</button>' +
-        '<span id="tell-msg">' + esc(state.tellMsg || 'Enter sends. Shift+Enter starts a new line. Jake can look things up, draft, and change the schedule when you tell him to. Nothing goes out until you tap Send.') + '</span></div></form>';
+      tell += '<form id="tell"><textarea id="tell-text" placeholder="What&#39;s next" aria-label="Instruction to the team">' + esc(state.draft[p.no] || '') + '</textarea>' +
+        '<div class="bar"><button class="go" id="tell-btn" type="submit"' + (state.sending ? ' disabled' : '') + '>' + (state.sending ? 'Sending…' : 'Send') + '</button>' +
+        '<span id="tell-msg">' + esc(state.tellMsg || 'Enter sends. Shift+Enter starts a new line.') + '</span></div></form>';
     } else {
       tell += '<p class="note">Your instruction box goes here on the plansman.ai version. This private preview cannot save anything.</p>';
     }
