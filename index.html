@@ -276,7 +276,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261120-143557";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261120-145312";</script>
 </head>
 <body>
 
@@ -315,7 +315,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   var CFG = window.OFFICE || null;                 // set on the web build: { url, key }
   var TOKEN_KEY = 'plansman_office_token';
   var DATA = null, P = [], BY = {}, SAID = [], token = null;
-  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', decWrong: null, decText: {}, decMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null };
+  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', loose: {}, decWrong: null, decText: {}, decMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null };
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var usd = function (n) { return n == null ? '' : (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 }); };
@@ -561,10 +561,17 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var loose = (DATA.loose_texts || []).map(function (t) {
       var d = DRAFTS.filter(function (x) { return x.item_key === 'text:' + t.id && x.state !== 'sent'; }).slice(-1)[0];
       if (!d && !t.needs_lance) return '';
+      if (MARKS['text:' + t.id]) return '';                       // he marked it Handled
       var n = { kind: 'text', days: t.days };
+      // what he told Jake about this text, and Jake's answer, on the text itself
+      var asked = SAID.filter(function (x) { return x.proj_no === 'office' && (x.body || '').indexOf('[text:' + t.id + ']') >= 0; })[0];
+      var talk = asked ? '<div class="body"><b>You: </b>' + esc(asked.body.split('Lance: ').slice(-1)[0]) + '</div>' +
+        '<div class="body">' + (asked.reply ? '<b>Jake: </b>' + para(asked.reply) : '<span class="note">' + (asked.state === 'working' ? 'Jake is working on it…' : 'Waiting for Jake to pick it up…') + '</span>') + '</div>' : '';
+      var act = CFG ? '<div class="answer"><textarea data-loose="' + esc(t.id) + '" placeholder="Tell Jake what to do with it: which job, text back, ignore" aria-label="Tell Jake">' + esc(state.loose[t.id] || '') + '</textarea>' +
+        '<div class="marks"><button class="go" type="button" data-loose-send="' + esc(t.id) + '">Send to Jake</button> <button class="text" type="button" data-loose-done="' + esc(t.id) + '">Handled</button></div></div>' : '';
       return '<div class="item s' + sev(n) + '"><div class="head"><b>' + esc(t.who) + (t.channel === 'voicemail' ? ' left a voicemail' : ' texted') + '</b><span>' + bub(n, 'Reply ' + dtext(t.days)) + '</span></div>' +
         (t.summary ? '<div class="body">' + esc(t.summary) + '</div>' : '') +
-        (t.jake && !(d && d.note) ? '<div class="body"><b>Jake: </b>' + esc(t.jake) + '</div>' : '') + (d ? draftBlock(d, true) : '') + '</div>';
+        (t.jake && !(d && d.note) ? '<div class="body"><b>Jake: </b>' + esc(t.jake) + '</div>' : '') + (d ? draftBlock(d, true) : '') + talk + act + '</div>';
     }).filter(Boolean);
     var looseSec = loose.length ? '<h2>Texts not on a project <span class="n">' + loose.length + '</span><small>Jake could not tie these to a job.</small></h2><div class="sec need loose">' + loose.join('') + '</div>' : '';
     var didBy = {};
@@ -866,6 +873,17 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       t.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); state.ans[t.getAttribute('data-ans')] = t.value; answerQuestion(+t.getAttribute('data-ans')); }
       });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-loose]'), function (t) {
+      var id = t.getAttribute('data-loose');
+      t.addEventListener('input', function () { state.loose[id] = t.value; });
+      t.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); state.loose[id] = t.value; looseTell(id); } });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-loose-send]'), function (b) {
+      b.addEventListener('click', function () { looseTell(b.getAttribute('data-loose-send')); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-loose-done]'), function (b) {
+      b.addEventListener('click', function () { mark('office', 'text:' + b.getAttribute('data-loose-done'), 'handled'); });
     });
     Array.prototype.forEach.call(document.querySelectorAll('[data-dec]'), function (b) {
       b.addEventListener('click', function () { decideDec(b.getAttribute('data-id'), b.getAttribute('data-dec')); });
@@ -1186,6 +1204,18 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       else { SAID.unshift(d.instruction); state.draft[no] = ''; state.tellMsg = 'Sent to Jake. The answer appears here, usually within a minute.'; watchReplies(); }
       render();
     }).catch(function (e) { state.sending = false; state.tellMsg = 'Not saved (' + e.message + '). Your text is still here.'; render(); });
+  }
+  // A text not on a project: what he tells Jake about it goes to Jake with the text named, and the answer shows on it
+  function looseTell(id) {
+    var text = (state.loose[id] || '').trim();
+    var t = (DATA.loose_texts || []).filter(function (x) { return String(x.id) === String(id); })[0];
+    if (!text || !t) return;
+    var body = 'About the ' + (t.channel === 'voicemail' ? 'voicemail' : 'text') + ' from ' + t.who + ' that is not on a project [text:' + t.id + ']' +
+      (t.summary ? ' (' + t.summary + ')' : '') + '.\n\nLance: ' + text;
+    rpc('office_tell', { p_token: token, p_proj: 'office', p_text: body }).then(function (d) {
+      if (d && d.ok && d.saved) { SAID.unshift(d.instruction); delete state.loose[id]; watchReplies(); }
+      render();
+    }).catch(function () { render(); });
   }
   // While an instruction has no reply yet, ask for replies every 8 seconds (for at most 10 minutes).
   var watching = null, watchUntil = 0;
