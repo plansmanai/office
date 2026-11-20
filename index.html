@@ -261,7 +261,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261119-225705";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261119-230949";</script>
 </head>
 <body>
 
@@ -495,6 +495,8 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       (cleared.length ? section('Nothing open for you', 'In our court. You marked everything handled or not your move.', cleared) : '') +
       section('Waiting on the client', '', group('client')) +
       section('At the city', '', group('city')) +
+      section('Approved', '', group('approved')) +
+      section('Construction', '', group('construction')) +
       section('Leads', 'Not signed.', group('lead')) +
       section('No phase set', '', group('unknown'));
   }
