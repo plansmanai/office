@@ -546,7 +546,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     if (CFG) {
       tell += '<form id="tell"><textarea id="tell-text" placeholder="What should happen next on this job?" aria-label="Instruction to the team">' + esc(state.draft[p.no] || '') + '</textarea>' +
         '<div class="bar"><button class="go" id="tell-btn" type="submit"' + (state.sending ? ' disabled' : '') + '>' + (state.sending ? 'Saving…' : 'Tell the team') + '</button>' +
-        '<span id="tell-msg">' + esc(state.tellMsg || 'Enter sends. Shift+Enter starts a new line. Jake can look things up, draft, and change the schedule after your tap. He cannot send anything yet.') + '</span></div></form>';
+        '<span id="tell-msg">' + esc(state.tellMsg || 'Enter sends. Shift+Enter starts a new line. Jake can look things up, draft, and change the schedule when you tell him to. He cannot send anything yet.') + '</span></div></form>';
     } else {
       tell += '<p class="note">Your instruction box goes here on the plansman.ai version. This private preview cannot save anything.</p>';
     }
@@ -817,7 +817,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     DATA = data; P = data.projects; BY = {};
     P.forEach(function (p) { BY[p.no] = p; });
     $('read').textContent = readLine;
-    $('foot').innerHTML = CFG ? 'Nothing here changes the sheets or sends anything. <button class="text" id="out" type="button">Sign out</button>'
+    $('foot').innerHTML = CFG ? 'Jake changes the schedule only when you tell him to. Nothing is sent to anyone. <button class="text" id="out" type="button">Sign out</button>'
                               : 'Read-only private preview. Tapping changes nothing.';
     var out = $('out');
     if (out) out.addEventListener('click', function () { var t = token; token = null; try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} rpc('office_logout', { p_token: t }).catch(function () {}); showLogin(''); });
