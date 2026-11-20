@@ -276,7 +276,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261120-145312";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261120-145530";</script>
 </head>
 <body>
 
@@ -485,15 +485,18 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var h = '<div class="item"><div class="head"><b>' + esc(d.what) + '</b><span>' + esc(stamp(d.created_at)) + '</span></div>' +
       (d.why ? '<div class="body note">' + esc(d.why) + '</div>' : '');
     if (!CFG) return h + '</div>';
-    if (state.decWrong === d.id) h += '<div class="answer"><textarea data-dec-text="' + d.id + '" data-dec-send="wrong-send" placeholder="What is right?" aria-label="What is right">' + esc(state.decText[d.id] || '') + '</textarea>' +
-      '<div class="marks"><button class="go" type="button" data-dec="wrong-send" data-id="' + d.id + '">Send</button> <button class="text quiet" type="button" data-dec="cancel" data-id="' + d.id + '">Cancel</button></div></div>';
-    else h += '<div class="marks"><button class="text" type="button" data-dec="right" data-id="' + d.id + '">Right</button> <button class="text" type="button" data-dec="wrong" data-id="' + d.id + '">Wrong</button></div>';
+    // Correct: part of it is right; he says what to change. Wrong: Jake puts it back as it was (why is optional).
+    var fixing = state.decWrong === d.id && state.decMode === 'correct';
+    if (state.decWrong === d.id) h += '<div class="answer"><textarea data-dec-text="' + d.id + '" data-dec-send="wrong-send" placeholder="' +
+      (fixing ? 'What should it be?' : 'Why is it wrong? (optional) Jake puts it back as it was.') + '" aria-label="' + (fixing ? 'What should it be' : 'Why it is wrong') + '">' + esc(state.decText[d.id] || '') + '</textarea>' +
+      '<div class="marks"><button class="go" type="button" data-dec="wrong-send" data-id="' + d.id + '">' + (fixing ? 'Send correction' : 'Undo it') + '</button> <button class="text quiet" type="button" data-dec="cancel" data-id="' + d.id + '">Cancel</button></div></div>';
+    else h += '<div class="marks"><button class="text" type="button" data-dec="right" data-id="' + d.id + '">Right</button> <button class="text" type="button" data-dec="correct" data-id="' + d.id + '">Correct</button> <button class="text" type="button" data-dec="wrong" data-id="' + d.id + '">Wrong</button></div>';
     return h + '</div>';
   }
   // His last verdicts, quietly: what he said, whether Jake has dealt with it, and what Jake wrote down from it
   function decRecent(d) {
-    var said = d.state === 'wrong' ? (d.lance_said ? 'You said: ' + d.lance_said : '') : 'You answered: ' + (d.confirmed ? 'Yes' : (d.lance_said || ''));
-    return '<div class="item"><div class="head"><span>' + esc((d.state === 'wrong' ? 'Wrong: ' : 'Jake asked: ') + d.what) + '</span><span>' + esc(stamp(d.decided_at)) + '</span></div>' +
+    var said = d.state === 'wrong' ? (d.lance_said ? 'You said: ' + d.lance_said.replace(/^Correct it: /, '').replace(/^Undo it\.\s*/, 'Undo it. ') : '') : 'You answered: ' + (d.confirmed ? 'Yes' : (d.lance_said || ''));
+    return '<div class="item"><div class="head"><span>' + esc((d.state === 'wrong' ? (/^Correct it:/.test(d.lance_said || '') ? 'Corrected: ' : 'Wrong: ') : 'Jake asked: ') + d.what) + '</span><span>' + esc(stamp(d.decided_at)) + '</span></div>' +
       (said ? '<div class="body">' + esc(said) + '</div>' : '') +
       '<div class="body note">' + (d.handled_at ? 'Jake has dealt with it.' : 'Jake is on it…') + '</div>' +
       (d.learned ? '<div class="body"><b>Learned: </b>' + esc(d.learned) + '</div>' : '') + '</div>';
@@ -1115,8 +1118,8 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   // Right / Wrong on what Jake did, Yes / an answer on what he asked: shown at once, put back if the save fails.
   // verb: right, wrong (opens the box), wrong-send, cancel, yes, answer, allright (id is then the project number)
   function decideDec(id, verb) {
-    if (verb === 'wrong') {
-      state.decWrong = +id; state.decMsg = ''; render();
+    if (verb === 'wrong' || verb === 'correct') {
+      state.decWrong = +id; state.decMode = verb; state.decMsg = ''; render();
       var t = document.querySelector('[data-dec-text="' + id + '"]'); if (t) t.focus();
       return;
     }
@@ -1127,6 +1130,10 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var verdict = verb === 'allright' ? 'right' : verb === 'wrong-send' ? 'wrong' : verb;
     var text = (verdict === 'wrong' || verdict === 'answer') ? (state.decText[id] || '').trim() : '';
     if (verdict === 'answer' && !text) { state.decMsg = 'Type your answer first.'; render(); return; }
+    if (verdict === 'wrong' && state.decMode === 'correct') {
+      if (!text) { state.decMsg = 'Say what it should be first.'; render(); return; }
+      text = 'Correct it: ' + text;
+    } else if (verdict === 'wrong') text = 'Undo it.' + (text ? ' ' + text : '');
     if (!ids.length) return;
     var before = DEC.open.slice(), beforeRecent = DEC.recent.slice(), now = new Date().toISOString();
     DEC.open = before.filter(function (d) { return ids.indexOf(d.id) < 0; });
