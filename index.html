@@ -8,7 +8,7 @@
 <title>Plansman Dashboard</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&display=swap">
 <style>
 /* The look follows Lance's design brief for the high-end wing (19 Nov 2026): quiet, editorial, precise.
    Colour   Volcanic Black #1B1B19 on a backdrop a step lighter and less cream than the brief's Plaster White
@@ -16,7 +16,7 @@
             Weathered Oak #B2906B and Pacific Sage #4F6B66 as the two sparing accents. Never pure white.
             Light only: there is no dark mode ("i dont like darkmode so abandon that").
    Type     Jost: thin, wide-tracked capitals for the brand, headings and labels; regular weight for working
-            text. Cormorant Garamond for prose that is read (status notes, replies, drafts). Nothing heavier
+            text. One family only (Lance, 19 Nov 2026: "the amount of fonts on this screen is obnoxious"): no serif. Nothing heavier
             than 500.
    Line     one hairline weight for every rule, border and frame; square corners; flat; no shadows.
    Signature details from the logo work: thin square frames (the phase path's markers, the timer tags), a
@@ -161,7 +161,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .item .head span { color: var(--muted); font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .item .head span.bub { font-size: .62rem; }
 .item .head span.bub.g { color: var(--sage); } .item .head span.bub.a { color: var(--oak-ink); } .item .head span.bub.r { color: var(--long); }
-.item .body { color: var(--muted); font-size: 14.5px; overflow-wrap: anywhere; }
+.item .body { color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
 .item .body + .body { margin-top: 5px; }
 .item .body b { font-weight: 500; color: var(--ink); }
 /* the things waiting on him: each in its own thin frame, its wait down the left edge */
@@ -179,13 +179,13 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .marks button.go { padding: 8px 16px 7px 17px; font-size: .64rem; }
 .cleared { margin-top: 10px; }
 .cleared .item .head span { white-space: normal; }
-.draft { margin-top: 12px; padding: 14px 16px; background: var(--soft); font-family: var(--serif); font-weight: 500; font-size: 1.16rem; line-height: 1.42; overflow-wrap: anywhere; }
+.draft { margin-top: 12px; padding: 14px 16px; background: var(--soft); font-size: 15.5px; line-height: 1.5; overflow-wrap: anywhere; }
 .draft.real { background: none; border: 1px solid var(--rule); }
 /* a draft email waiting for his tap: framed in ink, the one thing on the page that can leave the office */
 .draft.mail { background: none; border: 1px solid var(--ink); }
 .draft.mail .subj { font-family: var(--sans); font-size: 14px; font-weight: 400; color: var(--muted); margin-bottom: 10px; }
-.draft.mail textarea { width: 100%; min-height: 240px; padding: 10px 11px; resize: vertical; font-family: var(--serif); font-size: 1.16rem; line-height: 1.42; }
-.draft.mail .body, .draft.mail .note { font-family: var(--sans); font-weight: 400; margin-top: 10px; }
+.draft.mail textarea { width: 100%; min-height: 240px; padding: 10px 11px; resize: vertical; font-size: 15.5px; line-height: 1.5; }
+.draft.mail .body, .draft.mail .note { margin-top: 10px; }
 .draft .lbl { margin-bottom: 8px; font-size: .56rem; }
 .tell textarea { width: 100%; min-height: 92px; padding: 12px 13px; resize: vertical; }
 .answer textarea { width: 100%; min-height: 64px; margin-top: 10px; padding: 10px 11px; }
@@ -200,16 +200,16 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .msg .lbl { font-family: var(--sans); text-transform: uppercase; letter-spacing: .18em; font-size: .56rem; color: var(--muted); margin-bottom: 6px; }
 .msg.me { align-self: flex-end; background: var(--bar); }
 .msg.me .lbl { text-align: right; }
-.msg.me .txt { font-size: 15.5px; }
+.msg .txt { font-size: 15.5px; line-height: 1.5; }
 .msg.jake { align-self: flex-start; border: 1px solid var(--rule); }
-.msg.jake .txt { font-family: var(--serif); font-weight: 500; font-size: 1.16rem; line-height: 1.42; }
-.msg.jake.wait .txt { font-family: var(--sans); font-weight: 400; font-size: 14px; color: var(--muted); }
+.msg.jake .draft { background: none; }
+.msg.jake.wait .txt { font-size: 14px; color: var(--muted); }
 @media (max-width: 719px) { .msg { max-width: 92%; } }
 .tl { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 2px 10px; padding: 9px 0; }
 .tl + .tl { border-top: 1px solid var(--rule); }
-.tl .d { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; padding-top: 2px; }
+.tl .d { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
 .tl .p { font-weight: 500; }
-.tl .n { color: var(--muted); font-size: 14.5px; overflow-wrap: anywhere; }
+.tl .n { color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
 .more { padding: 10px 0 4px; }
 .blank { color: var(--muted); padding: 90px 0; text-align: center; font-weight: 300; letter-spacing: .3em; text-transform: uppercase; font-size: .8rem; }
 
@@ -554,7 +554,15 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     // 1. what needs Lance: each thing waiting on him, longest wait first, with the two taps that clear it
     var others = p.tasks.filter(function (t) { return !isMine(t); });
     var open = openNeeds(p), done = (p.needs || []).filter(function (n) { return MARKS[n.key]; });
+    // A draft Jake made because Lance asked for it in the conversation is shown on Jake's answer below, with
+    // its buttons, and nowhere else on this page.
+    var talk = SAID.filter(function (s) { return s.proj_no === p.no; }).slice().reverse();
+    var inChat = {};
+    talk.slice(state.allSaid ? 0 : Math.max(0, talk.length - 15)).forEach(function (s) { inChat[s.id] = 1; });
+    function shownInChat(d) { return d && d.instruction_id && inChat[d.instruction_id]; }
+    var below = 0;
     var need = open.map(function (n) {
+      if (n.kind === 'draft' && shownInChat(n.draft)) { below++; return ''; }
       var h3 = '<div class="item' + (n.days != null ? ' s' + sev(n) : '') + '"><div class="head"><b>' + esc(n.title) + '</b><span>' + (n.days != null ? bub(n, (isReply(n) ? 'Reply ' : 'Waiting ') + dtext(n.days)) : '') + '</span></div>';
       var drHere = isMsg(n) ? draftOn(p, n.key) : null;
       if (n.jake && !(drHere && drHere.note)) h3 += '<div class="body"><b>Jake: </b>' + esc(n.jake) + '</div>';
@@ -589,7 +597,8 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     // what went out in the last three days, said once, quietly
     var openKeys = {};
     open.forEach(function (n) { openKeys[n.key] = 1; });
-    DRAFTS.filter(function (d) { return d.proj_no === p.no && d.state === 'sent' && !openKeys[d.item_key]; }).forEach(function (d) {
+    if (below) need += '<p class="note">' + (below === 1 ? 'A draft is' : below + ' drafts are') + ' waiting for your Approve below, on Jake\'s answer.</p>';
+    DRAFTS.filter(function (d) { return d.proj_no === p.no && d.state === 'sent' && !openKeys[d.item_key] && !shownInChat(d); }).forEach(function (d) {
       need += '<div class="item"><div class="head"><span>' + esc(d.subject) + '</span><span>' + esc(stamp(d.sent_at)) + '</span></div><div class="body ok">' + esc(d.result || 'Sent.') + '</div></div>';
     });
     ASKS.questions.filter(function (q) { return q.proj_no === p.no && q.state === 'answered'; }).forEach(function (q) {
@@ -610,7 +619,8 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
       (earlier ? '<button class="text more" id="more-said" type="button">Show ' + earlier + ' earlier</button>' : '') +
       said.slice(earlier).map(function (s) {
         var h2 = '<div class="msg me"><div class="lbl">You · ' + esc(stamp(s.created_at)) + '</div><div class="txt">' + para(s.body) + '</div></div>';
-        if (s.reply) h2 += '<div class="msg jake"><div class="lbl">Jake' + (s.replied_at ? ' · ' + esc(stamp(s.replied_at)) : '') + '</div><div class="txt">' + para(s.reply) + '</div></div>';
+        if (s.reply) h2 += '<div class="msg jake"><div class="lbl">Jake' + (s.replied_at ? ' · ' + esc(stamp(s.replied_at)) : '') + '</div><div class="txt">' + para(s.reply) + '</div>' +
+          DRAFTS.filter(function (d) { return d.instruction_id === s.id && d.proj_no === p.no; }).map(function (d) { return draftBlock(d); }).join('') + '</div>';
         else h2 += '<div class="msg jake wait"><div class="lbl">Jake</div><div class="txt">' + (s.state === 'working' ? 'Working on it…' : 'Picking it up…') + '</div></div>';
         return h2;
       }).join('') + '</div>';
