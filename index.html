@@ -54,6 +54,9 @@ h2, .sec h3, .below, .eyebrow, .fact .k, .draft .lbl, .nav a, .city { font-size:
 button.go { font-size: .7rem; color: var(--on-ink); background: var(--ink); border: 1px solid var(--ink); padding: 12px 20px; cursor: pointer; }
 @media (hover: hover) { button.go:hover { background: transparent; color: var(--ink); } }
 button.go:disabled { opacity: .45; cursor: default; }
+a.go.drafting { display: inline-block; font-family: var(--sans); text-transform: uppercase; letter-spacing: .18em; font-size: .7rem; color: var(--ink);
+  border: 1px solid var(--ink); padding: 12px 20px; }
+@media (hover: hover) { a.go.drafting:hover { background: var(--ink); color: var(--on-ink); } }
 button.text { background: none; border: 0; padding: 0; font: inherit; color: var(--ink); cursor: pointer; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
 input, textarea { font: inherit; color: var(--ink); background: transparent; border: 1px solid var(--rule); }
 input:focus, textarea:focus { border-color: var(--ink); outline: none; }
@@ -268,7 +271,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261120-113819";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261120-132905";</script>
 </head>
 <body>
 
@@ -725,6 +728,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       tell += '<p class="note">Your instruction box goes here on the plansman.ai version. This private preview cannot save anything.</p>';
     }
     h += sec('Tell the team', tell, 'lead tell');
+    if (CFG) h += '<p style="margin:14px 0 0"><a class="go drafting" href="drafting.html#' + encodeURIComponent(p.no) + '" target="drafting-' + esc(p.no) + '">Drafting</a></p>';
 
     // 3. what the team has
     h += sec('Who has what', others.map(function (t) { return taskItem(t, true); }).join(''), 'lead');
