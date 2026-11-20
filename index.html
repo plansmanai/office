@@ -544,7 +544,8 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     var open = openNeeds(p), done = (p.needs || []).filter(function (n) { return MARKS[n.key]; });
     var need = open.map(function (n) {
       var h3 = '<div class="item' + (n.days != null ? ' s' + sev(n) : '') + '"><div class="head"><b>' + esc(n.title) + '</b><span>' + (n.days != null ? bub(n, (isReply(n) ? 'Reply ' : 'Waiting ') + dtext(n.days)) : '') + '</span></div>';
-      if (n.jake) h3 += '<div class="body">' + esc(n.jake) + '</div>';
+      var drHere = n.kind === 'email' ? draftOn(p, n.key) : null;
+      if (n.jake && !(drHere && drHere.note)) h3 += '<div class="body"><b>Jake: </b>' + esc(n.jake) + '</div>';
       if (n.by) h3 += '<div class="body note">Needed by ' + esc(n.by) + '</div>';
       if (n.detail && n.kind !== 'note' || n.kind === 'note') h3 += '<div class="body' + (n.jake ? ' note' : '') + '">' + esc(n.detail) + (n.snippet ? '<div class="note" style="margin-top:4px">' + esc(n.snippet) + '</div>' : '') + '</div>';
       var dr = n.kind === 'draft' ? n.draft : n.kind === 'email' ? draftOn(p, n.key) : null;
