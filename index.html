@@ -383,20 +383,22 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     var open = d.state === 'draft' || d.state === 'failed', editing = open && state.editDraft === d.id, blanks = blanksIn(d.body), files = d.attachments || [], file = ATTACH.test(d.body || '') && !files.length;
     // Jake's one line on what he needs from Lance comes first; the subject is not repeated under the email it answers
     var h = (d.note && d.state !== 'sent' ? '<div class="body"><b>Jake: </b>' + esc(d.note) + '</div>' : '') +
-      '<div class="draft mail"><div class="lbl">' + (d.channel === 'sms' ? (d.state === 'sent' ? 'Text' : 'Draft text') : (d.state === 'sent' ? 'Email' : 'Draft email')) + ' to ' + esc(to) + (cc ? ' · copy to ' + esc(cc) : '') + '</div>' +
-      (onItem || d.channel === 'sms' ? '' : '<div class="subj">' + esc(d.subject) + '</div>');
+      '<div class="draft mail"><div class="lbl">' + (d.channel === 'action' ? esc(d.subject) + (to ? ' · to ' + esc(to) : '') :
+        (d.channel === 'sms' ? (d.state === 'sent' ? 'Text' : 'Draft text') : (d.state === 'sent' ? 'Email' : 'Draft email')) + ' to ' + esc(to) + (cc ? ' · copy to ' + esc(cc) : '')) + '</div>' +
+      (onItem || d.channel !== 'email' ? '' : '<div class="subj">' + esc(d.subject) + '</div>');
     if (editing) h += '<textarea data-draft-text="' + d.id + '" aria-label="The email text">' + esc(state.draftText[d.id] != null ? state.draftText[d.id] : d.body) + '</textarea>';
     else h += '<div class="txt">' + para(d.body) + '</div>';
     if (files.length && d.state !== 'sent') h += '<div class="body"><b>Attached: </b>' + files.map(function (a) { return esc(a.name) + ' <span class="note">(' + esc(a.size || '') + (a.modified ? ', last changed ' + esc(day(a.modified)) : '') + ')</span>'; }).join('; ') + '</div>';
     if (d.state === 'failed' || d.state === 'stale') h += '<div class="body late">' + esc(d.result || 'Not sent.') + '</div>';
-    else if (d.state === 'approved' || d.state === 'sending') h += '<div class="body note">' + esc(d.result || 'Approved. Sending…') + '</div>';
+    else if (d.state === 'approved' || d.state === 'sending') h += '<div class="body note">' + esc(d.result || (d.channel === 'action' ? 'Approved. Doing it…' : 'Approved. Sending…')) + '</div>';
     else if (d.state === 'sent') h += '<div class="body ok">' + esc(d.result || 'Sent.') + '</div>';
     if (open && !editing && blanks.length) h += '<div class="body note">Fill in ' + esc(blanks.join(', ')) + ' before it can go: tap Edit.</div>';
     if (open && !editing && file) h += '<div class="body note">It says a file is attached, and nothing is. Tell Jake which file to attach, or tap Edit and take that out.</div>';
     if (CFG && open) h += '<div class="marks">' +
       (editing || (!blanks.length && !file) ? '<button class="go" type="button" data-draft="approve" data-id="' + d.id + '">Approve</button> ' : '') +
       (editing ? '<button class="text quiet" type="button" data-draft="cancel" data-id="' + d.id + '">Cancel edit</button>'
-               : '<button class="text" type="button" data-draft="edit" data-id="' + d.id + '">Edit</button> <button class="text quiet" type="button" data-draft="drop" data-id="' + d.id + '">Drop</button>') + '</div>';
+               : (d.channel === 'action' ? '' : '<button class="text" type="button" data-draft="edit" data-id="' + d.id + '">Edit</button> ') + '<button class="text quiet" type="button" data-draft="drop" data-id="' + d.id + '">Drop</button>' +
+                 (d.channel === 'action' ? ' <span class="note">To change it, tell Jake.</span>' : '')) + '</div>';
     if (CFG && d.state === 'stale') h += '<div class="marks"><button class="text quiet" type="button" data-draft="drop" data-id="' + d.id + '">Clear</button></div>';
     if (state.draftMsg && state.draftMsgId === d.id) h += '<p class="note">' + esc(state.draftMsg) + '</p>';
     return h + '</div>';
@@ -407,7 +409,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     var keys = {};
     (p.needs || []).forEach(function (n) { if (!MARKS[n.key]) keys[n.key] = 1; });
     return DRAFTS.filter(function (d) { return d.proj_no === p.no && d.state !== 'sent' && !keys[d.item_key]; }).map(function (d) {
-      return { key: 'draft:' + d.id, kind: 'draft', draft: d, title: (d.channel === 'sms' ? 'Draft text to ' : 'Draft email to ') + (d.to_names || []).join(', '), days: daysSince(d.created_at) };
+      return { key: 'draft:' + d.id, kind: 'draft', draft: d, title: d.channel === 'action' ? d.subject : (d.channel === 'sms' ? 'Draft text to ' : 'Draft email to ') + (d.to_names || []).join(', '), days: daysSince(d.created_at) };
     });
   }
   var CHANGE_LABEL = { phase: 'Phase', due: 'Due date', status: 'Status note' };
