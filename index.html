@@ -259,7 +259,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261119-215405";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261119-225400";</script>
 </head>
 <body>
 
@@ -712,13 +712,16 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
   }
 
   function ruleItem(r) {
-      var said = (r.lance_words || '').length > 220 ? r.lance_words.slice(0, 220) + '…' : (r.lance_words || '');
-      return '<div class="item"><div class="head"><b>' + esc(r.agent ? 'For ' + cap(r.agent) : 'For everyone') + (r.scope && r.scope !== 'general' ? ' · ' + esc(r.scope.replace(':', ': ')) : '') + '</b><span>' + esc(stamp(r.created_at)) + '</span></div>' +
+      var said = (r.lance_words || '').length > 260 ? r.lance_words.slice(0, 260) + '…' : (r.lance_words || '');
+      var mine = r.learned_from === 'lance_said' || r.learned_from === 'answer';      // his own words, as against a team member's reason
+      var whom = (r.agent ? 'For ' + cap(r.agent) : 'For everyone') + (r.scope && r.scope !== 'general' ? ' · ' + esc(r.scope.replace(':', ': ')) : '');
+      return '<div class="item"><div class="head"><b>' + (r.retire_only ? 'Retire this rule? ' : r.replaces_rule ? 'Replace a rule · ' : '') + esc(whom) + '</b><span>' + esc(stamp(r.created_at)) + '</span></div>' +
         '<div class="body rule">' + esc(r.rule) + '</div>' +
         (r.applies_when ? '<div class="body note">When: ' + esc(r.applies_when) + '</div>' : '') +
-        (said ? '<div class="body note">From what you said: "' + esc(said) + '"</div>' : '') +
-        '<div class="marks"><button class="text" type="button" data-rule="approve" data-id="' + esc(r.id) + '">Approve</button> ' +
-        '<button class="text" type="button" data-rule="reject" data-id="' + esc(r.id) + '">No</button></div></div>';
+        (r.replaces_rule && !r.retire_only ? '<div class="body note">It replaces: ' + esc(r.replaces_rule) + '</div>' : '') +
+        (said ? '<div class="body note">' + (mine ? 'From what you said: "' + esc(said) + '"' : (r.retire_only ? 'Why retire it: ' : 'Why: ') + esc(said)) + '</div>' : '') +
+        '<div class="marks"><button class="text" type="button" data-rule="approve" data-id="' + esc(r.id) + '">' + (r.retire_only ? 'Retire' : 'Approve') + '</button> ' +
+        '<button class="text" type="button" data-rule="reject" data-id="' + esc(r.id) + '">' + (r.retire_only ? 'Keep' : 'No') + '</button></div></div>';
     }
   function render() {
     var q = state.q.trim().toLowerCase();
