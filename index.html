@@ -181,6 +181,11 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .cleared .item .head span { white-space: normal; }
 .draft { margin-top: 12px; padding: 14px 16px; background: var(--soft); font-family: var(--serif); font-weight: 500; font-size: 1.16rem; line-height: 1.42; overflow-wrap: anywhere; }
 .draft.real { background: none; border: 1px solid var(--rule); }
+/* a draft email waiting for his tap: framed in ink, the one thing on the page that can leave the office */
+.draft.mail { background: none; border: 1px solid var(--ink); }
+.draft.mail .subj { font-family: var(--sans); font-size: 14px; font-weight: 400; color: var(--muted); margin-bottom: 10px; }
+.draft.mail textarea { width: 100%; min-height: 240px; padding: 10px 11px; resize: vertical; font-family: var(--serif); font-size: 1.16rem; line-height: 1.42; }
+.draft.mail .body, .draft.mail .note { font-family: var(--sans); font-weight: 400; margin-top: 10px; }
 .draft .lbl { margin-bottom: 8px; font-size: .56rem; }
 .tell textarea { width: 100%; min-height: 92px; padding: 12px 13px; resize: vertical; }
 .answer textarea { width: 100%; min-height: 64px; margin-top: 10px; padding: 10px 11px; }
@@ -289,7 +294,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
   var CFG = window.OFFICE || null;                 // set on the web build: { url, key }
   var TOKEN_KEY = 'plansman_office_token';
   var DATA = null, P = [], BY = {}, SAID = [], token = null;
-  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '' };
+  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null };
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var usd = function (n) { return n == null ? '' : (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 }); };
@@ -362,6 +367,47 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
   var ASKS = { questions: [], rules: [] };
   // ACTS: changes Jake has proposed to the schedule. One is written only after Lance taps Do it (db/012).
   var ACTS = [];
+  // DRAFTS: emails Jake has drafted (db/015). One goes out only after Lance taps Approve on it; he can edit
+  // the wording first, or drop it. A draft answering an email that waits on him is shown on that email.
+  var DRAFTS = [], PUSHED = null;
+  var BLANK = /\[[A-Z][^\]\[a-z]{1,200}\]/g;                  // [FEE]: a fact only he has, left for him to fill
+  var ATTACH = /\battach(?:ed|ment|ments|ing)?\b|\benclosed\b/i;     // P4 cannot attach a file yet
+  function blanksIn(t) { return (t || '').match(BLANK) || []; }
+  function typing() { return document.activeElement && /^(TEXTAREA|INPUT)$/.test(document.activeElement.tagName); }
+  function draftOn(p, key) {
+    return DRAFTS.filter(function (d) { return d.proj_no === p.no && d.item_key === key; }).slice(-1)[0] || null;
+  }
+  function draftBlock(d, onItem) {
+    var to = (d.to_names || []).join(', '), cc = (d.cc_names || []).join(', ');
+    var open = d.state === 'draft' || d.state === 'failed', editing = open && state.editDraft === d.id, blanks = blanksIn(d.body), file = ATTACH.test(d.body || '');
+    // Jake's one line on what he needs from Lance comes first; the subject is not repeated under the email it answers
+    var h = (d.note && d.state !== 'sent' ? '<div class="body"><b>Jake: </b>' + esc(d.note) + '</div>' : '') +
+      '<div class="draft mail"><div class="lbl">' + (d.state === 'sent' ? 'Email' : 'Draft email') + ' to ' + esc(to) + (cc ? ' · copy to ' + esc(cc) : '') + '</div>' +
+      (onItem ? '' : '<div class="subj">' + esc(d.subject) + '</div>');
+    if (editing) h += '<textarea data-draft-text="' + d.id + '" aria-label="The email text">' + esc(state.draftText[d.id] != null ? state.draftText[d.id] : d.body) + '</textarea>';
+    else h += '<div class="txt">' + para(d.body) + '</div>';
+    if (d.state === 'failed' || d.state === 'stale') h += '<div class="body late">' + esc(d.result || 'Not sent.') + '</div>';
+    else if (d.state === 'approved' || d.state === 'sending') h += '<div class="body note">' + esc(d.result || 'Approved. Sending…') + '</div>';
+    else if (d.state === 'sent') h += '<div class="body ok">' + esc(d.result || 'Sent.') + '</div>';
+    if (open && !editing && blanks.length) h += '<div class="body note">Fill in ' + esc(blanks.join(', ')) + ' before it can go: tap Edit.</div>';
+    if (open && !editing && file) h += '<div class="body note">It says a file is attached. Jake cannot attach files yet: send this one yourself, or tap Edit and take that out.</div>';
+    if (CFG && open) h += '<div class="marks">' +
+      (editing || (!blanks.length && !file) ? '<button class="go" type="button" data-draft="approve" data-id="' + d.id + '">Approve</button> ' : '') +
+      (editing ? '<button class="text quiet" type="button" data-draft="cancel" data-id="' + d.id + '">Cancel edit</button>'
+               : '<button class="text" type="button" data-draft="edit" data-id="' + d.id + '">Edit</button> <button class="text quiet" type="button" data-draft="drop" data-id="' + d.id + '">Drop</button>') + '</div>';
+    if (CFG && d.state === 'stale') h += '<div class="marks"><button class="text quiet" type="button" data-draft="drop" data-id="' + d.id + '">Clear</button></div>';
+    if (state.draftMsg && state.draftMsgId === d.id) h += '<p class="note">' + esc(state.draftMsg) + '</p>';
+    return h + '</div>';
+  }
+  // A draft with nothing open to sit on (he marked the email handled, or Jake drafted it because he asked)
+  // is its own thing waiting on him.
+  function draftNeeds(p) {
+    var keys = {};
+    (p.needs || []).forEach(function (n) { if (!MARKS[n.key]) keys[n.key] = 1; });
+    return DRAFTS.filter(function (d) { return d.proj_no === p.no && d.state !== 'sent' && !keys[d.item_key]; }).map(function (d) {
+      return { key: 'draft:' + d.id, kind: 'draft', draft: d, title: 'Draft email to ' + (d.to_names || []).join(', '), days: daysSince(d.created_at) };
+    });
+  }
   var CHANGE_LABEL = { phase: 'Phase', due: 'Due date', status: 'Status note' };
   function actLines(a) {
     return ['phase', 'due', 'status'].filter(function (k) { return a.change && a.change[k]; }).map(function (k) {
@@ -390,7 +436,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
       return { key: 'action:' + a.id, kind: 'action', act: a, title: 'Schedule change waiting for your OK', days: daysSince(a.proposed_at) };
     });
   }
-  function openNeeds(p) { return actionNeeds(p).concat(questionNeeds(p), (p.needs || []).filter(function (n) { return !MARKS[n.key]; })); }
+  function openNeeds(p) { return actionNeeds(p).concat(questionNeeds(p), draftNeeds(p), (p.needs || []).filter(function (n) { return !MARKS[n.key]; })); }
   function wait(n) { return n.days == null ? '' : n.days === 0 ? 'since today' : n.days + (n.days === 1 ? ' day' : ' days'); }
   function longest(ns) { var m = -1; ns.forEach(function (n) { if (n.days != null && n.days > m) m = n.days; }); return m; }
   function whoHasWhat(p) {
@@ -409,7 +455,8 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     need.sort(function (x, y) { return y.w - x.w; });
     var needRows = need.map(function (x) {
       var p = x.p;
-      return row(p, x.ns.map(function (n) { return n.summary || n.title; }).join(' · '), '', false, p.phase || 'No phase', bubsFor(x.ns) || ' ', worstSev(x.ns));
+      var ready = x.ns.some(function (n) { var d = n.kind === 'email' && draftOn(p, n.key); return d && d.state === 'draft'; });
+      return row(p, x.ns.map(function (n) { return n.summary || n.title; }).concat(ready ? ['Draft email ready'] : []).join(' · '), '', false, p.phase || 'No phase', bubsFor(x.ns) || ' ', worstSev(x.ns));
     });
     // how the list divides by how long things have waited: one bar, three counts
     var cnt = { r: 0, a: 0, g: 0 };
@@ -499,7 +546,11 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
       if (n.jake) h3 += '<div class="body">' + esc(n.jake) + '</div>';
       if (n.by) h3 += '<div class="body note">Needed by ' + esc(n.by) + '</div>';
       if (n.detail && n.kind !== 'note' || n.kind === 'note') h3 += '<div class="body' + (n.jake ? ' note' : '') + '">' + esc(n.detail) + (n.snippet ? '<div class="note" style="margin-top:4px">' + esc(n.snippet) + '</div>' : '') + '</div>';
-      if (n.kind === 'action') {
+      var dr = n.kind === 'draft' ? n.draft : n.kind === 'email' ? draftOn(p, n.key) : null;
+      if (dr) h3 += draftBlock(dr, n.kind === 'email');
+      if (n.kind === 'draft') {
+        // its own buttons are the decision
+      } else if (n.kind === 'action') {
         h3 += actLines(n.act) + (CFG ? '<div class="marks"><button class="go" type="button" data-act="approve" data-id="' + n.act.id + '">Do it</button> <button class="text quiet" type="button" data-act="cancel" data-id="' + n.act.id + '">Cancel</button></div>' : '');
       } else if (n.kind === 'question') {
         if (n.why) h3 += '<div class="body note">Waiting on this: ' + esc(n.why) + '</div>';
@@ -521,6 +572,12 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
       return '<div class="item"><div class="head"><span>' + esc(n.title) + ': ' + (m.mark === 'handled' ? 'handled' : 'waiting on the ' + m.waiting_on) + (m.marked_at ? ', ' + esc(stamp(m.marked_at)) : '') + '</span>' +
         (CFG ? '<button class="text" type="button" data-mark="open" data-key="' + esc(n.key) + '">Put back</button>' : '') + '</div></div>';
     }).join('') + '</div>';
+    // what went out in the last three days, said once, quietly
+    var openKeys = {};
+    open.forEach(function (n) { openKeys[n.key] = 1; });
+    DRAFTS.filter(function (d) { return d.proj_no === p.no && d.state === 'sent' && !openKeys[d.item_key]; }).forEach(function (d) {
+      need += '<div class="item"><div class="head"><span>' + esc(d.subject) + '</span><span>' + esc(stamp(d.sent_at)) + '</span></div><div class="body ok">' + esc(d.result || 'Sent.') + '</div></div>';
+    });
     ASKS.questions.filter(function (q) { return q.proj_no === p.no && q.state === 'answered'; }).forEach(function (q) {
       need += '<div class="item"><div class="head"><span>' + esc(cap(q.agent)) + ' asked: ' + esc(q.body) + '</span><span>' + esc(stamp(q.answered_at)) + '</span></div><div class="body">You answered: ' + para(q.answer || '') + '</div></div>';
     });
@@ -553,7 +610,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     if (CFG) {
       tell += '<form id="tell"><textarea id="tell-text" placeholder="What should happen next on this job?" aria-label="Instruction to the team">' + esc(state.draft[p.no] || '') + '</textarea>' +
         '<div class="bar"><button class="go" id="tell-btn" type="submit"' + (state.sending ? ' disabled' : '') + '>' + (state.sending ? 'Saving…' : 'Tell the team') + '</button>' +
-        '<span id="tell-msg">' + esc(state.tellMsg || 'Enter sends. Shift+Enter starts a new line. Jake can look things up, draft, and change the schedule when you tell him to. He cannot send anything yet.') + '</span></div></form>';
+        '<span id="tell-msg">' + esc(state.tellMsg || 'Enter sends. Shift+Enter starts a new line. Jake can look things up, draft, and change the schedule when you tell him to. An email he drafts goes out only when you tap Approve.') + '</span></div></form>';
     } else {
       tell += '<p class="note">Your instruction box goes here on the plansman.ai version. This private preview cannot save anything.</p>';
     }
@@ -655,6 +712,12 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     Array.prototype.forEach.call($('detail').querySelectorAll('[data-act]'), function (b) {
       b.addEventListener('click', function () { decideAct(+b.getAttribute('data-id'), b.getAttribute('data-act')); });
     });
+    Array.prototype.forEach.call($('detail').querySelectorAll('[data-draft]'), function (b) {
+      b.addEventListener('click', function () { decideDraft(+b.getAttribute('data-id'), b.getAttribute('data-draft')); });
+    });
+    Array.prototype.forEach.call($('detail').querySelectorAll('[data-draft-text]'), function (t) {
+      t.addEventListener('input', function () { state.draftText[+t.getAttribute('data-draft-text')] = t.value; });
+    });
     Array.prototype.forEach.call($('detail').querySelectorAll('[data-ans]'), function (t) {
       t.addEventListener('input', function () { state.ans[t.getAttribute('data-ans')] = t.value; });
       t.addEventListener('keydown', function (e) {
@@ -714,6 +777,8 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
         MARKS = {}; (m.marks || []).forEach(function (x) { MARKS[x.item_key] = x; }); render();
       }).catch(function () {});
       loadAsks();
+      loadDrafts();
+      if (!window.__draftPoll) window.__draftPoll = setInterval(loadDrafts, 20000);
     }).catch(function (e) { showLogin('Could not reach the dashboard (' + e.message + ').'); });
   }
   // What the team has put to him: read on load and again while a reply is being waited for
@@ -735,6 +800,66 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
       ACTS = d.actions || [];
       if (JSON.stringify(ACTS) !== before && !typing) render();
     }).catch(function () {});
+  }
+  // Draft emails: read on load and every 20 seconds while the page is open. The same call says when the
+  // dashboard's data was last pushed, so the page reloads its data by itself instead of waiting for a refresh.
+  function loadDrafts() {
+    if (!CFG || !token || document.hidden) return;
+    rpc('office_drafts', { p_token: token }).then(function (d) {
+      if (!d || !d.ok) return;
+      var before = JSON.stringify(DRAFTS);
+      DRAFTS = d.drafts || [];
+      if (JSON.stringify(DRAFTS) !== before && !typing()) render();
+      if (d.pushed_at && PUSHED && d.pushed_at !== PUSHED) refreshData();
+      PUSHED = d.pushed_at || PUSHED;
+    }).catch(function () {});
+  }
+  function refreshData() {
+    rpc('office_read', { p_token: token }).then(function (d) {
+      if (!d || !d.ok || !d.data) return;
+      DATA = d.data; P = d.data.projects; BY = {};
+      P.forEach(function (p) { BY[p.no] = p; });
+      $('read').textContent = 'Sheets read ' + d.read_at;
+      if (!typing()) render();
+    }).catch(function () {});
+  }
+  // Approve (as written, or as he edited it), Edit, Drop. Shown at once; put right again if the save fails.
+  var draftWatch = null;
+  function decideDraft(id, what) {
+    var d = DRAFTS.filter(function (x) { return x.id === id; })[0];
+    if (!d) return;
+    state.draftMsg = ''; state.draftMsgId = id;
+    if (what === 'edit') { state.editDraft = id; if (state.draftText[id] == null) state.draftText[id] = d.body; render(); var t = document.querySelector('[data-draft-text="' + id + '"]'); if (t) t.focus(); return; }
+    if (what === 'cancel') { state.editDraft = null; delete state.draftText[id]; render(); return; }
+    var editing = state.editDraft === id, text = editing ? (state.draftText[id] || '').trim() : null;
+    if (what === 'approve') {
+      var left = blanksIn(editing ? text : d.body);
+      if (editing && !text) { state.draftMsg = 'The email is empty.'; render(); return; }
+      if (left.length) { state.draftMsg = 'Fill in ' + left.join(', ') + ' first.'; render(); return; }
+      if (ATTACH.test(editing ? text : d.body)) { state.draftMsg = 'It still says a file is attached. Jake cannot attach files yet.'; render(); return; }
+    }
+    var was = { state: d.state, body: d.body, result: d.result };
+    if (what === 'approve') { d.state = 'approved'; d.result = null; if (text) d.body = text; }
+    else { DRAFTS = DRAFTS.filter(function (x) { return x.id !== id; }); }
+    state.editDraft = null; render();
+    function back(msg) {
+      d.state = was.state; d.body = was.body; d.result = was.result;
+      if (what !== 'approve') DRAFTS.push(d);
+      if (text != null) state.editDraft = id;
+      state.draftMsg = msg; render();
+    }
+    rpc('office_draft', { p_token: token, p_id: id, p_decision: what, p_text: what === 'approve' && text && text !== was.body ? text : null }).then(function (r) {
+      if (!r || !r.ok) return back('Signed out. Reload and enter the PIN; your text is still here.');
+      if (!r.saved) return back('Not saved: ' + (r.why || 'try again') + '.');
+      delete state.draftText[id];
+      if (what === 'approve' && !draftWatch) {
+        var until = Date.now() + 3 * 60 * 1000;
+        draftWatch = setInterval(function () {
+          if (Date.now() > until || !DRAFTS.some(function (x) { return x.state === 'approved' || x.state === 'sending'; })) { clearInterval(draftWatch); draftWatch = null; return; }
+          loadDrafts();
+        }, 4000);
+      }
+    }).catch(function (e) { back('Not saved (' + e.message + '). Your text is still here.'); });
   }
   // Undo on a schedule change that was written (and Do it / Cancel, kept for a change Jake did not make
   // on Lance's word). Then watch until the worker reports done or failed.
@@ -824,7 +949,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     DATA = data; P = data.projects; BY = {};
     P.forEach(function (p) { BY[p.no] = p; });
     $('read').textContent = readLine;
-    $('foot').innerHTML = CFG ? 'Jake changes the schedule only when you tell him to. Nothing is sent to anyone. <button class="text" id="out" type="button">Sign out</button>'
+    $('foot').innerHTML = CFG ? 'Jake changes the schedule only when you tell him to. An email goes out only when you approve it. <button class="text" id="out" type="button">Sign out</button>'
                               : 'Read-only private preview. Tapping changes nothing.';
     var out = $('out');
     if (out) out.addEventListener('click', function () { var t = token; token = null; try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} rpc('office_logout', { p_token: t }).catch(function () {}); showLogin(''); });
