@@ -178,6 +178,12 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .marks button.text.quiet, button.text.quiet { color: var(--muted); border-color: var(--rule); }
 .marks button.go { padding: 8px 16px 7px 17px; font-size: .64rem; }
 .cleared { margin-top: 10px; }
+.score h3 { margin-top: 18px; }
+.score .item { padding: 8px 0; }
+.score .item .head b { font-weight: 400; }
+.score .item .head span { white-space: normal; text-align: right; }
+.did .marks.all { margin: 4px 0 2px; }
+#decisions .sec { margin-top: 0; }
 .cleared .item .head span { white-space: normal; }
 .draft { margin-top: 12px; padding: 14px 16px; background: var(--soft); font-size: 15.5px; line-height: 1.5; overflow-wrap: anywhere; }
 .draft.real { background: none; border: 1px solid var(--rule); }
@@ -261,7 +267,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261120-065636";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261120-073621";</script>
 </head>
 <body>
 
@@ -284,6 +290,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     </form>
     <div id="ask-said"></div>
     <div id="rules"></div>
+    <div id="decisions"></div>
     <nav class="nav" aria-label="Views"><a href="#queue" id="nav-queue">Queue</a><a href="#projects" id="nav-projects">All projects</a></nav>
     <div id="listbody"></div>
     <p class="foot" id="foot"></p>
@@ -297,7 +304,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   var CFG = window.OFFICE || null;                 // set on the web build: { url, key }
   var TOKEN_KEY = 'plansman_office_token';
   var DATA = null, P = [], BY = {}, SAID = [], token = null;
-  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null };
+  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', decWrong: null, decText: {}, decMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null };
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var usd = function (n) { return n == null ? '' : (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 }); };
@@ -318,7 +325,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   // date... everything should just be based on how long its been sitting". Colors by how long, in one place:
   // [amber from, red from], in days. A person waiting on a reply turns sooner than work does.
   var SEV = { reply: [2, 4], other: [7, 14] };
-  function isReply(n) { return n.kind === 'email' || n.kind === 'text' || n.kind === 'question'; }
+  function isReply(n) { return n.kind === 'email' || n.kind === 'text' || n.kind === 'question' || n.kind === 'decision'; }
   function isMsg(n) { return n.kind === 'email' || n.kind === 'text'; }
   function sev(n) { var t = SEV[isReply(n) ? 'reply' : 'other']; return n.days >= t[1] ? 'r' : n.days >= t[0] ? 'a' : 'g'; }
   function dtext(d) { return d === 0 ? 'today' : d + (d === 1 ? ' day' : ' days'); }
@@ -369,6 +376,10 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   // a thing waiting on him until he answers); rules = standing rules proposed by the team, which count only
   // after his tap (db/010).
   var ASKS = { questions: [], rules: [] };
+  // DEC: Jake's judgment calls (db/028). open = what he ASKS before acting (state 'asked': it waits on Lance, so
+  // it counts as Needs you on its project) and what he did and shows ('shown': Right or Wrong, never a thing
+  // waiting on Lance); recent = Lance's last verdicts and what Jake learned from each; kinds = the score.
+  var DEC = { open: [], recent: [], kinds: [] };
   // ACTS: changes Jake has proposed to the schedule. One is written only after Lance taps Do it (db/012).
   var ACTS = [];
   // DRAFTS: emails Jake has drafted (db/015). One goes out only after Lance taps Approve on it; he can edit
@@ -443,7 +454,61 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       return { key: 'action:' + a.id, kind: 'action', act: a, title: 'Schedule change waiting for your OK', days: daysSince(a.proposed_at) };
     });
   }
-  function openNeeds(p) { return actionNeeds(p).concat(questionNeeds(p), draftNeeds(p), (p.needs || []).filter(function (n) { return !MARKS[n.key]; })); }
+  function decisionNeeds(p) {
+    return DEC.open.filter(function (d) { return d.proj_no === p.no && d.state === 'asked'; }).map(function (d) {
+      return { key: 'decision:' + d.id, kind: 'decision', dec: d, title: 'Jake asks', detail: d.what, days: daysSince(d.created_at) };
+    });
+  }
+  // What Jake asks before acting: why, his guess (Yes is one tap), and a box to say something else
+  function decAsk(d) {
+    var h = '';
+    if (d.why) h += '<div class="body note">' + esc(d.why) + '</div>';
+    if (d.guess) h += '<div class="body"><b>His guess: </b>' + esc(d.guess) + '</div>';
+    if (CFG) h += '<div class="answer"><textarea data-dec-text="' + d.id + '" data-dec-send="answer" placeholder="' + (d.guess ? 'Or say what to do instead' : 'Your answer') + '" aria-label="Your answer">' + esc(state.decText[d.id] || '') + '</textarea>' +
+      '<div class="marks">' + (d.guess ? '<button class="go" type="button" data-dec="yes" data-id="' + d.id + '">Yes</button> ' : '') +
+      '<button class="' + (d.guess ? 'text' : 'go') + '" type="button" data-dec="answer" data-id="' + d.id + '">Answer</button></div></div>';
+    return h;
+  }
+  // What Jake did and shows: Right is one tap; Wrong opens a box for what is right
+  function decShown(d) {
+    var h = '<div class="item"><div class="head"><b>' + esc(d.what) + '</b><span>' + esc(stamp(d.created_at)) + '</span></div>' +
+      (d.why ? '<div class="body note">' + esc(d.why) + '</div>' : '');
+    if (!CFG) return h + '</div>';
+    if (state.decWrong === d.id) h += '<div class="answer"><textarea data-dec-text="' + d.id + '" data-dec-send="wrong-send" placeholder="What is right?" aria-label="What is right">' + esc(state.decText[d.id] || '') + '</textarea>' +
+      '<div class="marks"><button class="go" type="button" data-dec="wrong-send" data-id="' + d.id + '">Send</button> <button class="text quiet" type="button" data-dec="cancel" data-id="' + d.id + '">Cancel</button></div></div>';
+    else h += '<div class="marks"><button class="text" type="button" data-dec="right" data-id="' + d.id + '">Right</button> <button class="text" type="button" data-dec="wrong" data-id="' + d.id + '">Wrong</button></div>';
+    return h + '</div>';
+  }
+  // His last verdicts, quietly: what he said, whether Jake has dealt with it, and what Jake wrote down from it
+  function decRecent(d) {
+    var said = d.state === 'wrong' ? (d.lance_said ? 'You said: ' + d.lance_said : '') : 'You answered: ' + (d.confirmed ? 'Yes' : (d.lance_said || ''));
+    return '<div class="item"><div class="head"><span>' + esc((d.state === 'wrong' ? 'Wrong: ' : 'Jake asked: ') + d.what) + '</span><span>' + esc(stamp(d.decided_at)) + '</span></div>' +
+      (said ? '<div class="body">' + esc(said) + '</div>' : '') +
+      '<div class="body note">' + (d.handled_at ? 'Jake has dealt with it.' : 'Jake is on it…') + '</div>' +
+      (d.learned ? '<div class="body"><b>Learned: </b>' + esc(d.learned) + '</div>' : '') + '</div>';
+  }
+  function decDid(list, recent, allKey) {
+    if (!list.length && !recent.length) return '';
+    return (list.length > 1 && CFG ? '<div class="marks all"><button class="text" type="button" data-dec="allright" data-id="' + esc(allKey) + '">All ' + list.length + ' right</button></div>' : '') +
+      list.map(decShown).join('') + (recent.length ? '<div class="cleared">' + recent.map(decRecent).join('') + '</div>' : '');
+  }
+  // The score: each kind of decision, where it stands today, and how his verdicts on it have gone
+  function scoreBoard() {
+    if (!DEC.kinds.length) return '';
+    var T = [['ask', 'He asks you first'], ['show', 'He does it and shows you'], ['do', 'He does it without telling you']];
+    return '<h2>How Jake is doing</h2><div class="sec score">' + T.map(function (t) {
+      var ks = DEC.kinds.filter(function (k) { return k.tier === t[0]; });
+      return ks.length ? '<h3>' + t[1] + '</h3>' + ks.map(function (k) {
+        var n = [];
+        if (k.right_n) n.push(k.right_n + ' right');
+        if (k.wrong_n) n.push(k.wrong_n + ' wrong');
+        if (k.quiet_n) n.push(k.quiet_n + ' done, not shown');
+        return '<div class="item"><div class="head"><b>' + esc(k.title) + '</b><span>' + esc(n.join(' · ')) + '</span></div>' +
+          (k.pinned ? '<div class="body note">Stays here until you say otherwise.</div>' : k.note ? '<div class="body note">' + esc(k.note) + '</div>' : '') + '</div>';
+      }).join('') : '';
+    }).join('') + '</div>';
+  }
+  function openNeeds(p) { return actionNeeds(p).concat(decisionNeeds(p), questionNeeds(p), draftNeeds(p), (p.needs || []).filter(function (n) { return !MARKS[n.key]; })); }
   function wait(n) { return n.days == null ? '' : n.days === 0 ? 'since today' : n.days + (n.days === 1 ? ' day' : ' days'); }
   function longest(ns) { var m = -1; ns.forEach(function (n) { if (n.days != null && n.days > m) m = n.days; }); return m; }
   function whoHasWhat(p) {
@@ -491,14 +556,21 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
         (t.jake && !(d && d.note) ? '<div class="body"><b>Jake: </b>' + esc(t.jake) + '</div>' : '') + (d ? draftBlock(d, true) : '') + '</div>';
     }).filter(Boolean);
     var looseSec = loose.length ? '<h2>Texts not on a project <span class="n">' + loose.length + '</span><small>Jake could not tie these to a job.</small></h2><div class="sec need loose">' + loose.join('') + '</div>' : '';
+    var didBy = {};
+    DEC.open.forEach(function (d) { if (d.state === 'shown' && BY[d.proj_no]) (didBy[d.proj_no] = didBy[d.proj_no] || []).push(d); });
+    var didRows = Object.keys(didBy).sort(function (a, b) { return didBy[b].length - didBy[a].length; }).map(function (no) {
+      var ds = didBy[no];
+      return row(BY[no], ds.slice(0, 2).map(function (d) { return d.what; }).join(' · ') + (ds.length > 2 ? ' · and ' + (ds.length - 2) + ' more' : ''), '', false, BY[no].phase || 'No phase');
+    });
     return looseSec + section('Needs you', '', needRows, dist) +
+      (didRows.length ? section('Jake did, check it', '', didRows) : '') +
       (cleared.length ? section('Nothing open for you', 'In our court. You marked everything handled or not your move.', cleared) : '') +
       section('Waiting on the client', '', group('client')) +
       section('At the city', '', group('city')) +
       section('Approved', '', group('approved')) +
       section('Construction', '', group('construction')) +
       section('Leads', 'Not signed.', group('lead')) +
-      section('No phase set', '', group('unknown'));
+      section('No phase set', '', group('unknown')) + scoreBoard();
   }
   function projects(list) {
     var years = {};
@@ -581,6 +653,8 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
         // its own buttons are the decision
       } else if (n.kind === 'action') {
         h3 += actLines(n.act) + (CFG ? '<div class="marks"><button class="go" type="button" data-act="approve" data-id="' + n.act.id + '">Do it</button> <button class="text quiet" type="button" data-act="cancel" data-id="' + n.act.id + '">Cancel</button></div>' : '');
+      } else if (n.kind === 'decision') {
+        h3 += decAsk(n.dec);
       } else if (n.kind === 'question') {
         if (n.why) h3 += '<div class="body note">Waiting on this: ' + esc(n.why) + '</div>';
         if (CFG) h3 += '<div class="answer"><textarea data-ans="' + n.qid + '" placeholder="Your answer" aria-label="Your answer">' + esc(state.ans[n.qid] || '') + '</textarea>' +
@@ -611,7 +685,10 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     ASKS.questions.filter(function (q) { return q.proj_no === p.no && q.state === 'answered'; }).forEach(function (q) {
       need += '<div class="item"><div class="head"><span>' + esc(cap(q.agent)) + ' asked: ' + esc(q.body) + '</span><span>' + esc(stamp(q.answered_at)) + '</span></div><div class="body">You answered: ' + para(q.answer || '') + '</div></div>';
     });
+    if (state.decMsg) need += '<p class="note">' + esc(state.decMsg) + '</p>';
     h += sec('Needs you', need || '<p class="note">Nothing is waiting on you on this project.</p>', 'lead need');
+    h += sec('Jake did, check it', decDid(DEC.open.filter(function (d) { return d.proj_no === p.no && d.state === 'shown'; }),
+      DEC.recent.filter(function (d) { return d.proj_no === p.no; }), p.no), 'lead need did');
 
     // 1b. what Jake would do (shadow: nothing is sent)
     var live = (p.shadow || []).filter(function (x) { return x.mode === 'waiting'; });
@@ -743,6 +820,14 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
                  : '<div class="body note">' + (s.state === 'working' ? 'Jake is working on it…' : 'Waiting for Jake to pick it up…') + '</div>') + '</div>';
     }).join('');
     $('rules').innerHTML = (ASKS.rules.length ? '<h2>Rules waiting for your OK <small>' + ASKS.rules.length + '</small></h2>' + ASKS.rules.map(ruleItem).join('') : '') + (state.ruleMsg ? '<p class="note">' + esc(state.ruleMsg) + '</p>' : '');
+    var noProj = function (d) { return !d.proj_no || !BY[d.proj_no]; };
+    var looseAsked = DEC.open.filter(function (d) { return d.state === 'asked' && noProj(d); });
+    var looseDid = decDid(DEC.open.filter(function (d) { return d.state === 'shown' && noProj(d); }), DEC.recent.filter(noProj), '');
+    $('decisions').innerHTML =
+      (looseAsked.length ? '<h2>Jake asks <span class="n">' + looseAsked.length + '</span></h2><div class="sec need">' + looseAsked.map(function (d) {
+        return '<div class="item"><div class="head"><b>' + esc(d.what) + '</b><span>' + esc(stamp(d.created_at)) + '</span></div>' + decAsk(d) + '</div>'; }).join('') + '</div>' : '') +
+      (looseDid ? '<h2>Jake did, check it</h2><div class="sec need did">' + looseDid + '</div>' : '') +
+      (state.decMsg && !(state.no && BY[state.no]) ? '<p class="note">' + esc(state.decMsg) + '</p>' : '');
     var p = state.no && BY[state.no];
     $('detail').innerHTML = p ? project(p) : '<div class="blank">Pick a project on the left.</div>';
     Array.prototype.forEach.call(document.querySelectorAll('#rules [data-rule], #detail [data-rule]'), function (b) {
@@ -768,6 +853,16 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       t.addEventListener('input', function () { state.ans[t.getAttribute('data-ans')] = t.value; });
       t.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); state.ans[t.getAttribute('data-ans')] = t.value; answerQuestion(+t.getAttribute('data-ans')); }
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-dec]'), function (b) {
+      b.addEventListener('click', function () { decideDec(b.getAttribute('data-id'), b.getAttribute('data-dec')); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-dec-text]'), function (t) {
+      var did = t.getAttribute('data-dec-text');
+      t.addEventListener('input', function () { state.decText[did] = t.value; });
+      t.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); state.decText[did] = t.value; decideDec(did, t.getAttribute('data-dec-send')); }
       });
     });
     Array.prototype.forEach.call($('detail').querySelectorAll('[data-answer]'), function (b) {
@@ -824,7 +919,9 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       }).catch(function () {});
       loadAsks();
       loadDrafts();
+      loadDecisions();
       if (!window.__draftPoll) window.__draftPoll = setInterval(loadDrafts, 20000);
+      if (!window.__decPoll) window.__decPoll = setInterval(loadDecisions, 60000);
     }).catch(function (e) { showLogin('Could not reach the dashboard (' + e.message + ').'); });
   }
   // What the team has put to him: read on load and again while a reply is being waited for
@@ -935,6 +1032,50 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       } else { state.actMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN.'; }
       render();
     }).catch(function (e) { state.actMsg = 'Not saved (' + e.message + ').'; render(); });
+  }
+  // Jake's decisions: read on load and every minute while the page is open
+  function loadDecisions() {
+    if (!CFG || !token || document.hidden) return;
+    rpc('office_decisions', { p_token: token }).then(function (d) {
+      if (!d || !d.ok) return;
+      var before = JSON.stringify(DEC);
+      DEC = { open: d.open || [], recent: d.recent || [], kinds: d.kinds || [] };
+      if (JSON.stringify(DEC) !== before && !typing()) render();
+    }).catch(function () {});
+  }
+  // Right / Wrong on what Jake did, Yes / an answer on what he asked: shown at once, put back if the save fails.
+  // verb: right, wrong (opens the box), wrong-send, cancel, yes, answer, allright (id is then the project number)
+  function decideDec(id, verb) {
+    if (verb === 'wrong') {
+      state.decWrong = +id; state.decMsg = ''; render();
+      var t = document.querySelector('[data-dec-text="' + id + '"]'); if (t) t.focus();
+      return;
+    }
+    if (verb === 'cancel') { state.decWrong = null; render(); return; }
+    var ids = verb === 'allright'
+      ? DEC.open.filter(function (d) { return d.state === 'shown' && (id ? d.proj_no === id : (!d.proj_no || !BY[d.proj_no])); }).map(function (d) { return d.id; })
+      : [+id];
+    var verdict = verb === 'allright' ? 'right' : verb === 'wrong-send' ? 'wrong' : verb;
+    var text = (verdict === 'wrong' || verdict === 'answer') ? (state.decText[id] || '').trim() : '';
+    if (verdict === 'answer' && !text) { state.decMsg = 'Type your answer first.'; render(); return; }
+    if (!ids.length) return;
+    var before = DEC.open.slice(), beforeRecent = DEC.recent.slice(), now = new Date().toISOString();
+    DEC.open = before.filter(function (d) { return ids.indexOf(d.id) < 0; });
+    if (verdict !== 'right') before.forEach(function (d) {
+      if (ids.indexOf(d.id) >= 0) DEC.recent = [{ id: d.id, proj_no: d.proj_no, title: d.title, what: d.what, state: verdict === 'wrong' ? 'wrong' : 'answered',
+        confirmed: verdict === 'yes', lance_said: verdict === 'yes' ? '' : text, decided_at: now }].concat(DEC.recent);
+    });
+    state.decWrong = null; state.decMsg = ''; render();
+    Promise.all(ids.map(function (i) { return rpc('office_decide', { p_token: token, p_id: i, p_verdict: verdict, p_text: text || null }); })).then(function (rs) {
+      var bad = rs.filter(function (d) { return !(d && d.ok && d.saved); })[0];
+      if (!bad) { delete state.decText[id]; setTimeout(loadDecisions, 45000); return; }
+      DEC.open = before; DEC.recent = beforeRecent; if (verdict === 'wrong') state.decWrong = +id;
+      state.decMsg = bad && bad.ok ? 'Not saved: ' + (bad.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN.'; render();
+      if (ids.length > 1) loadDecisions();
+    }).catch(function (e) {
+      DEC.open = before; DEC.recent = beforeRecent; if (verdict === 'wrong') state.decWrong = +id;
+      state.decMsg = 'Not saved (' + e.message + ').'; render();
+    });
   }
   // Approve or refuse a proposed rule: shown at once, put back if the save fails
   function decideRule(id, decision) {
