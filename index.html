@@ -184,7 +184,8 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 /* a draft email waiting for his tap: framed in ink, the one thing on the page that can leave the office */
 .draft.mail { background: none; border: 1px solid var(--ink); }
 .draft.mail .subj { font-family: var(--sans); font-size: 14px; font-weight: 400; color: var(--muted); margin-bottom: 10px; }
-.draft.mail textarea { width: 100%; min-height: 240px; padding: 10px 11px; resize: vertical; font-size: 15.5px; line-height: 1.5; }
+.draft.mail textarea { display: block; width: 100%; min-height: 3em; margin: -6px -8px; padding: 6px 8px; box-sizing: content-box; border: 0; outline: 1px dashed var(--muted);
+  background: var(--soft); resize: none; overflow: hidden; font: inherit; font-size: 15.5px; line-height: 1.5; color: var(--ink); }
 .draft.mail .body, .draft.mail .note { margin-top: 10px; }
 .draft .lbl { margin-bottom: 8px; font-size: .56rem; }
 .tell textarea { width: 100%; min-height: 92px; padding: 12px 13px; resize: vertical; }
@@ -258,7 +259,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"};</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261119-215405";</script>
 </head>
 <body>
 
@@ -390,13 +391,13 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     else h += '<div class="txt">' + para(d.body) + '</div>';
     if (files.length && d.state !== 'sent') h += '<div class="body"><b>Attached: </b>' + files.map(function (a) { return esc(a.name) + ' <span class="note">(' + esc(a.size || '') + (a.modified ? ', last changed ' + esc(day(a.modified)) : '') + ')</span>'; }).join('; ') + '</div>';
     if (d.state === 'failed' || d.state === 'stale') h += '<div class="body late">' + esc(d.result || 'Not sent.') + '</div>';
-    else if (d.state === 'approved' || d.state === 'sending') h += '<div class="body note">' + esc(d.result || (d.channel === 'action' ? 'Approved. Doing it…' : 'Approved. Sending…')) + '</div>';
+    else if (d.state === 'approved' || d.state === 'sending') h += '<div class="body note">' + esc(d.result || (d.channel === 'action' ? 'Doing it…' : 'Sending…')) + '</div>';
     else if (d.state === 'sent') h += '<div class="body ok">' + esc(d.result || 'Sent.') + '</div>';
     if (open && !editing && blanks.length) h += '<div class="body note">Fill in ' + esc(blanks.join(', ')) + ' before it can go: tap Edit.</div>';
     if (open && !editing && file) h += '<div class="body note">It says a file is attached, and nothing is. Tell Jake which file to attach, or tap Edit and take that out.</div>';
     if (CFG && open) h += '<div class="marks">' +
-      (editing || (!blanks.length && !file) ? '<button class="go" type="button" data-draft="approve" data-id="' + d.id + '">Approve</button> ' : '') +
-      (editing ? '<button class="text quiet" type="button" data-draft="cancel" data-id="' + d.id + '">Cancel edit</button>'
+      (editing || (!blanks.length && !file) ? '<button class="go" type="button" data-draft="approve" data-id="' + d.id + '">Send</button> ' : '') +
+      (editing ? '<button class="text quiet" type="button" data-draft="cancel" data-id="' + d.id + '">Cancel</button>'
                : (d.channel === 'action' ? '' : '<button class="text" type="button" data-draft="edit" data-id="' + d.id + '">Edit</button> ') + '<button class="text quiet" type="button" data-draft="drop" data-id="' + d.id + '">Drop</button>' +
                  (d.channel === 'action' ? ' <span class="note">To change it, tell Jake.</span>' : '')) + '</div>';
     if (CFG && d.state === 'stale') h += '<div class="marks"><button class="text quiet" type="button" data-draft="drop" data-id="' + d.id + '">Clear</button></div>';
@@ -599,7 +600,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     // what went out in the last three days, said once, quietly
     var openKeys = {};
     open.forEach(function (n) { openKeys[n.key] = 1; });
-    if (below) need += '<p class="note">' + (below === 1 ? 'A draft is' : below + ' drafts are') + ' waiting for your Approve below, on Jake\'s answer.</p>';
+    if (below) need += '<p class="note">' + (below === 1 ? 'A draft is' : below + ' drafts are') + ' waiting below, on Jake\'s answer.</p>';
     DRAFTS.filter(function (d) { return d.proj_no === p.no && d.state === 'sent' && !openKeys[d.item_key] && !shownInChat(d); }).forEach(function (d) {
       need += '<div class="item"><div class="head"><span>' + esc(d.subject) + '</span><span>' + esc(stamp(d.sent_at)) + '</span></div><div class="body ok">' + esc(d.result || 'Sent.') + '</div></div>';
     });
@@ -636,7 +637,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     if (CFG) {
       tell += '<form id="tell"><textarea id="tell-text" placeholder="What should happen next on this job?" aria-label="Instruction to the team">' + esc(state.draft[p.no] || '') + '</textarea>' +
         '<div class="bar"><button class="go" id="tell-btn" type="submit"' + (state.sending ? ' disabled' : '') + '>' + (state.sending ? 'Saving…' : 'Tell the team') + '</button>' +
-        '<span id="tell-msg">' + esc(state.tellMsg || 'Enter sends. Shift+Enter starts a new line. Jake can look things up, draft, and change the schedule when you tell him to. An email he drafts goes out only when you tap Approve.') + '</span></div></form>';
+        '<span id="tell-msg">' + esc(state.tellMsg || 'Enter sends. Shift+Enter starts a new line. Jake can look things up, draft, and change the schedule when you tell him to. Nothing goes out until you tap Send.') + '</span></div></form>';
     } else {
       tell += '<p class="note">Your instruction box goes here on the plansman.ai version. This private preview cannot save anything.</p>';
     }
@@ -742,7 +743,9 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
       b.addEventListener('click', function () { decideDraft(+b.getAttribute('data-id'), b.getAttribute('data-draft')); });
     });
     Array.prototype.forEach.call(document.querySelectorAll('#detail [data-draft-text], #listbody [data-draft-text]'), function (t) {
-      t.addEventListener('input', function () { state.draftText[+t.getAttribute('data-draft-text')] = t.value; });
+      var fit = function () { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; };
+      fit();
+      t.addEventListener('input', function () { state.draftText[+t.getAttribute('data-draft-text')] = t.value; fit(); });
     });
     Array.prototype.forEach.call($('detail').querySelectorAll('[data-ans]'), function (t) {
       t.addEventListener('input', function () { state.ans[t.getAttribute('data-ans')] = t.value; });
@@ -840,6 +843,15 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
       PUSHED = d.pushed_at || PUSHED;
     }).catch(function () {});
   }
+  // A phone keeps the page it loaded. When a newer page has been published, load it (never while he is typing).
+  function checkBuild() {
+    if (!CFG || !window.BUILD || typing() || state.editDraft) return;
+    fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
+      if (v && v.build && v.build !== window.BUILD) location.replace(location.pathname + '?v=' + encodeURIComponent(v.build) + location.hash);
+    }).catch(function () {});
+  }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { checkBuild(); loadDrafts(); } });
+  setInterval(checkBuild, 60000);
   function refreshData() {
     rpc('office_read', { p_token: token }).then(function (d) {
       if (!d || !d.ok || !d.data) return;
@@ -855,7 +867,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     var d = DRAFTS.filter(function (x) { return x.id === id; })[0];
     if (!d) return;
     state.draftMsg = ''; state.draftMsgId = id;
-    if (what === 'edit') { state.editDraft = id; if (state.draftText[id] == null) state.draftText[id] = d.body; render(); var t = document.querySelector('[data-draft-text="' + id + '"]'); if (t) t.focus(); return; }
+    if (what === 'edit') { state.editDraft = id; if (state.draftText[id] == null) state.draftText[id] = d.body; render(); var t = document.querySelector('[data-draft-text="' + id + '"]'); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } return; }
     if (what === 'cancel') { state.editDraft = null; delete state.draftText[id]; render(); return; }
     var editing = state.editDraft === id, text = editing ? (state.draftText[id] || '').trim() : null;
     if (what === 'approve') {
@@ -975,7 +987,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
     DATA = data; P = data.projects; BY = {};
     P.forEach(function (p) { BY[p.no] = p; });
     $('read').textContent = readLine;
-    $('foot').innerHTML = CFG ? 'Jake changes the schedule only when you tell him to. An email goes out only when you approve it. <button class="text" id="out" type="button">Sign out</button>'
+    $('foot').innerHTML = CFG ? 'Jake changes the schedule only when you tell him to. Nothing goes out until you tap Send. <button class="text" id="out" type="button">Sign out</button>'
                               : 'Read-only private preview. Tapping changes nothing.';
     var out = $('out');
     if (out) out.addEventListener('click', function () { var t = token; token = null; try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} rpc('office_logout', { p_token: t }).catch(function () {}); showLogin(''); });
