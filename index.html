@@ -79,11 +79,23 @@ input:focus, textarea:focus { border-color: var(--ink); outline: none; }
 #notify span { flex: 1; min-width: 180px; font-size: 14px; color: var(--muted); }
 #notice { margin-top: 14px; padding: 12px 14px; border: 1px solid var(--long); color: var(--long); font-size: 15.5px; }
 #q { width: 100%; margin-top: 16px; padding: 12px 13px; }
-#ask { display: flex; gap: 8px; margin-top: 8px; }
-#ask-text { flex: 1; min-width: 0; padding: 12px 13px; }
-#ask-said .item, #rules .item { padding: 12px 0 8px; }
+/* the Chat page: the general conversation with Jake, newest at the bottom, the box under it */
+#chatview { margin-top: 18px; }
+#chatlog { min-height: 30vh; }
+#chatlog .empty { color: var(--muted); text-align: center; margin: 12vh 0; }
+#chatlog .msg a.open { display: inline-block; margin-top: 8px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .18em; font-size: .6rem;
+  border: 1px solid var(--ink); padding: 7px 11px 6px 12px; }
+#chatlog .msg b { font-weight: 500; }
+#ask { position: sticky; bottom: 0; background: var(--bg); padding: 10px 0 max(10px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--rule); }
+#ask-text { width: 100%; min-height: 58px; max-height: 40vh; resize: none; padding: 10px 11px; display: block; }
+#ask .bar { display: flex; gap: 14px; align-items: center; margin-top: 8px; }
+#ask .bar span { color: var(--muted); font-size: 13px; }
+#chat-dot { display: inline-block; width: 7px; height: 7px; background: var(--long); margin-left: 7px; vertical-align: 2px; }
+@keyframes slideL { from { transform: translateX(32px); opacity: .2; } to { transform: none; opacity: 1; } }
+@keyframes slideR { from { transform: translateX(-32px); opacity: .2; } to { transform: none; opacity: 1; } }
+.slide-l { animation: slideL .2s ease-out; } .slide-r { animation: slideR .2s ease-out; }
+#rules .item { padding: 12px 0 8px; }
 #rules .rule { font-size: 15.5px; }
-#ask-said .note { margin-top: 4px; }
 .nav { display: flex; gap: 26px; margin-top: 22px; border-bottom: 1px solid var(--rule); }
 .nav a { padding: 8px 0 11px; border-bottom: 1px solid transparent; margin-bottom: -1px; }
 .nav a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--ink); }
@@ -276,7 +288,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261120-155642";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261120-161644";</script>
 </head>
 <body>
 
@@ -293,17 +305,21 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   <div class="pane" id="list">
     <div class="brand"><b>Plansman</b><span id="read"></span></div>
     <div id="notice" hidden></div>
-    <input id="q" type="search" placeholder="Find an address, number or name" autocomplete="off" aria-label="Find a project">
-    <form id="ask" hidden>
-      <input id="ask-text" type="text" placeholder="Ask the team" autocomplete="off" aria-label="Ask the team">
-      <button class="go" id="ask-btn" type="submit">Ask</button>
-    </form>
-    <div id="ask-said"></div>
     <div id="notify" hidden></div>
-    <div id="rules"></div>
-    <div id="decisions"></div>
-    <nav class="nav" aria-label="Views"><a href="#queue" id="nav-queue">Queue</a><a href="#projects" id="nav-projects">All projects</a></nav>
-    <div id="listbody"></div>
+    <nav class="nav" aria-label="Views"><a href="#chat" id="nav-chat">Chat<i id="chat-dot" hidden></i></a><a href="#queue" id="nav-queue">Queue</a><a href="#projects" id="nav-projects">All projects</a></nav>
+    <div id="chatview" hidden>
+      <div class="chat" id="chatlog"></div>
+      <form id="ask" hidden>
+        <textarea id="ask-text" placeholder="Message Jake" aria-label="Message Jake"></textarea>
+        <div class="bar"><button class="go" id="ask-btn" type="submit">Send</button><span id="ask-note">Enter sends. Shift+Enter starts a new line.</span></div>
+      </form>
+    </div>
+    <div id="listview">
+      <input id="q" type="search" placeholder="Find an address, number or name" autocomplete="off" aria-label="Find a project">
+      <div id="rules"></div>
+      <div id="decisions"></div>
+      <div id="listbody"></div>
+    </div>
     <p class="foot" id="foot"></p>
   </div>
   <div class="pane" id="detail"></div>
@@ -315,7 +331,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   var CFG = window.OFFICE || null;                 // set on the web build: { url, key }
   var TOKEN_KEY = 'plansman_office_token';
   var DATA = null, P = [], BY = {}, SAID = [], token = null;
-  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', loose: {}, decWrong: null, decText: {}, decMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null };
+  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', loose: {}, chatAll: false, lastList: 'queue', decWrong: null, decText: {}, decMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null };
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var usd = function (n) { return n == null ? '' : (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 }); };
@@ -391,6 +407,45 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   // it counts as Needs you on its project) and what he did and shows ('shown': Right or Wrong, never a thing
   // waiting on Lance); recent = Lance's last verdicts and what Jake learned from each; kinds = the score.
   var DEC = { open: [], recent: [], kinds: [] };
+  // NOTES: the news Jake sent him (db/034, notices). With what he writes to Jake outside any project and Jake's
+  // answers, they are the Chat page: the general conversation (Lance, 20 Nov 2026: "I can use that as the telegram").
+  var NOTES = [];
+  var SEEN_KEY = 'plansman_chat_seen';
+  function chatSeen() { try { return localStorage.getItem(SEEN_KEY) || ''; } catch (e) { return ''; } }
+  // what he wrote about a text that is on no project reads as he wrote it, without the reference the page added
+  function tidy(body) {
+    var m = /^About the (text|voicemail) from (.+?) that is not on a project \[text:[^\]]+\][\s\S]*?\n\nLance: ([\s\S]*)$/.exec(body || '');
+    return m ? 'About the ' + m[1] + ' from ' + m[2] + ': ' + m[3] : (body || '');
+  }
+  function chatItems() {
+    var items = SAID.filter(function (x) { return x.proj_no === 'office'; }).map(function (x) { return { at: x.created_at, said: x }; })
+      .concat(NOTES.map(function (n) { return { at: n.created_at, note: n }; }));
+    items.sort(function (a, b) { return new Date(a.at) - new Date(b.at); });
+    return items;
+  }
+  function chatNewest() {
+    var t = '';
+    SAID.forEach(function (x) { if (x.proj_no === 'office' && x.replied_at && x.replied_at > t) t = x.replied_at; });
+    NOTES.forEach(function (n) { if (n.created_at > t) t = n.created_at; });
+    return t;
+  }
+  function chat() {
+    var items = chatItems(), KEEP = 40, earlier = state.chatAll ? 0 : Math.max(0, items.length - KEEP);
+    if (!items.length) return '<p class="empty">Nothing here yet. Write to Jake below; his news shows here too.</p>';
+    return (earlier ? '<button class="text more" id="more-chat" type="button">Show ' + earlier + ' earlier</button>' : '') + items.slice(earlier).map(function (it) {
+      if (it.note) {
+        var n = it.note, p = n.proj_no && BY[n.proj_no];
+        return '<div class="msg jake"><div class="lbl">' + esc(cap(n.who || 'jake')) + ' · ' + esc(stamp(n.created_at)) + '</div><div class="txt"><b>' + esc(n.title) + '</b><br>' + para(n.body) + '</div>' +
+          (p ? '<a class="open" href="#p-' + esc(n.proj_no) + '">Open ' + esc(n.proj_no) + '</a>' : '') + '</div>';
+      }
+      var x = it.said;
+      var h = '<div class="msg me"><div class="lbl">You · ' + esc(stamp(x.created_at)) + '</div><div class="txt">' + para(tidy(x.body)) + '</div></div>';
+      if (x.reply) h += '<div class="msg jake' + (x.state === 'failed' ? ' wait' : '') + '"><div class="lbl">Jake' + (x.replied_at ? ' · ' + esc(stamp(x.replied_at)) : '') + '</div><div class="txt">' + para(x.reply) + '</div>' +
+        DRAFTS.filter(function (d) { return d.instruction_id === x.id; }).map(function (d) { return draftBlock(d); }).join('') + '</div>';
+      else h += '<div class="msg jake wait"><div class="lbl">Jake</div><div class="txt">' + (x.state === 'working' ? 'Working on it…' : 'Picking it up…') + '</div></div>';
+      return h;
+    }).join('');
+  }
   // ACTS: changes Jake has proposed to the schedule. One is written only after Lance taps Do it (db/012).
   var ACTS = [];
   // DRAFTS: emails Jake has drafted (db/015). One goes out only after Lance taps Approve on it; he can edit
@@ -834,14 +889,19 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     }
   function render() {
     var q = state.q.trim().toLowerCase();
-    $('listbody').innerHTML = q ? projects(P.filter(function (p) { return matches(p, q); })) : (state.view === 'projects' ? projects(P) : queue());
-    ['queue', 'projects'].forEach(function (v) { if (state.view === v && !q) $('nav-' + v).setAttribute('aria-current', 'page'); else $('nav-' + v).removeAttribute('aria-current'); });
-    var asked = SAID.filter(function (s) { return s.proj_no === 'office'; }).slice(0, 2);
-    $('ask-said').innerHTML = asked.map(function (s) {
-      return '<div class="item"><div class="head"><b>You asked</b><span>' + esc(stamp(s.created_at)) + '</span></div><div class="body">' + para(s.body) + '</div>' +
-        (s.reply ? '<div class="draft"><div class="lbl">Jake</div>' + para(s.reply) + '</div>'
-                 : '<div class="body note">' + (s.state === 'working' ? 'Jake is working on it…' : 'Waiting for Jake to pick it up…') + '</div>') + '</div>';
-    }).join('');
+    var inChat = state.view === 'chat';
+    $('chatview').hidden = !inChat; $('listview').hidden = inChat;
+    if (inChat) {
+      var log = $('chatlog'), was = log.innerHTML, now = chat();
+      if (was !== now) { log.innerHTML = now; state.chatStick = true; }
+      var newest = chatNewest();
+      if (newest && newest > chatSeen() && !document.hidden) { try { localStorage.setItem(SEEN_KEY, newest); } catch (e) {} }
+      var mc = $('more-chat'); if (mc) mc.addEventListener('click', function () { state.chatAll = true; render(); });
+    } else {
+      $('listbody').innerHTML = q ? projects(P.filter(function (p) { return matches(p, q); })) : (state.view === 'projects' ? projects(P) : queue());
+    }
+    ['chat', 'queue', 'projects'].forEach(function (v) { if (state.view === v && (!q || v === 'chat')) $('nav-' + v).setAttribute('aria-current', 'page'); else $('nav-' + v).removeAttribute('aria-current'); });
+    $('chat-dot').hidden = inChat || !(chatNewest() > chatSeen());
     $('rules').innerHTML = (ASKS.rules.length ? '<h2>Rules waiting for your OK <small>' + ASKS.rules.length + '</small></h2>' + ASKS.rules.map(ruleItem).join('') : '') + (state.ruleMsg ? '<p class="note">' + esc(state.ruleMsg) + '</p>' : '');
     var noProj = function (d) { return !d.proj_no || !BY[d.proj_no]; };
     var looseAsked = DEC.open.filter(function (d) { return d.state === 'asked' && noProj(d); });
@@ -859,7 +919,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     Array.prototype.forEach.call($('detail').querySelectorAll('[data-act]'), function (b) {
       b.addEventListener('click', function () { decideAct(+b.getAttribute('data-id'), b.getAttribute('data-act')); });
     });
-    Array.prototype.forEach.call(document.querySelectorAll('#detail [data-draft], #listbody [data-draft]'), function (b) {
+    Array.prototype.forEach.call(document.querySelectorAll('#detail [data-draft], #listbody [data-draft], #chatlog [data-draft]'), function (b) {
       b.addEventListener('click', function () { decideDraft(+b.getAttribute('data-id'), b.getAttribute('data-draft')); });
     });
     Array.prototype.forEach.call(document.querySelectorAll('[data-rule-text]'), function (t) {
@@ -867,7 +927,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       fitR();
       t.addEventListener('input', function () { state.ruleText[t.getAttribute('data-rule-text')] = t.value; fitR(); });
     });
-    Array.prototype.forEach.call(document.querySelectorAll('#detail [data-draft-text], #listbody [data-draft-text]'), function (t) {
+    Array.prototype.forEach.call(document.querySelectorAll('#detail [data-draft-text], #listbody [data-draft-text], #chatlog [data-draft-text]'), function (t) {
       var fit = function () { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; };
       fit();
       t.addEventListener('input', function () { state.draftText[+t.getAttribute('data-draft-text')] = t.value; fit(); });
@@ -903,6 +963,10 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       b.addEventListener('click', function () { answerQuestion(+b.getAttribute('data-answer')); });
     });
     document.body.setAttribute('data-show', p ? 'detail' : 'list');
+    if (inChat && !p && state.chatStick) {             // the newest is at the bottom, by the box
+      state.chatStick = false;
+      window.scrollTo(0, document.body.scrollHeight); $('list').scrollTop = $('list').scrollHeight;
+    }
     var moreSaid = $('more-said');
     if (moreSaid) moreSaid.addEventListener('click', function () { state.allSaid = true; render(); });
     var more = $('more');
@@ -926,7 +990,16 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   function route() {
     var hsh = (location.hash || '#queue').slice(1), prev = state.no;
     if (hsh.indexOf('p-') === 0 && BY[hsh.slice(2)]) { state.no = hsh.slice(2); }
-    else { state.no = null; state.view = hsh === 'projects' ? 'projects' : 'queue'; }
+    else {
+      var before = state.view, wasOpen = !!prev;
+      state.no = null; state.view = hsh === 'projects' ? 'projects' : hsh === 'chat' ? 'chat' : 'queue';
+      if (state.view !== 'chat') state.lastList = state.view; else state.chatStick = true;
+      if (!wasOpen && before !== state.view && (before === 'chat' || state.view === 'chat')) {
+        var el = $(state.view === 'chat' ? 'chatview' : 'listview'), cls = state.swipe || (state.view === 'chat' ? 'slide-r' : 'slide-l');
+        el.classList.remove('slide-l', 'slide-r'); void el.offsetWidth; el.classList.add(cls);
+      }
+      state.swipe = null;
+    }
     if (state.no !== prev) { state.allTimeline = false; state.allSaid = false; state.tellMsg = ''; state.pick = null; state.markMsg = ''; }
     render();
     if (state.no && state.no !== prev) window.scrollTo(0, 0);
@@ -954,6 +1027,8 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       loadAsks();
       loadDrafts();
       loadDecisions();
+      loadNotes();
+      if (!window.__notePoll) window.__notePoll = setInterval(loadNotes, 30000);
       notifySetup();
       if (!window.__draftPoll) window.__draftPoll = setInterval(loadDrafts, 20000);
       if (!window.__decPoll) window.__decPoll = setInterval(loadDecisions, 60000);
@@ -1105,6 +1180,22 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       });
     }).catch(function () {});
     function save(sub) { return rpc('office_push_subscribe', { p_token: token, p_sub: sub.toJSON(), p_agent: navigator.userAgent.slice(0, 200) }).catch(function () {}); }
+  }
+  function loadNotes() {
+    if (!CFG || !token || document.hidden) return;
+    rpc('office_notices', { p_token: token }).then(function (d) {
+      if (!d || !d.ok) return;
+      var before = JSON.stringify(NOTES);
+      NOTES = d.notices || [];
+      if (JSON.stringify(NOTES) !== before && !typing()) render();
+    }).catch(function () {});
+    // an answer or a draft Jake made since the page last looked
+    rpc('office_replies', { p_token: token }).then(function (d) {
+      if (!d || !d.ok) return;
+      var before = JSON.stringify(SAID);
+      SAID = d.instructions || SAID;
+      if (JSON.stringify(SAID) !== before && !typing()) render();
+    }).catch(function () {});
   }
   // Jake's decisions: read on load and every minute while the page is open
   function loadDecisions() {
@@ -1264,10 +1355,28 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     b.disabled = true;
     rpc('office_tell', { p_token: token, p_proj: 'office', p_text: text }).then(function (d) {
       b.disabled = false;
-      if (d && d.ok && d.saved) { SAID.unshift(d.instruction); $('ask-text').value = ''; watchReplies(); render(); }
-      else { $('ask-text').placeholder = d && d.ok ? 'Not saved: ' + (d.why || 'try again') : 'Signed out. Reload and enter the PIN.'; }
-    }).catch(function () { b.disabled = false; $('ask-text').placeholder = 'Could not reach the dashboard. Try again.'; });
+      if (d && d.ok && d.saved) { SAID.unshift(d.instruction); $('ask-text').value = ''; $('ask-note').textContent = 'Enter sends. Shift+Enter starts a new line.'; watchReplies(); render(); }
+      else { $('ask-note').textContent = d && d.ok ? 'Not sent: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN.'; }
+    }).catch(function () { b.disabled = false; $('ask-note').textContent = 'Could not reach the dashboard. Your words are still here.'; });
   });
+  $('ask-text').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('ask').dispatchEvent(new Event('submit', { cancelable: true })); }
+  });
+  // A swipe left or right, on a phone, goes between the chat and the list (Lance: "swiping left and right would be rad")
+  var sw = null;
+  document.addEventListener('touchstart', function (e) {
+    var t = e.touches[0], el = e.target;
+    sw = (e.touches.length === 1 && !(el.closest && el.closest('textarea, input, .rtags'))) ? { x: t.clientX, y: t.clientY, at: Date.now() } : null;
+  }, { passive: true });
+  document.addEventListener('touchend', function (e) {
+    if (!sw || !DATA) return;
+    var t = e.changedTouches[0], dx = t.clientX - sw.x, dy = t.clientY - sw.y, quick = Date.now() - sw.at < 700;
+    sw = null;
+    if (!quick || Math.abs(dx) < 70 || Math.abs(dy) > 50 || window.innerWidth >= 960) return;
+    if (document.body.getAttribute('data-show') !== 'list') return;
+    state.swipe = dx > 0 ? 'slide-r' : 'slide-l';
+    location.hash = state.view === 'chat' ? '#' + (state.lastList || 'queue') : '#chat';
+  }, { passive: true });
   window.addEventListener('hashchange', function () { if (DATA) route(); });
   $('login').addEventListener('submit', function (e) {
     e.preventDefault();
