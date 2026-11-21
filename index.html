@@ -190,7 +190,20 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .reach a.mailto { text-transform: none; letter-spacing: 0; font-size: 14.5px; border: 0; padding: 0; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; overflow-wrap: anywhere; }
 .marks.slim { margin-top: 6px; } .marks.slim button.text { padding: 5px 10px 4px 11px; }
 .pedit { display: grid; gap: 10px; } .pedit label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
-.pedit input { padding: 10px 11px; font-size: 16px; width: 100%; }
+.pedit input, .pedit textarea { padding: 10px 11px; font-size: 16px; width: 100%; font-family: inherit; }
+.pf { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+.prow { display: flex; gap: 6px; align-items: stretch; }
+.prow input { flex: 1; min-width: 0; }
+.prow button.x { flex: none; width: 44px; background: none; border: 1px solid var(--rule); color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; }
+.pedit button.add { justify-self: start; background: none; border: 0; padding: 6px 0; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .62rem; color: var(--ink); cursor: pointer; }
+.pmore { display: flex; gap: 20px; flex-wrap: wrap; }
+.item.person .head .role { white-space: normal; text-align: right; max-width: 58%; }
+.pfoot { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.pfoot .pleft { flex: 1; min-width: 0; }
+.pfoot .marks.slim { flex: none; margin: 6px 0 0; }
+.item .body.pnote { margin-top: 8px; white-space: pre-wrap; }
+.pask { margin-top: 10px; padding: 12px 14px; border: 1px solid var(--ink); }
+.pask p { margin: 0; font-size: 15.5px; }
 .sectog { background: none; border: 0; padding: 6px 0; margin: -6px 0; width: 100%; display: flex; justify-content: space-between; align-items: center; cursor: pointer;
   font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; text-align: left; }
 .sectog i { font-style: normal; font-size: 1rem; letter-spacing: 0; color: var(--muted); padding-left: 12px; }
@@ -316,7 +329,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261120-215923";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-061733";</script>
 </head>
 <body>
 
@@ -359,7 +372,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   var CFG = window.OFFICE || null;                 // set on the web build: { url, key }
   var TOKEN_KEY = 'plansman_office_token';
   var DATA = null, P = [], BY = {}, SAID = [], token = null;
-  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', loose: {}, mailQ: '', openMail: null, mailBody: {}, editPerson: null, personForm: {}, personMsg: '', needReply: null, needText: {}, chatAll: false, chatPending: false, chatLast: '', lastList: 'queue', decWrong: null, decText: {}, decMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null };
+  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', loose: {}, mailQ: '', openMail: null, mailBody: {}, editPerson: null, personForm: {}, personMsg: '', personAsk: null, needReply: null, needText: {}, chatAll: false, chatPending: false, chatLast: '', lastList: 'queue', decWrong: null, decText: {}, decMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null };
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var usd = function (n) { return n == null ? '' : (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 }); };
@@ -734,6 +747,13 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   function mailLink(a) {
     return '<a class="mailto" href="' + (PHONE ? 'googlegmail://co?to=' + encodeURIComponent(a) : 'mailto:' + encodeURIComponent(a)) + '">' + esc(a) + '</a>';
   }
+  function webLink(u) {
+    var l = String(u).toLowerCase(), h = l.indexOf('http://') === 0 || l.indexOf('https://') === 0 ? u : 'https://' + u;
+    return '<a class="mailto" href="' + esc(h) + '" target="_blank" rel="noopener">' + esc(u) + '</a>';
+  }
+  function placeLink(a) {
+    return '<a class="mailto" href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(a) + '" target="_blank" rel="noopener">' + esc(a) + '</a>';
+  }
   // the sender's own words, without the quoted thread under them
   function ownWords(t) {
     t = String(t || '').split(/\n\s*On (?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[\s\S]{0,200}?wrote:|\n-----Original Message-----|\nFrom: [^\n]+\nSent: /)[0];
@@ -931,16 +951,41 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     }
     h += sec('People', p.people.map(function (x) {
       if (CFG && state.editPerson === x.id) {
+        // The whole contact, the way Google's own editor has it: any number of phones, emails, websites and
+        // addresses, each added with its + and taken off with its x. What is saved goes to his Google Contacts.
         var f = state.personForm;
-        return '<div class="item"><div class="pedit"><label>Name<input type="text" data-person-name value="' + esc(f.name) + '" autocomplete="off"></label>' +
-          '<label>On this job they are<input type="text" data-person-role value="' + esc(f.role) + '" placeholder="client, builder, engineer…" autocomplete="off"></label></div>' +
+        var one = function (label, key, ph) {
+          return '<label>' + label + '<input type="text" data-pf1="' + key + '" value="' + esc(f[key]) + '"' + (ph ? ' placeholder="' + ph + '"' : '') + ' autocomplete="off"></label>';
+        };
+        var many = function (label, kind, type, extra) {
+          return '<div class="pf"><span>' + label + '</span>' + f[kind].map(function (v, i) {
+            return '<div class="prow"><input type="' + type + '" data-pf="' + kind + '" data-i="' + i + '" value="' + esc(v) + '" autocomplete="off"' + (extra || '') + '>' +
+              '<button class="x" type="button" data-pf-del="' + kind + '" data-i="' + i + '" aria-label="Remove this ' + label.toLowerCase() + '">&times;</button></div>';
+          }).join('') + '<button class="add" type="button" data-pf-add="' + kind + '">+ ' + label + '</button></div>';
+        };
+        var more = [['websites', 'Website'], ['addresses', 'Address']].filter(function (k) { return !f[k[0]].length; });
+        return '<div class="item"><div class="pedit">' + one('Name', 'name') + one('Company', 'company') + one('On this job they are', 'role', 'client, builder, engineer…') +
+          many('Phone', 'phones', 'tel', ' inputmode="tel"') + many('Email', 'emails', 'email', ' inputmode="email" autocapitalize="off" autocorrect="off"') +
+          (f.websites.length ? many('Website', 'websites', 'url', ' inputmode="url" autocapitalize="off" autocorrect="off"') : '') +
+          (f.addresses.length ? many('Address', 'addresses', 'text') : '') +
+          (f.hasNote ? '<label>Note<textarea data-pf1="note" rows="3">' + esc(f.note) + '</textarea></label>' : '') +
+          (more.length || !f.hasNote ? '<div class="pmore">' + more.map(function (k) { return '<button class="add" type="button" data-pf-add="' + k[0] + '">+ ' + k[1] + '</button>'; }).join('') +
+            (f.hasNote ? '' : '<button class="add" type="button" data-pf-add="note">+ Note</button>') + '</div>' : '') + '</div>' +
           '<div class="marks"><button class="go" type="button" data-person="save" data-id="' + esc(x.id) + '">Save</button> ' +
           '<button class="text" type="button" data-person="remove" data-id="' + esc(x.id) + '">Take off this job</button> ' +
           '<button class="text quiet" type="button" data-person="cancel" data-id="' + esc(x.id) + '">Cancel</button></div></div>';
       }
-      return '<div class="item"><div class="head"><b>' + esc(x.name) + '</b><span>' + esc(x.company) + '</span></div>' + (x.role ? '<div class="body">' + esc(x.role) + '</div>' : '') +
-        ((x.phones || []).length || (x.emails || []).length ? '<div class="reach">' + (x.phones || []).map(phoneLinks).join('') + (x.emails || []).map(mailLink).join('') + '</div>' : '') +
-        (CFG && x.id ? '<div class="marks slim"><button class="text quiet" type="button" data-person="edit" data-id="' + esc(x.id) + '">Edit</button></div>' : '') + '</div>';
+      var reach = (x.phones || []).map(phoneLinks).join('') + (x.emails || []).map(mailLink).join('') + (x.websites || []).map(webLink).join('') + (x.addresses || []).map(placeLink).join('');
+      // a number or address he just added that another contact already has, under another name: his call
+      var ask = state.personAsk && state.personAsk.id === x.id ? state.personAsk.others.map(function (o) {
+        return '<div class="pask"><p>' + esc((o.shares || []).map(function (v) { return /^[0-9]{10}$/.test(v) ? pretty(v) : v; }).join(', ')) + ' is also on <b>' + esc(o.name) + '</b> in your contacts. Same person?</p>' +
+          '<div class="marks"><button class="go" type="button" data-person="join" data-id="' + esc(x.id) + '" data-other="' + esc(o.id) + '">Yes, connect them</button> ' +
+          '<button class="text quiet" type="button" data-person="apart" data-id="' + esc(x.id) + '" data-other="' + esc(o.id) + '">No, different people</button></div></div>';
+      }).join('') : '';
+      return '<div class="item person"><div class="head"><b>' + esc(x.name) + '</b>' + (x.role ? '<span class="role">' + esc(x.role) + '</span>' : '') + '</div>' +
+        (x.company ? '<div class="body">' + esc(x.company) + '</div>' : '') +
+        '<div class="pfoot"><div class="pleft">' + (reach ? '<div class="reach">' + reach + '</div>' : '') + (x.note ? '<div class="body pnote">' + esc(x.note) + '</div>' : '') + '</div>' +
+        (CFG && x.id ? '<div class="marks slim"><button class="text quiet" type="button" data-person="edit" data-id="' + esc(x.id) + '">Edit</button></div>' : '') + '</div>' + ask + '</div>';
     }).join('') + (state.personMsg ? '<p class="note">' + esc(state.personMsg) + '</p>' : ''));
     if (p.files) {
       var fl = p.files, rows = [['Folder', fl.folder]];
@@ -1097,10 +1142,24 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       });
     });
     Array.prototype.forEach.call($('detail').querySelectorAll('[data-person]'), function (b) {
-      b.addEventListener('click', function () { if (p) personDo(p, b.getAttribute('data-id'), b.getAttribute('data-person')); });
+      b.addEventListener('click', function () { if (p) personDo(p, b.getAttribute('data-id'), b.getAttribute('data-person'), b.getAttribute('data-other')); });
     });
-    Array.prototype.forEach.call($('detail').querySelectorAll('[data-person-name], [data-person-role]'), function (t) {
-      t.addEventListener('input', function () { state.personForm[t.hasAttribute('data-person-name') ? 'name' : 'role'] = t.value; });
+    Array.prototype.forEach.call($('detail').querySelectorAll('[data-pf1], [data-pf]'), function (t) {
+      t.addEventListener('input', function () {
+        var f = state.personForm, k = t.getAttribute('data-pf1');
+        if (k) f[k] = t.value; else f[t.getAttribute('data-pf')][+t.getAttribute('data-i')] = t.value;
+      });
+    });
+    Array.prototype.forEach.call($('detail').querySelectorAll('[data-pf-add], [data-pf-del]'), function (b) {
+      b.addEventListener('click', function () {
+        var f = state.personForm, add = b.getAttribute('data-pf-add'), del = b.getAttribute('data-pf-del');
+        if (add === 'note') f.hasNote = true;
+        else if (add) f[add].push('');
+        else f[del].splice(+b.getAttribute('data-i'), 1);
+        render();
+        var t = add === 'note' ? document.querySelector('[data-pf1="note"]') : add ? document.querySelector('[data-pf="' + add + '"][data-i="' + (f[add].length - 1) + '"]') : null;
+        if (t) t.focus();
+      });
     });
     Array.prototype.forEach.call($('detail').querySelectorAll('[data-sec]'), function (b) {
       b.addEventListener('click', function () {
@@ -1234,6 +1293,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       if (!d || !d.ok || !d.data) return;
       DATA = d.data; P = d.data.projects; BY = {};
       P.forEach(function (p) { BY[p.no] = p; });
+      keepPeople();
       $('read').textContent = 'Sheets read ' + d.read_at;
       if (!typing()) render();
     }).catch(function () {});
@@ -1458,22 +1518,79 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       render();
     }).catch(function (e) { state.sending = false; state.tellMsg = 'Not saved (' + e.message + '). Your text is still here.'; render(); });
   }
-  // People on a job, edited by him: the name, what they are on this job, or off the job. Saved as HIS, so neither
-  // the rebuild nor Jake changes it back; a name fix also goes to Google Contacts (db/037).
-  function personDo(p, id, verb) {
+  // People on a job, edited by him: the whole contact, what they are on this job, or off the job. Saved as HIS, so
+  // neither the rebuild nor Jake changes it back, and written to his Google Contacts (db/037, db/042). A number or
+  // address he adds that another contact already has: the same name is joined at once, another name is asked.
+  // The page's data is re-read every so often from the published copy, which is a little behind the record. What he
+  // just saved about a person is laid over it for five minutes, so a save never appears to undo itself.
+  var KEPT = [];
+  function keepPeople() {
+    var now = Date.now();
+    KEPT = KEPT.filter(function (k) { return k.until > now; });
+    KEPT.forEach(function (k) {
+      var p = BY[k.no]; if (!p) return;
+      if (k.gone) { p.people = p.people.filter(function (y) { return y.id !== k.id; }); return; }
+      var x = p.people.filter(function (y) { return y.id === k.id; })[0]; if (!x) return;
+      Object.keys(k.set).forEach(function (f) { x[f] = k.set[f]; });
+      if (k.joined.length) p.people = p.people.filter(function (y) { return y === x || k.joined.indexOf(y.name) < 0; });
+    });
+  }
+  function keepPerson(p, x, gone, joined) {
+    KEPT = KEPT.filter(function (k) { return !(k.no === p.no && k.id === x.id); });
+    KEPT.push({ no: p.no, id: x.id, gone: gone, joined: joined || [], until: Date.now() + 300000, set: JSON.parse(JSON.stringify(
+      { name: x.name, role: x.role, company: x.company, phones: x.phones, emails: x.emails, websites: x.websites, addresses: x.addresses, note: x.note })) });
+  }
+  function personDo(p, id, verb, other) {
     var x = p.people.filter(function (y) { return y.id === id; })[0];
     if (!x) return;
-    if (verb === 'edit') { state.editPerson = id; state.personForm = { name: x.name, role: x.role || '' }; state.personMsg = ''; render(); return; }
+    if (verb === 'edit') {
+      var f0 = { name: x.name, company: x.company || '', role: x.role || '', phones: (x.phones || []).map(pretty), emails: (x.emails || []).slice(),
+        websites: (x.websites || []).slice(), addresses: (x.addresses || []).slice(), note: x.note || '', hasNote: !!x.note };
+      if (!f0.phones.length) f0.phones.push('');
+      if (!f0.emails.length) f0.emails.push('');
+      state.editPerson = id; state.personForm = f0; state.personMsg = ''; state.personAsk = null; render(); return;
+    }
     if (verb === 'cancel') { state.editPerson = null; render(); return; }
+    if (verb === 'apart') {
+      var rest = state.personAsk ? state.personAsk.others.filter(function (o) { return o.id !== other; }) : [];
+      state.personAsk = rest.length ? { id: id, others: rest } : null; render(); return;
+    }
+    var took = function (d, first) {                       // what the record now holds for this person, and what it joined
+      var n = d.person, j = d.joined || [];
+      if (n) { x.name = n.name; x.company = n.company; x.phones = n.phones; x.emails = n.emails; x.websites = n.websites; x.addresses = n.addresses; x.note = n.note; }
+      if (j.length) p.people = p.people.filter(function (y) { return y === x || j.indexOf(y.name) < 0; });
+      state.personAsk = (d.same || []).length ? { id: id, others: d.same } : null;
+      state.personMsg = (first + (j.length ? ' Connected with ' + j.join(' and ') + ', already in your contacts. They are one contact now.' : '')).trim();
+    };
+    if (verb === 'join') {
+      state.personMsg = 'Connecting…'; render();
+      rpc('office_person', { p_token: token, p_proj: p.no, p_person: id, p_join: other }).then(function (d) {
+        if (d && d.ok && d.saved) { took(d, ''); keepPerson(p, x, false, d.joined); render(); return; }
+        state.personMsg = d && d.ok ? 'Not connected: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN.'; render();
+      }).catch(function (e) { state.personMsg = 'Not connected (' + e.message + ').'; render(); });
+      return;
+    }
     var f = state.personForm || {}, name = (f.name || '').trim(), role = (f.role || '').trim(), gone = verb === 'remove';
-    if (!gone && !name) { state.personMsg = 'The name is empty.'; render(); return; }
-    var before = p.people.slice();
-    if (gone) p.people = p.people.filter(function (y) { return y.id !== id; }); else { x.name = name; x.role = role; }
-    state.editPerson = null; state.personMsg = ''; render();
-    rpc('office_person', { p_token: token, p_proj: p.no, p_person: id, p_name: gone ? null : name, p_role: gone ? null : (role || null), p_remove: gone }).then(function (d) {
-      if (d && d.ok && d.saved) { state.personMsg = gone ? 'Taken off this job.' : 'Saved.'; render(); return; }
-      p.people = before; state.personMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN.'; render();
-    }).catch(function (e) { p.people = before; state.personMsg = 'Not saved (' + e.message + ').'; render(); });
+    var list = function (k) { return (f[k] || []).map(function (v) { return String(v).trim(); }).filter(Boolean); };
+    var contact = null;
+    if (!gone) {
+      if (!name) { state.personMsg = 'The name is empty.'; render(); return; }
+      var phones = list('phones'), emails = list('emails').map(function (v) { return v.toLowerCase(); });
+      var badP = phones.filter(function (v) { var d = v.replace(/[^0-9]/g, ''); return !(d.length === 10 || (d.length === 11 && d.charAt(0) === '1')); });
+      var badE = emails.filter(function (v) { return !/^[^@ ]+@[^@ ]+[.][^@ ]+$/.test(v); });
+      if (badP.length) { state.personMsg = 'A phone number needs 10 digits: ' + badP.join(', ') + '.'; render(); return; }
+      if (badE.length) { state.personMsg = 'That is not an email address: ' + badE.join(', ') + '.'; render(); return; }
+      contact = { company: (f.company || '').trim(), phones: phones.map(ten), emails: emails, websites: list('websites'), addresses: list('addresses'), note: f.hasNote ? (f.note || '').trim() : '' };
+    }
+    var before = p.people.slice(), was = JSON.parse(JSON.stringify(x));
+    var undo = function () { p.people = before; Object.keys(was).forEach(function (k) { x[k] = was[k]; }); if (!gone) state.editPerson = id; };   // his typing is still in the boxes
+    if (gone) p.people = p.people.filter(function (y) { return y.id !== id; });
+    else { x.name = name; x.role = role; x.company = contact.company; x.phones = contact.phones; x.emails = contact.emails; x.websites = contact.websites; x.addresses = contact.addresses; x.note = contact.note; }
+    state.editPerson = null; state.personMsg = ''; state.personAsk = null; render();
+    rpc('office_person', { p_token: token, p_proj: p.no, p_person: id, p_name: gone ? null : name, p_role: gone ? null : (role || null), p_remove: gone, p_contact: contact }).then(function (d) {
+      if (d && d.ok && d.saved) { if (gone) state.personMsg = 'Taken off this job.'; else took(d, 'Saved.'); keepPerson(p, x, gone, d.joined); render(); return; }
+      undo(); state.personMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN.'; render();
+    }).catch(function (e) { undo(); state.personMsg = 'Not saved (' + e.message + ').'; render(); });
   }
   // His reply to something in Needs you goes to Jake on that project with the item named; the answer shows on the item
   function needTell(p, key) {
