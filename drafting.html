@@ -78,8 +78,26 @@ button.go:disabled { opacity: .45; cursor: default; }
   main[data-show="drew"] .stage, main[data-show="live"] .talk, main[data-show="sheets"] .talk { display: none; }
   header .status { margin-left: 0; width: 100%; }
 }
+/* the conversation, the way Jake's chat looks: he is on the right on grey, Drew on the left in a thin frame */
+.msg { max-width: 90%; padding: 10px 14px 12px; overflow-wrap: anywhere; }
+.msg .lbl { font-size: .56rem; margin-bottom: 6px; }
+.msg.me { align-self: flex-end; background: #E7E5E0; }
+.msg.me .lbl { text-align: right; }
+.msg.me .txt { background: none; color: var(--ink); padding: 0; }
+.msg.drew { align-self: flex-start; border: 1px solid var(--rule); }
+.msg.drew .txt { border-left: 0; padding: 0; }
+.msg.drew.work { border: 0; border-left: 1px solid var(--rule); padding: 2px 0 2px 12px; }
+/* the bar between the view and the chat: drag it left or right; double-click to give the view the whole width */
+#split { display: none; }
+@media (min-width: 861px) {
+  main { grid-template-columns: minmax(0, 1fr) 9px var(--talk, 440px); }
+  .stage { border-right: 0; }
+  #split { display: block; cursor: col-resize; background: var(--soft); border-left: 1px solid var(--rule); border-right: 1px solid var(--rule); position: relative; touch-action: none; }
+  #split::after { content: ''; position: absolute; top: 50%; left: 3px; width: 1px; height: 34px; margin-top: -17px; background: var(--ink); opacity: .45; }
+  .talk { overflow: hidden; min-width: 0; }
+}
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"};</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261120-210013";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -96,6 +114,7 @@ button.go:disabled { opacity: .45; cursor: default; }
     <div class="view live" id="stage-live"><img id="live" alt="Drew's AutoCAD" hidden><p id="live-note">Looking for Drew's AutoCAD…</p><div id="live-cap" hidden></div></div>
     <div class="view" id="stage-sheets" hidden><p>Check-ins and plots, at full size, with your markup, show here. They come after the live view.</p></div>
   </section>
+  <div id="split" title="Drag to resize. Double-click to hide or show the chat."></div>
   <section class="talk">
     <div id="said"></div>
     <form id="say"><textarea id="text" placeholder="Talk to Drew" aria-label="Talk to Drew"></textarea>
@@ -212,6 +231,29 @@ button.go:disabled { opacity: .45; cursor: default; }
       $('stage-live').hidden = s !== 'live'; $('stage-sheets').hidden = s !== 'sheets';
     });
   });
+  // The bar between the view and the chat (Lance: "a slider left and right so I can maximize and minimize the
+  // drewview screen"). The width is remembered.
+  var WKEY = 'plansman_draft_talk';
+  function setTalk(w) {
+    w = Math.max(0, Math.min(window.innerWidth - 240, Math.round(w)));
+    if (w < 140) w = 0;                                  // too narrow to read: closed
+    document.getElementById('main').style.setProperty('--talk', w + 'px');
+    try { localStorage.setItem(WKEY, String(w)); } catch (e) {}
+  }
+  try { var w0 = localStorage.getItem(WKEY); if (w0 !== null) setTalk(+w0); } catch (e) {}
+  var split = $('split'), dragging = false;
+  split.addEventListener('pointerdown', function (e) { dragging = true; split.setPointerCapture(e.pointerId); e.preventDefault(); });
+  split.addEventListener('pointermove', function (e) { if (dragging) setTalk(window.innerWidth - e.clientX - 4); });
+  split.addEventListener('pointerup', function () { dragging = false; });
+  split.addEventListener('dblclick', function () {
+    var now = parseInt(getComputedStyle($('main')).getPropertyValue('--talk')); if (isNaN(now)) now = 440;
+    setTalk(now === 0 ? 440 : 0);
+  });
+  // a new version of this window reloads itself (when he is not in the middle of typing)
+  setInterval(function () {
+    if (!window.BUILD || document.hidden || $('text').value) return;
+    fetch('version.json?' + Date.now()).then(function (r) { return r.json(); }).then(function (v) { if (v && v.build && v.build !== window.BUILD) location.reload(); }).catch(function () {});
+  }, 60000);
   loop();
   live();
 })();
