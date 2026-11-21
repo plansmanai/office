@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light only">
-<title>Plansman Drafting</title>
+<title>Plansman Drew</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&display=swap">
 <style>
@@ -123,7 +123,7 @@ button.go:disabled { opacity: .45; cursor: default; }
 .msg .ask .was { color: var(--muted); font-size: 13px; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261121-065027";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261121-065616";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -218,7 +218,7 @@ button.go:disabled { opacity: .45; cursor: default; }
       if (d.project) {
         $('no').textContent = d.project.proj_no; $('addr').textContent = d.project.address || '';
         if (d.project.phase) { $('phase').textContent = d.project.phase; $('phase').hidden = false; }
-        document.title = d.project.proj_no + ' ' + T.win;
+        document.title = d.project.proj_no + ' ' + T.name;
       }
       (d.gos || []).forEach(function (g) { GOS[g.id] = g; });
       (d.messages || []).forEach(function (m) {
@@ -270,7 +270,7 @@ button.go:disabled { opacity: .45; cursor: default; }
   if (!CFG) { gate('This window works on plansman.ai.'); return; }
   try { token = localStorage.getItem(TOKEN_KEY); } catch (e) {}
   if (!token) { gate('<a href="./">Open the dashboard</a> and enter your PIN, then come back.'); return; }
-  if (!NO) { gate('Open a project on the <a href="./">dashboard</a> and tap ' + T.win + '.'); return; }
+  if (!NO) { gate('Open a project on the <a href="./">dashboard</a> and tap ' + T.name + '.'); return; }
   // the page's own words, for whoever's window this is
   document.querySelector('.tabs [data-show="drew"]').textContent = T.name;
   document.querySelector('.tabs [data-show="sheets"]').textContent = T.sheets;
