@@ -288,7 +288,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261120-161644";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261120-163225";</script>
 </head>
 <body>
 
@@ -331,7 +331,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   var CFG = window.OFFICE || null;                 // set on the web build: { url, key }
   var TOKEN_KEY = 'plansman_office_token';
   var DATA = null, P = [], BY = {}, SAID = [], token = null;
-  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', loose: {}, chatAll: false, lastList: 'queue', decWrong: null, decText: {}, decMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null };
+  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', loose: {}, needReply: null, needText: {}, chatAll: false, lastList: 'queue', decWrong: null, decText: {}, decMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null };
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var usd = function (n) { return n == null ? '' : (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 }); };
@@ -415,7 +415,9 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   // what he wrote about a text that is on no project reads as he wrote it, without the reference the page added
   function tidy(body) {
     var m = /^About the (text|voicemail) from (.+?) that is not on a project \[text:[^\]]+\][\s\S]*?\n\nLance: ([\s\S]*)$/.exec(body || '');
-    return m ? 'About the ' + m[1] + ' from ' + m[2] + ': ' + m[3] : (body || '');
+    if (m) return 'About the ' + m[1] + ' from ' + m[2] + ': ' + m[3];
+    m = /^About "([\s\S]*?)" in Needs you \[need:[^\]]+\][\s\S]*?\n\nLance: ([\s\S]*)$/.exec(body || '');
+    return m ? 'About "' + m[1] + '": ' + m[2] : (body || '');
   }
   function chatItems() {
     var items = SAID.filter(function (x) { return x.proj_no === 'office'; }).map(function (x) { return { at: x.created_at, said: x }; })
@@ -737,11 +739,17 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
         if (CFG) h3 += '<div class="answer"><textarea data-ans="' + n.qid + '" placeholder="Your answer" aria-label="Your answer">' + esc(state.ans[n.qid] || '') + '</textarea>' +
           '<div class="bar"><button class="go" type="button" data-answer="' + n.qid + '">Answer</button><span class="note">' + esc(state.ansMsg || 'Your answer goes back to the job. If there is a general rule in it, it is proposed to you.') + '</span></div></div>';
       } else if (CFG) {
-        h3 += state.pick === n.key
+        // what he already told Jake about this item, and Jake's answer, on the item itself
+        var told = SAID.filter(function (x) { return x.proj_no === p.no && (x.body || '').indexOf('[need:' + n.key + ']') >= 0; })[0];
+        if (told) h3 += '<div class="body"><b>You: </b>' + esc(told.body.split('Lance: ').slice(-1)[0]) + '</div>' +
+          '<div class="body">' + (told.reply ? '<b>Jake: </b>' + para(told.reply) : '<span class="note">' + (told.state === 'working' ? 'Jake is working on it…' : 'Waiting for Jake to pick it up…') + '</span>') + '</div>';
+        if (state.needReply === n.key) h3 += '<div class="answer"><textarea data-need-text="' + esc(n.key) + '" placeholder="Your reply to Jake" aria-label="Your reply to Jake">' + esc(state.needText[n.key] || '') + '</textarea>' +
+          '<div class="marks"><button class="go" type="button" data-need-send="' + esc(n.key) + '">Send to Jake</button> <button class="text quiet" type="button" data-need-reply="">Cancel</button></div></div>';
+        else h3 += state.pick === n.key
           ? '<div class="marks"><span class="note">Waiting on:</span> ' + ['client', 'city', 'team'].map(function (w) {
               return '<button class="text" type="button" data-mark="not_mine" data-who="' + w + '" data-key="' + esc(n.key) + '">' + w.charAt(0).toUpperCase() + w.slice(1) + '</button>'; }).join(' ') +
             ' <button class="text quiet" type="button" data-pick="">Cancel</button></div>'
-          : '<div class="marks"><button class="text" type="button" data-mark="handled" data-key="' + esc(n.key) + '">Handled</button> ' +
+          : '<div class="marks"><button class="text" type="button" data-need-reply="' + esc(n.key) + '">Reply</button> <button class="text" type="button" data-mark="handled" data-key="' + esc(n.key) + '">Handled</button> ' +
             '<button class="text" type="button" data-pick="' + esc(n.key) + '">Not my move</button></div>';
       }
       return h3 + '</div>';
@@ -779,7 +787,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     if (said.length) tell += '<div class="chat">' +
       (earlier ? '<button class="text more" id="more-said" type="button">Show ' + earlier + ' earlier</button>' : '') +
       said.slice(earlier).map(function (s) {
-        var h2 = '<div class="msg me"><div class="lbl">You · ' + esc(stamp(s.created_at)) + '</div><div class="txt">' + para(s.body) + '</div></div>';
+        var h2 = '<div class="msg me"><div class="lbl">You · ' + esc(stamp(s.created_at)) + '</div><div class="txt">' + para(tidy(s.body)) + '</div></div>';
         if (s.reply) h2 += '<div class="msg jake"><div class="lbl">Jake' + (s.replied_at ? ' · ' + esc(stamp(s.replied_at)) : '') + '</div><div class="txt">' + para(s.reply) + '</div>' +
           DRAFTS.filter(function (d) { return d.instruction_id === s.id && d.proj_no === p.no; }).map(function (d) { return draftBlock(d); }).join('') + '</div>';
         else h2 += '<div class="msg jake wait"><div class="lbl">Jake</div><div class="txt">' + (s.state === 'working' ? 'Working on it…' : 'Picking it up…') + '</div></div>';
@@ -971,6 +979,20 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     if (moreSaid) moreSaid.addEventListener('click', function () { state.allSaid = true; render(); });
     var more = $('more');
     if (more) more.addEventListener('click', function () { state.allTimeline = true; render(); });
+    Array.prototype.forEach.call($('detail').querySelectorAll('[data-need-reply]'), function (b) {
+      b.addEventListener('click', function () {
+        state.needReply = b.getAttribute('data-need-reply') || null; render();
+        var t = state.needReply && document.querySelector('[data-need-text="' + state.needReply + '"]'); if (t) t.focus();
+      });
+    });
+    Array.prototype.forEach.call($('detail').querySelectorAll('[data-need-text]'), function (t) {
+      var k = t.getAttribute('data-need-text');
+      t.addEventListener('input', function () { state.needText[k] = t.value; });
+      t.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); state.needText[k] = t.value; needTell(p, k); } });
+    });
+    Array.prototype.forEach.call($('detail').querySelectorAll('[data-need-send]'), function (b) {
+      b.addEventListener('click', function () { needTell(p, b.getAttribute('data-need-send')); });
+    });
     Array.prototype.forEach.call($('detail').querySelectorAll('[data-pick]'), function (b) {
       b.addEventListener('click', function () { state.pick = b.getAttribute('data-pick') || null; render(); });
     });
@@ -1300,6 +1322,18 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       else { SAID.unshift(d.instruction); state.draft[no] = ''; state.tellMsg = 'Sent to Jake. The answer appears here, usually within a minute.'; watchReplies(); }
       render();
     }).catch(function (e) { state.sending = false; state.tellMsg = 'Not saved (' + e.message + '). Your text is still here.'; render(); });
+  }
+  // His reply to something in Needs you goes to Jake on that project with the item named; the answer shows on the item
+  function needTell(p, key) {
+    var text = (state.needText[key] || '').trim();
+    var n = openNeeds(p).filter(function (x) { return x.key === key; })[0];
+    if (!text || !n) return;
+    var body = 'About "' + (n.title || '') + '" in Needs you [need:' + key + ']' + (n.detail ? ' (' + n.detail + ')' : '') + '.\n\nLance: ' + text;
+    rpc('office_tell', { p_token: token, p_proj: p.no, p_text: body }).then(function (d) {
+      if (d && d.ok && d.saved) { SAID.unshift(d.instruction); delete state.needText[key]; state.needReply = null; watchReplies(); }
+      else state.markMsg = d && d.ok ? 'Not sent: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN; your reply is still here.';
+      render();
+    }).catch(function (e) { state.markMsg = 'Not sent (' + e.message + '). Your reply is still here.'; render(); });
   }
   // A text not on a project: what he tells Jake about it goes to Jake with the text named, and the answer shows on it
   function looseTell(id) {
