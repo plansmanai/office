@@ -104,6 +104,20 @@ button.go:disabled { opacity: .45; cursor: default; }
 .srow b { font-weight: 500; display: block; } .srow span { color: var(--muted); font-size: 13.5px; }
 .srow i { font-style: normal; float: right; font-size: .6rem; letter-spacing: .16em; text-transform: uppercase; border: 1px solid var(--rule); padding: 2px 7px 1px; color: var(--muted); }
 .srow i.open { border-color: var(--ink); color: var(--ink); }
+.sgroup { border-bottom: 1px solid var(--ink); }
+.sgroup > summary { list-style: none; cursor: pointer; padding: 14px 18px; display: flex; align-items: baseline; gap: 12px; }
+.sgroup > summary::-webkit-details-marker { display: none; }
+.sgroup > summary b { font-family: var(--sans); font-weight: 500; letter-spacing: .14em; text-transform: uppercase; font-size: .78rem; }
+.sgroup > summary span { color: var(--muted); font-size: 13.5px; flex: 1; }
+.sgroup > summary em { font-style: normal; font-size: .6rem; letter-spacing: .16em; text-transform: uppercase; border: 1px solid var(--ink); padding: 2px 7px 1px; }
+.sgroup > summary::after { content: "+"; color: var(--muted); } .sgroup[open] > summary::after { content: "\2212"; }
+.sgroup .srow { padding-left: 30px; } .sgroup .srow:last-child { border-bottom: 0; }
+.srow.latest b::after { content: "latest"; margin-left: 10px; font-size: .58rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 400; }
+.srow .said { display: block; margin-top: 4px; color: var(--ink); font-size: 14px; }
+.sscore { padding: 12px 18px 16px; border-bottom: 1px solid var(--rule); color: var(--muted); font-size: 13.5px; }
+.sscore summary { cursor: pointer; font-family: var(--sans); letter-spacing: .14em; text-transform: uppercase; font-size: .62rem; color: var(--ink); }
+.sscore table { border-collapse: collapse; margin-top: 10px; width: 100%; max-width: 560px; } .sscore td, .sscore th { text-align: left; padding: 4px 14px 4px 0; font-weight: 400; }
+.sscore th { font-size: .58rem; letter-spacing: .14em; text-transform: uppercase; } .sscore td.n { font-variant-numeric: tabular-nums; }
 #sheet-open { display: flex; flex-direction: column; height: 100%; } #sheet-open[hidden] { display: none; }
 .sbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
 .sbar b { font-weight: 500; flex: 1; min-width: 120px; } .sbar .tools { display: flex; gap: 6px; }
@@ -123,7 +137,7 @@ button.go:disabled { opacity: .45; cursor: default; }
 .msg .ask .was { color: var(--muted); font-size: 13px; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261121-072709";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261121-080158";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -344,7 +358,10 @@ button.go:disabled { opacity: .45; cursor: default; }
   // ---- Sheets: check-ins and markup (db/040). A stroke is kept as fractions of the picture, so it lands on the
   // same place in the drawing whatever the zoom. A pencil always draws; a finger draws when Draw is on, and moves
   // the sheet when it is off.
-  var SH = { list: [], open: null, strokes: [], zoom: 1, draw: true, cur: null };
+  var SH = { list: [], open: null, strokes: [], zoom: 1, draw: true, cur: null, openGroups: {} };
+  $('sheet-list').addEventListener('toggle', function (e) {            // remember which sheets he has open
+    var g = e.target.getAttribute && e.target.getAttribute('data-group'); if (g) SH.openGroups[g] = e.target.open;
+  }, true);
   function showSheets() {
     var b = window.innerWidth > 860 ? document.querySelector('.switch [data-stage="sheets"]') : document.querySelector('.tabs [data-show="sheets"]');
     if (b) b.click();
@@ -354,9 +371,37 @@ button.go:disabled { opacity: .45; cursor: default; }
     rpc('office_drew_checkins', { p_token: token, p_proj: NO, p_who: WHO }).then(function (d) {
       if (!d || !d.ok) return;
       SH.list = d.checkins || [];
-      $('sheet-list').innerHTML = SH.list.length ? SH.list.map(function (c) {
-        return '<button class="srow" type="button" data-sheet="' + c.id + '"><i class="' + (c.state === 'open' ? 'open' : '') + '">' + (c.state === 'open' ? 'Needs you' : c.state === 'ok' ? 'Right' : 'Marked') + '</i><b>' + esc(c.title) + '</b>' +
-          '<span>' + esc(stamp(c.created_at)) + (c.note ? ' · ' + esc(c.note) : '') + '</span></button>'; }).join('')
+      // One group per sheet (Lance, 21 Nov 2026: "an expandable list where I can see this set of plans per sheet as he
+      // works on them ... the edits ... the live one at the top"). Groups are in the order of the set; inside a group
+      // the latest check-in is on top and his words on each are shown with it. A group he opened or closed stays so.
+      var label = {}, ord = {}; (d.kinds || []).forEach(function (k) { label[k.key] = k.label; ord[k.key] = k.ord; });
+      var groups = {}, order = [];
+      SH.list.forEach(function (c) {
+        var g = c.sheet || 'Other';
+        if (!groups[g]) { groups[g] = { sheet: g, kind: c.sheet_kind, items: [] }; order.push(g); }
+        groups[g].items.push(c);
+      });
+      order.sort(function (a, b) { var x = groups[a], y = groups[b]; return ((ord[x.kind] || 999) - (ord[y.kind] || 999)) || (a < b ? -1 : 1); });
+      var newest = SH.list.length ? (SH.list[0].sheet || 'Other') : null;
+      var row = function (c, first) {
+        return '<button class="srow' + (first ? ' latest' : '') + '" type="button" data-sheet="' + c.id + '"><i class="' + (c.state === 'open' ? 'open' : '') + '">' + (c.state === 'open' ? 'Needs you' : c.state === 'ok' ? 'Right' : 'Marked') + '</i><b>' + esc(c.title) + '</b>' +
+          '<span>' + esc(stamp(c.created_at)) + (c.note ? ' · ' + esc(c.note) : '') + '</span>' +
+          (c.state === 'marked' ? '<span class="said">You' + (c.marks ? ' drew ' + c.marks + (c.marks === 1 ? ' mark' : ' marks') : '') + (c.lance_said ? (c.marks ? ' and said: ' : ' said: ') + esc(c.lance_said) : '') + '</span>' : '') + '</button>';
+      };
+      var score = (d.score || []).filter(function (s) { return s.shown; });
+      var html = order.map(function (g) {
+        var G = groups[g], waiting = G.items.filter(function (c) { return c.state === 'open'; }).length;
+        var isOpen = SH.openGroups[g] === undefined ? (g === newest || waiting > 0) : SH.openGroups[g];
+        return '<details class="sgroup" data-group="' + esc(g) + '"' + (isOpen ? ' open' : '') + '><summary><b>' + esc(g) + '</b><span>' + esc(label[G.kind] || '') +
+          ' · ' + G.items.length + (G.items.length === 1 ? ' check-in' : ' check-ins') + '</span>' + (waiting ? '<em>' + waiting + ' need you</em>' : '') + '</summary>' +
+          G.items.map(function (c, i) { return row(c, i === 0); }).join('') + '</details>';
+      }).join('');
+      if (score.length) {
+        html += '<details class="sscore"' + (SH.openGroups._score ? ' open' : '') + ' data-group="_score"><summary>How ' + T.name + ' is doing, last 30 days, all jobs</summary><table><tr><th>Kind of sheet</th><th>Shown</th><th>You drew on</th><th>Marks</th></tr>' +
+          score.map(function (s) { return '<tr><td>' + esc(s.label) + '</td><td class="n">' + s.shown + '</td><td class="n">' + s.drawn_on + '</td><td class="n">' + s.marks + '</td></tr>'; }).join('') +
+          '</table><p style="margin:8px 0 0">Fewer marks per sheet over the weeks is the measure. Corrections you only typed are not counted as marks.</p></details>';
+      }
+      $('sheet-list').innerHTML = SH.list.length ? html
         : '<p class="none">No check-ins on this job yet. ' + T.name + ' posts one when ' + (WHO === 'cora' ? 'she wants' : 'he wants') + ' you to look at something.</p>';
     }).catch(function () {});
   }
