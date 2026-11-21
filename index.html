@@ -288,7 +288,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261120-163225";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261120-171730";</script>
 </head>
 <body>
 
@@ -419,6 +419,13 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     m = /^About "([\s\S]*?)" in Needs you \[need:[^\]]+\][\s\S]*?\n\nLance: ([\s\S]*)$/.exec(body || '');
     return m ? 'About "' + m[1] + '": ' + m[2] : (body || '');
   }
+  function itemThread(list) {                          // list: newest first, as SAID is
+    return list.slice().reverse().map(function (x) {
+      return '<div class="body"><b>You: </b>' + esc(x.body.split('Lance: ').slice(-1)[0]) + '</div>' +
+        '<div class="body">' + (x.reply ? '<b>Jake: </b>' + para(x.reply) : '<span class="note">' + (x.state === 'working' ? 'Jake is working on it…' : 'Waiting for Jake to pick it up…') + '</span>') + '</div>' +
+        DRAFTS.filter(function (d) { return d.instruction_id === x.id && d.state !== 'dropped'; }).map(function (d) { return draftBlock(d); }).join('');
+    }).join('');
+  }
   function chatItems() {
     var items = SAID.filter(function (x) { return x.proj_no === 'office'; }).map(function (x) { return { at: x.created_at, said: x }; })
       .concat(NOTES.map(function (n) { return { at: n.created_at, note: n }; }));
@@ -443,7 +450,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       var x = it.said;
       var h = '<div class="msg me"><div class="lbl">You · ' + esc(stamp(x.created_at)) + '</div><div class="txt">' + para(tidy(x.body)) + '</div></div>';
       if (x.reply) h += '<div class="msg jake' + (x.state === 'failed' ? ' wait' : '') + '"><div class="lbl">Jake' + (x.replied_at ? ' · ' + esc(stamp(x.replied_at)) : '') + '</div><div class="txt">' + para(x.reply) + '</div>' +
-        DRAFTS.filter(function (d) { return d.instruction_id === x.id; }).map(function (d) { return draftBlock(d); }).join('') + '</div>';
+        DRAFTS.filter(function (d) { return d.instruction_id === x.id && d.state !== 'dropped'; }).map(function (d) { return draftBlock(d); }).join('') + '</div>';
       else h += '<div class="msg jake wait"><div class="lbl">Jake</div><div class="txt">' + (x.state === 'working' ? 'Working on it…' : 'Picking it up…') + '</div></div>';
       return h;
     }).join('');
@@ -625,9 +632,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       if (MARKS['text:' + t.id]) return '';                       // he marked it Handled
       var n = { kind: 'text', days: t.days };
       // what he told Jake about this text, and Jake's answer, on the text itself
-      var asked = SAID.filter(function (x) { return x.proj_no === 'office' && (x.body || '').indexOf('[text:' + t.id + ']') >= 0; })[0];
-      var talk = asked ? '<div class="body"><b>You: </b>' + esc(asked.body.split('Lance: ').slice(-1)[0]) + '</div>' +
-        '<div class="body">' + (asked.reply ? '<b>Jake: </b>' + para(asked.reply) : '<span class="note">' + (asked.state === 'working' ? 'Jake is working on it…' : 'Waiting for Jake to pick it up…') + '</span>') + '</div>' : '';
+      var talk = itemThread(SAID.filter(function (x) { return x.proj_no === 'office' && (x.body || '').indexOf('[text:' + t.id + ']') >= 0; }));
       var act = CFG ? '<div class="answer"><textarea data-loose="' + esc(t.id) + '" placeholder="Tell Jake what to do with it: which job, text back, ignore" aria-label="Tell Jake">' + esc(state.loose[t.id] || '') + '</textarea>' +
         '<div class="marks"><button class="go" type="button" data-loose-send="' + esc(t.id) + '">Send to Jake</button> <button class="text" type="button" data-loose-done="' + esc(t.id) + '">Handled</button></div></div>' : '';
       return '<div class="item s' + sev(n) + '"><div class="head"><b>' + esc(t.who) + (t.channel === 'voicemail' ? ' left a voicemail' : ' texted') + '</b><span>' + bub(n, 'Reply ' + dtext(t.days)) + '</span></div>' +
@@ -714,13 +719,15 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var open = openNeeds(p), done = (p.needs || []).filter(function (n) { return MARKS[n.key]; });
     // A draft Jake made because Lance asked for it in the conversation is shown on Jake's answer below, with
     // its buttons, and nowhere else on this page.
-    var talk = SAID.filter(function (s) { return s.proj_no === p.no; }).slice().reverse();
+    var onItem = function (s) { var m = /\[need:([^\]]+)\]/.exec(s.body || ''); return !!m && open.some(function (n) { return n.key === m[1]; }); };
+    var talk = SAID.filter(function (s) { return s.proj_no === p.no && !onItem(s); }).slice().reverse();
     var inChat = {};
     talk.slice(state.allSaid ? 0 : Math.max(0, talk.length - 15)).forEach(function (s) { inChat[s.id] = 1; });
     function shownInChat(d) { return d && d.instruction_id && inChat[d.instruction_id]; }
     var below = 0;
     var need = open.map(function (n) {
       if (n.kind === 'draft' && shownInChat(n.draft)) { below++; return ''; }
+      if (n.kind === 'draft' && n.draft && SAID.some(function (x) { return x.id === n.draft.instruction_id && onItem(x); })) return '';   // it is on the item it answers
       var h3 = '<div class="item' + (n.days != null ? ' s' + sev(n) : '') + '"><div class="head"><b>' + esc(n.title) + '</b><span>' + (n.days != null ? bub(n, (isReply(n) ? 'Reply ' : 'Waiting ') + dtext(n.days)) : '') + '</span></div>';
       var drHere = isMsg(n) ? draftOn(p, n.key) : null;
       if (n.jake && !(drHere && drHere.note)) h3 += '<div class="body"><b>Jake: </b>' + esc(n.jake) + '</div>';
@@ -740,9 +747,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
           '<div class="bar"><button class="go" type="button" data-answer="' + n.qid + '">Answer</button><span class="note">' + esc(state.ansMsg || 'Your answer goes back to the job. If there is a general rule in it, it is proposed to you.') + '</span></div></div>';
       } else if (CFG) {
         // what he already told Jake about this item, and Jake's answer, on the item itself
-        var told = SAID.filter(function (x) { return x.proj_no === p.no && (x.body || '').indexOf('[need:' + n.key + ']') >= 0; })[0];
-        if (told) h3 += '<div class="body"><b>You: </b>' + esc(told.body.split('Lance: ').slice(-1)[0]) + '</div>' +
-          '<div class="body">' + (told.reply ? '<b>Jake: </b>' + para(told.reply) : '<span class="note">' + (told.state === 'working' ? 'Jake is working on it…' : 'Waiting for Jake to pick it up…') + '</span>') + '</div>';
+        h3 += itemThread(SAID.filter(function (x) { return x.proj_no === p.no && (x.body || '').indexOf('[need:' + n.key + ']') >= 0; }));
         if (state.needReply === n.key) h3 += '<div class="answer"><textarea data-need-text="' + esc(n.key) + '" placeholder="Your reply to Jake" aria-label="Your reply to Jake">' + esc(state.needText[n.key] || '') + '</textarea>' +
           '<div class="marks"><button class="go" type="button" data-need-send="' + esc(n.key) + '">Send to Jake</button> <button class="text quiet" type="button" data-need-reply="">Cancel</button></div></div>';
         else h3 += state.pick === n.key
@@ -781,7 +786,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
 
     // 2. his line to the team, as a conversation: he is on the right, Jake on the left, newest at the bottom
     //    just above the box. The last 15 exchanges show; the rest are one tap away.
-    var said = SAID.filter(function (s) { return s.proj_no === p.no; }).slice().reverse();      // oldest first
+    var said = SAID.filter(function (s) { return s.proj_no === p.no && !onItem(s); }).slice().reverse();      // oldest first
     var KEEP = 15, earlier = state.allSaid ? 0 : Math.max(0, said.length - KEEP);
     var tell = '';
     if (said.length) tell += '<div class="chat">' +
