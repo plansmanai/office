@@ -118,7 +118,7 @@ button.go:disabled { opacity: .45; cursor: default; }
 .sanswer textarea { min-height: 48px; } .sanswer .bar { flex-wrap: wrap; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261120-210511";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261120-215923";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -331,12 +331,42 @@ button.go:disabled { opacity: .45; cursor: default; }
   function frac(e) { var r = $('s-img').getBoundingClientRect(); return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))]; }
   var cvs = $('s-canvas');
   cvs.classList.add('draw');
+  // One finger (or the mouse, or a pencil) draws. Two fingers move the sheet and pinch it bigger or smaller, the
+  // way a phone does everywhere else; the stroke the first finger had started is dropped.
+  var fingers = {}, gest = null, spent = false, sc = $('s-scroll');
+  function two() { var k = Object.keys(fingers); return k.length >= 2 ? [fingers[k[0]], fingers[k[1]]] : null; }
   cvs.addEventListener('pointerdown', function (e) {
-    if (!(SH.draw || e.pointerType === 'pen')) return;
-    e.preventDefault(); cvs.setPointerCapture(e.pointerId); SH.cur = [frac(e)]; paint();
+    if (e.pointerType === 'touch') fingers[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var t = two();
+    if (t) {                                             // a second finger: this is a move, not a mark
+      e.preventDefault(); SH.cur = null; spent = true; paint();
+      var r = sc.getBoundingClientRect(), cx = (t[0].x + t[1].x) / 2, cy = (t[0].y + t[1].y) / 2;
+      gest = { d: Math.hypot(t[0].x - t[1].x, t[0].y - t[1].y) || 1, z: SH.zoom, ax: (sc.scrollLeft + cx - r.left) / SH.zoom, ay: (sc.scrollTop + cy - r.top) / SH.zoom };
+      return;
+    }
+    if (spent || !(SH.draw || e.pointerType === 'pen')) return;
+    e.preventDefault(); try { cvs.setPointerCapture(e.pointerId); } catch (err) {}
+    SH.cur = [frac(e)]; paint();
   });
-  cvs.addEventListener('pointermove', function (e) { if (SH.cur) { e.preventDefault(); SH.cur.push(frac(e)); paint(); } });
-  var endStroke = function () { if (SH.cur) { SH.strokes.push(SH.cur); SH.cur = null; paint(); } };
+  cvs.addEventListener('pointermove', function (e) {
+    if (fingers[e.pointerId]) fingers[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var t = gest && two();
+    if (t) {
+      e.preventDefault();
+      var r = sc.getBoundingClientRect(), cx = (t[0].x + t[1].x) / 2, cy = (t[0].y + t[1].y) / 2;
+      var z = Math.max(1, Math.min(6, gest.z * Math.hypot(t[0].x - t[1].x, t[0].y - t[1].y) / gest.d));
+      if (Math.abs(z - SH.zoom) > 0.01) { SH.zoom = z; $('s-wrap').style.width = (z * 100) + '%'; }
+      sc.scrollLeft = gest.ax * SH.zoom - (cx - r.left); sc.scrollTop = gest.ay * SH.zoom - (cy - r.top);
+      return;
+    }
+    if (SH.cur && !gest) { e.preventDefault(); SH.cur.push(frac(e)); paint(); }
+  });
+  var endStroke = function (e) {
+    delete fingers[e.pointerId];
+    if (gest) { if (!two()) { gest = null; paint(); } }
+    else if (SH.cur) { SH.strokes.push(SH.cur); SH.cur = null; paint(); }
+    if (!Object.keys(fingers).length) spent = false;     // every finger is up: the next touch may draw again
+  };
   cvs.addEventListener('pointerup', endStroke); cvs.addEventListener('pointercancel', endStroke);
   $('s-draw').addEventListener('click', function () { SH.draw = !SH.draw; this.setAttribute('aria-pressed', SH.draw ? 'true' : 'false'); this.textContent = SH.draw ? 'Draw' : 'Move'; cvs.classList.toggle('draw', SH.draw); });
   $('s-undo').addEventListener('click', function () { SH.strokes.pop(); paint(); });
