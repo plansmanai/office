@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light only">
+<title>Plansman Permitting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&display=swap">
+<style>
+/* The Drafting window (docs/DREW-ON-P4.md): one project, Drew live. Same look as the dashboard (Lance's brief):
+   Volcanic Black on a near-white backdrop, Jost only, one hairline, square corners, flat, light only.
+   A computer: the large sheet area on the left (Live view / Sheets), Drew's conversation on the right.
+   A phone: one of the three at a time, switched at the top. */
+:root {
+  color-scheme: light only;
+  --bg: #FCFBF9; --soft: #F4F2ED; --ink: #1B1B19; --muted: #6E695F; --rule: rgba(27, 27, 25, .2);
+  --oak: #B2906B; --sage: #4F6B66; --long: #9A3B2E; --on-ink: #FCFBF9;
+  --sans: "Jost", "Futura", "Century Gothic", "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; border-radius: 0; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15.5px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  display: flex; flex-direction: column; padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+a { color: inherit; text-decoration: none; }
+.lbl, .tabs button, button.go, .back { font-family: var(--sans); text-transform: uppercase; letter-spacing: .18em; font-weight: 400; font-size: .66rem; }
+header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; padding: 16px 18px 12px; border-bottom: 1px solid var(--ink); }
+header .back { color: var(--muted); }
+header h1 { margin: 0; font-weight: 300; font-size: 17px; letter-spacing: .12em; text-transform: uppercase; }
+header h1 .no { margin-right: 12px; }
+header .phase { font-size: .62rem; letter-spacing: .18em; text-transform: uppercase; border: 1px solid var(--rule); padding: 2px 7px 1px; color: var(--muted); }
+header .status { margin-left: auto; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+header .dot { width: 8px; height: 8px; background: var(--rule); display: inline-block; }
+header .dot.on { background: var(--sage); } header .dot.busy { background: var(--oak); }
+.tabs { display: none; border-bottom: 1px solid var(--rule); }
+.tabs button { flex: 1; background: none; border: 0; padding: 12px 0 11px; color: var(--muted); border-bottom: 1px solid transparent; margin-bottom: -1px; cursor: pointer; }
+.tabs button[aria-current] { color: var(--ink); border-bottom-color: var(--ink); }
+main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 440px; }
+.stage { min-width: 0; min-height: 0; display: flex; flex-direction: column; border-right: 1px solid var(--rule); }
+.stage .switch { display: flex; gap: 22px; padding: 10px 18px 0; border-bottom: 1px solid var(--rule); }
+.stage .switch button { background: none; border: 0; padding: 6px 0 9px; color: var(--muted); border-bottom: 1px solid transparent; margin-bottom: -1px; cursor: pointer;
+  font-family: var(--sans); text-transform: uppercase; letter-spacing: .18em; font-size: .66rem; }
+.stage .switch button[aria-current] { color: var(--ink); border-bottom-color: var(--ink); }
+.view { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; background: var(--soft); color: var(--muted); padding: 24px; text-align: center; }
+.view p { max-width: 420px; margin: 0; }
+.view.live { padding: 0; flex-direction: column; align-items: stretch; justify-content: flex-start; background: #1d2127; overflow: auto; }
+.view.live img { width: 100%; height: auto; display: block; }
+.view.live p { margin: auto; color: #b9bdc4; padding: 24px; }
+#live-cap { padding: 8px 14px; font-size: 12.5px; color: #b9bdc4; display: flex; justify-content: space-between; gap: 12px; }
+.talk { min-height: 0; display: flex; flex-direction: column; }
+#said { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 18px 8px; display: flex; flex-direction: column; gap: 12px; }
+.msg { max-width: 92%; }
+.msg .lbl { color: var(--muted); font-size: .6rem; margin-bottom: 3px; }
+.msg .txt { white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg.me { align-self: flex-end; text-align: left; }
+.msg.me .txt { background: var(--ink); color: var(--on-ink); padding: 9px 12px; }
+.msg.drew .txt { border-left: 1px solid var(--ink); padding: 2px 0 2px 12px; }
+.msg.work { color: var(--muted); font-size: 14px; }
+.msg.work .txt { border-left: 1px solid var(--rule); padding-left: 12px; }
+.msg.failed .txt { color: var(--long); }
+.empty { color: var(--muted); margin: auto 0; text-align: center; }
+form { border-top: 1px solid var(--rule); padding: 12px 18px max(14px, env(safe-area-inset-bottom, 0px)); }
+textarea { width: 100%; min-height: 64px; max-height: 40vh; resize: none; font: inherit; color: var(--ink); background: transparent; border: 1px solid var(--rule); padding: 10px 11px; }
+textarea:focus { border-color: var(--ink); outline: none; }
+.bar { display: flex; gap: 14px; align-items: center; margin-top: 8px; }
+.bar span { color: var(--muted); font-size: 13px; }
+button.go { color: var(--on-ink); background: var(--ink); border: 1px solid var(--ink); padding: 11px 20px; cursor: pointer; }
+button.go:disabled { opacity: .45; cursor: default; }
+.gate { margin: 18vh auto 0; max-width: 360px; text-align: center; color: var(--muted); }
+.gate a { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+@media (max-width: 860px) {
+  .tabs { display: flex; }
+  main { display: block; position: relative; }
+  .stage, .talk { position: absolute; inset: 0; border-right: 0; }
+  .stage .switch { display: none; }
+  main[data-show="drew"] .stage, main[data-show="live"] .talk, main[data-show="sheets"] .talk { display: none; }
+  header .status { margin-left: 0; width: 100%; }
+}
+/* the conversation, the way Jake's chat looks: he is on the right on grey, Drew on the left in a thin frame */
+.msg { max-width: 90%; padding: 10px 14px 12px; overflow-wrap: anywhere; }
+.msg .lbl { font-size: .56rem; margin-bottom: 6px; }
+.msg.me { align-self: flex-end; background: #E7E5E0; }
+.msg.me .lbl { text-align: right; }
+.msg.me .txt { background: none; color: var(--ink); padding: 0; }
+.msg.drew { align-self: flex-start; border: 1px solid var(--rule); }
+.msg.drew .txt { border-left: 0; padding: 0; }
+.msg.drew.work { border: 0; border-left: 1px solid var(--rule); padding: 2px 0 2px 12px; }
+/* the bar between the view and the chat: drag it left or right; double-click to give the view the whole width */
+#split { display: none; }
+@media (min-width: 861px) {
+  main { grid-template-columns: minmax(0, 1fr) 9px var(--talk, 440px); }
+  .stage { border-right: 0; }
+  #split { display: block; cursor: col-resize; background: var(--soft); border-left: 1px solid var(--rule); border-right: 1px solid var(--rule); position: relative; touch-action: none; }
+  #split::after { content: ''; position: absolute; top: 50%; left: 3px; width: 1px; height: 34px; margin-top: -17px; background: var(--ink); opacity: .45; }
+  .talk { overflow: hidden; min-width: 0; }
+}
+/* Sheets: check-ins at full size, drawn on with a finger, a mouse or a pencil */
+.view.sheets { display: block; padding: 0; text-align: left; background: var(--bg); color: var(--ink); overflow: auto; }
+.view.sheets[hidden] { display: none; }
+#sheet-list .none { color: var(--muted); padding: 28px 18px; margin: 0; max-width: none; }
+.srow { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--rule); padding: 14px 18px; cursor: pointer; font: inherit; color: inherit; }
+.srow b { font-weight: 500; display: block; } .srow span { color: var(--muted); font-size: 13.5px; }
+.srow i { font-style: normal; float: right; font-size: .6rem; letter-spacing: .16em; text-transform: uppercase; border: 1px solid var(--rule); padding: 2px 7px 1px; color: var(--muted); }
+.srow i.open { border-color: var(--ink); color: var(--ink); }
+#sheet-open { display: flex; flex-direction: column; height: 100%; } #sheet-open[hidden] { display: none; }
+.sbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
+.sbar b { font-weight: 500; flex: 1; min-width: 120px; } .sbar .tools { display: flex; gap: 6px; }
+.sbar button, .sanswer .bar button:not(.go) { background: none; border: 1px solid var(--ink); color: var(--ink); padding: 8px 11px; cursor: pointer; font-family: var(--sans); text-transform: uppercase; letter-spacing: .14em; font-size: .6rem; }
+.sbar button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); }
+#s-note { padding: 8px 14px; color: var(--muted); font-size: 14px; } #s-note:empty { display: none; }
+#s-scroll { flex: 1; min-height: 200px; overflow: auto; background: #d9d6cf; -webkit-overflow-scrolling: touch; }
+#s-wrap { position: relative; width: 100%; } #s-img { display: block; width: 100%; height: auto; background: #fff; }
+#s-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: pan-x pan-y; }
+#s-canvas.draw { touch-action: none; cursor: crosshair; }
+.sanswer { border-top: 1px solid var(--rule); padding: 10px 14px max(12px, env(safe-area-inset-bottom, 0px)); }
+.sanswer textarea { min-height: 48px; } .sanswer .bar { flex-wrap: wrap; }
+.msg .ask { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.msg .ask button { background: none; border: 1px solid var(--ink); color: var(--ink); padding: 9px 13px 8px; cursor: pointer; font-family: var(--sans); text-transform: uppercase; letter-spacing: .14em; font-size: .62rem; }
+.msg .ask button.go { background: var(--ink); color: var(--on-ink); }
+.msg .ask input { flex: 1 1 150px; min-width: 0; padding: 9px 10px; font-size: 16px; font-family: inherit; border: 1px solid var(--rule); background: #fff; }
+.msg .ask .was { color: var(--muted); font-size: 13px; }
+.msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
+</style>
+<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261121-065027";</script>
+</head>
+<body>
+<div class="gate" id="gate" hidden></div>
+<header id="head" hidden>
+  <a class="back" id="back" href="./">&lsaquo; Dashboard</a>
+  <h1><span class="no" id="no"></span><span id="addr"></span></h1>
+  <span class="phase" id="phase" hidden></span>
+  <span class="status"><i class="dot" id="dot"></i><span id="status">Connecting…</span></span>
+</header>
+<nav class="tabs" id="tabs" hidden><button type="button" data-show="live">Live view</button><button type="button" data-show="sheets">Sheets</button><button type="button" data-show="drew" aria-current="true">Drew</button></nav>
+<main id="main" data-show="drew" hidden>
+  <section class="stage">
+    <div class="switch"><button type="button" data-stage="live" aria-current="true">Live view</button><button type="button" data-stage="sheets">Sheets</button></div>
+    <div class="view live" id="stage-live"><img id="live" alt="Drew's AutoCAD" hidden><p id="live-note">Looking for Drew's AutoCAD…</p><div id="live-cap" hidden></div></div>
+    <div class="view sheets" id="stage-sheets" hidden>
+      <div id="sheet-list"><p class="none">No check-ins on this job yet. Drew posts one when he wants you to look at something.</p></div>
+      <div id="sheet-open" hidden>
+        <div class="sbar"><button type="button" id="s-back">&lsaquo; All</button><b id="s-title"></b>
+          <span class="tools"><button type="button" id="s-draw" aria-pressed="true">Draw</button><button type="button" id="s-undo">Undo</button><button type="button" id="s-clear">Clear</button>
+          <button type="button" id="s-out">&minus;</button><button type="button" id="s-in">+</button></span></div>
+        <div id="s-note"></div>
+        <div id="s-scroll"><div id="s-wrap"><img id="s-img" alt=""><canvas id="s-canvas"></canvas></div></div>
+        <div class="sanswer"><textarea id="s-text" placeholder="What to change (optional if your marks say it)"></textarea>
+          <div class="bar"><button class="go" type="button" id="s-send">Send markup</button><button type="button" id="s-ok">Looks right</button><span id="s-msg"></span></div></div>
+      </div>
+    </div>
+  </section>
+  <div id="split" title="Drag to resize. Double-click to hide or show the chat."></div>
+  <section class="talk">
+    <div id="said"></div>
+    <form id="say"><textarea id="text" placeholder="Talk to Drew" aria-label="Talk to Drew"></textarea>
+      <div class="bar"><button class="go" id="send" type="submit">Send</button><span id="note">Enter sends. Shift+Enter starts a new line.</span></div></form>
+  </section>
+</main>
+<script>
+(function () {
+  var CFG = window.OFFICE || null, TOKEN_KEY = 'plansman_office_token', token = null;
+  var NO = decodeURIComponent((location.hash || '').replace(/^#/, ''));
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  // Whose window this is. The same page is Drew's Drafting window and Cora's Permitting window (db/043).
+  var WHO = window.WHO || 'drew';
+  var T = { drew: { name: 'Drew', win: 'Drafting', screen: 'Drew\'s AutoCAD', none: 'AutoCAD is not open on the AI PC right now.', looking: 'Looking for Drew\'s AutoCAD…',
+                    open: 'Drew has open: ', nothing: 'No drawing open', sheets: 'Sheets', empty: 'Tell Drew what you want done on this job.' },
+            cora: { name: 'Cora', win: 'Permitting', screen: 'Cora\'s browser', none: 'Cora\'s browser is not open on the AI PC right now.', looking: 'Looking for Cora\'s browser…',
+                    open: '', nothing: '', sheets: 'Check-ins', empty: 'Tell Cora what you want done on this job\'s permit.' } }[WHO];
+  var MSGS = [], LAST = 0, BUSY = false, timer = null, sending = false, GOS = {}, LOGIN = {};
+  function stamp(iso) { var d = new Date(iso); return isNaN(d) ? '' : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); }
+  function rpc(name, body) {
+    return fetch(CFG.url + '/rest/v1/rpc/' + name, { method: 'POST', headers: { apikey: CFG.key, Authorization: 'Bearer ' + CFG.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  }
+  function gate(html) { $('gate').innerHTML = html; $('gate').hidden = false; $('head').hidden = $('main').hidden = $('tabs').hidden = true; }
+  function draw() {
+    var box = $('said'), atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+    if (document.activeElement && document.activeElement.tagName === 'INPUT' && box.contains(document.activeElement)) return;   // he is typing a login: leave it be
+    box.innerHTML = MSGS.length ? MSGS.map(function (m) {
+      var cls = m.who === 'lance' ? 'me' : m.kind === 'progress' ? 'drew work' : 'drew';
+      if (m.state === 'failed') cls += ' failed';
+      var who = m.who === 'lance' ? 'You' : m.who.charAt(0).toUpperCase() + m.who.slice(1);
+      var extra = '';
+      if (m.kind === 'go' && m.files && m.files.go) {            // her request to submit or pay: his word, once
+        var g = GOS[m.files.go];
+        extra = !g || !g.answer ? '<div class="ask"><button class="go" type="button" data-go="' + m.files.go + '" data-yes="1">Go ahead</button><button type="button" data-go="' + m.files.go + '">Not yet</button></div>'
+          : '<div class="ask"><span class="was">' + (g.answer === 'yes' ? 'You said go ahead' : 'You said not yet') + ' · ' + esc(stamp(g.answered_at)) + '</span></div>';
+      }
+      if (m.kind === 'login' && m.files && m.files.login) {      // a login she asked for: typed here, kept on the AI PC
+        var L = m.files.login, v = LOGIN[m.id] || (LOGIN[m.id] = { u: L.username || '', p: '' });
+        extra = L.saved ? '<div class="ask"><span class="was">Saved' + (L.username ? ' · ' + esc(L.username) : '') + '</span></div>'
+          : '<div class="ask"><input type="text" data-login-u="' + m.id + '" value="' + esc(v.u) + '" placeholder="User name" autocomplete="off" autocapitalize="off" autocorrect="off">' +
+            '<input type="password" data-login-p="' + m.id + '" value="' + esc(v.p) + '" placeholder="Password" autocomplete="off">' +
+            '<button class="go" type="button" data-login-save="' + m.id + '">Save</button></div>';
+      }
+      return '<div class="msg ' + cls + '">' + (m.kind === 'progress' ? '' : '<div class="lbl">' + who + ' · ' + esc(stamp(m.created_at)) + '</div>') +
+        '<div class="txt">' + esc(m.body) + '</div>' + (m.files && m.files.checkin && m.who === WHO ? '<a class="open" data-sheet="' + m.files.checkin + '">Open check-in</a>' : '') + extra + '</div>';
+    }).join('') : '<p class="empty">Nothing said here yet. ' + T.empty + '</p>';
+    if (atEnd || sending) box.scrollTop = box.scrollHeight;
+  }
+  function status(d) {
+    var st = d.state || {};
+    // he is here when his heartbeat is fresh, or when he is in the middle of work on this job (a long step can run
+    // many minutes; 20 Nov 2026 the page said "not running" while he was drawing)
+    var alive = (d.alive && (Date.now() - new Date(d.alive).getTime() < 90000)) ||
+      (st.busy && st.updated_at && (Date.now() - new Date(st.updated_at).getTime() < 30 * 60000));
+    BUSY = !!st.busy;
+    $('dot').className = 'dot' + (!alive ? '' : BUSY ? ' busy' : ' on');
+    $('status').textContent = !alive ? T.name + ' is not running' : BUSY ? T.name + ' is working' + (st.doing ? ': ' + st.doing : '') : T.name + ' is here';
+  }
+  function read() {
+    return rpc('office_drew', { p_token: token, p_proj: NO, p_after: LAST, p_who: WHO }).then(function (d) {
+      if (!d || !d.ok) { gate('Signed out. <a href="./">Open the dashboard</a> and enter your PIN, then come back.'); return; }
+      if (d.project) {
+        $('no').textContent = d.project.proj_no; $('addr').textContent = d.project.address || '';
+        if (d.project.phase) { $('phase').textContent = d.project.phase; $('phase').hidden = false; }
+        document.title = d.project.proj_no + ' ' + T.win;
+      }
+      (d.gos || []).forEach(function (g) { GOS[g.id] = g; });
+      (d.messages || []).forEach(function (m) {
+        var i = MSGS.findIndex(function (x) { return x.id === m.id; });
+        if (i < 0) MSGS.push(m); else MSGS[i] = m;
+        if (m.id > LAST) LAST = m.id;
+      });
+      MSGS.sort(function (a, b) { return a.id - b.id; });
+      status(d); draw();
+    });
+  }
+  // The live view: the latest picture of Drew's AutoCAD, asked for every two seconds while this panel is in front.
+  // Asking is also what tells the AI PC that someone is watching, so nothing is captured when nobody is.
+  var liveAt = null, liveTimer = null;
+  function liveShowing() {
+    if (document.hidden || $('stage-live').hidden) return false;
+    return window.innerWidth > 860 || $('main').getAttribute('data-show') === 'live';
+  }
+  function live() {
+    clearTimeout(liveTimer);
+    if (!liveShowing()) { liveTimer = setTimeout(live, 1500); return; }
+    rpc('office_drew_view', { p_token: token, p_after: liveAt, p_who: WHO }).then(function (d) {
+      if (!d || !d.ok) return;
+      if (d.jpeg) { $('live').src = 'data:image/jpeg;base64,' + d.jpeg; $('live').hidden = false; $('live-note').hidden = true; liveAt = d.at; }
+      var age = d.at ? (Date.now() - new Date(d.at).getTime()) / 1000 : null;
+      if (!d.at || (!d.jpeg && $('live').hidden)) { $('live-note').textContent = age == null || age > 30 ? T.none : T.looking; }
+      $('live-cap').hidden = $('live').hidden;
+      var parts = (d.title || '').split(' || open: ');
+      $('live-cap').innerHTML = '<span>' + esc(parts[1] ? T.open + parts[1] : T.nothing) + '</span><span>' + (age == null ? '' : age < 8 ? 'live' : 'as of ' + stamp(d.at)) + '</span>';
+    }).catch(function () {}).then(function () { liveTimer = setTimeout(live, 2000); });
+  }
+  function loop() {
+    clearTimeout(timer);
+    read().catch(function () { $('status').textContent = 'Cannot reach the dashboard'; }).then(function () {
+      timer = setTimeout(loop, BUSY || sending ? 1500 : 4000);
+    });
+  }
+  function send(e) {
+    if (e) e.preventDefault();
+    var t = $('text').value.trim();
+    if (!t || sending) return;
+    sending = true; $('send').disabled = true;
+    rpc('office_drew_say', { p_token: token, p_proj: NO, p_body: t, p_who: WHO }).then(function (d) {
+      if (d && d.ok && d.saved) { $('text').value = ''; $('note').textContent = 'Enter sends. Shift+Enter starts a new line.'; }
+      else $('note').textContent = d && d.ok ? 'Not sent. Try again.' : 'Signed out. Open the dashboard and enter your PIN.';
+    }).catch(function (err) { $('note').textContent = 'Not sent (' + err.message + '). Your words are still here.'; })
+      .then(function () { sending = false; $('send').disabled = false; loop(); setTimeout(function () { sending = false; }, 4000); });
+  }
+  if (!CFG) { gate('This window works on plansman.ai.'); return; }
+  try { token = localStorage.getItem(TOKEN_KEY); } catch (e) {}
+  if (!token) { gate('<a href="./">Open the dashboard</a> and enter your PIN, then come back.'); return; }
+  if (!NO) { gate('Open a project on the <a href="./">dashboard</a> and tap ' + T.win + '.'); return; }
+  // the page's own words, for whoever's window this is
+  document.querySelector('.tabs [data-show="drew"]').textContent = T.name;
+  document.querySelector('.tabs [data-show="sheets"]').textContent = T.sheets;
+  document.querySelector('.switch [data-stage="sheets"]').textContent = T.sheets;
+  $('text').placeholder = 'Talk to ' + T.name; $('text').setAttribute('aria-label', 'Talk to ' + T.name);
+  $('live').alt = T.screen; $('live-note').textContent = T.looking;
+  document.querySelector('#sheet-list .none').textContent = 'No check-ins on this job yet. ' + T.name + ' posts one when ' + (WHO === 'cora' ? 'she wants' : 'he wants') + ' you to look at something.';
+  // her two questions in the conversation: go ahead or not, and a login
+  $('said').addEventListener('input', function (e) {
+    var t = e.target, u = t.getAttribute && t.getAttribute('data-login-u'), p = t.getAttribute && t.getAttribute('data-login-p');
+    if (u) (LOGIN[u] = LOGIN[u] || { u: '', p: '' }).u = t.value;
+    if (p) (LOGIN[p] = LOGIN[p] || { u: '', p: '' }).p = t.value;
+  });
+  $('said').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button') : null; if (!b) return;
+    var go = b.getAttribute('data-go'), sv = b.getAttribute('data-login-save');
+    if (go) {
+      b.disabled = true;
+      rpc('office_go', { p_token: token, p_id: +go, p_yes: !!b.getAttribute('data-yes') }).catch(function () {}).then(function () { if (document.activeElement) document.activeElement.blur(); loop(); });
+    }
+    if (sv) {
+      var v = LOGIN[sv] || { u: '', p: '' };
+      if (!v.u && !v.p) return;
+      b.disabled = true;
+      rpc('office_login_save', { p_token: token, p_msg: +sv, p_username: v.u, p_password: v.p }).then(function (d) {
+        if (d && d.ok && d.saved) { delete LOGIN[sv]; var m = MSGS.filter(function (x) { return x.id === +sv; })[0]; if (m) { m.files.login.saved = true; m.files.login.username = v.u; } }
+      }).catch(function () {}).then(function () { if (document.activeElement) document.activeElement.blur(); LAST = 0; loop(); });
+    }
+  });
+  $('back').href = './#p-' + encodeURIComponent(NO);
+  $('head').hidden = $('main').hidden = $('tabs').hidden = false;
+  $('say').addEventListener('submit', send);
+  $('text').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) send(e); });
+  Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function (b) {
+    b.addEventListener('click', function () {
+      Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function (x) { x.removeAttribute('aria-current'); });
+      b.setAttribute('aria-current', 'true'); $('main').setAttribute('data-show', b.getAttribute('data-show'));
+      var s = b.getAttribute('data-show'); if (s !== 'drew') { $('stage-live').hidden = s !== 'live'; $('stage-sheets').hidden = s !== 'sheets'; }
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.switch button'), function (b) {
+    b.addEventListener('click', function () {
+      Array.prototype.forEach.call(document.querySelectorAll('.switch button'), function (x) { x.removeAttribute('aria-current'); });
+      b.setAttribute('aria-current', 'true'); var s = b.getAttribute('data-stage');
+      $('stage-live').hidden = s !== 'live'; $('stage-sheets').hidden = s !== 'sheets';
+    });
+  });
+  // The bar between the view and the chat (Lance: "a slider left and right so I can maximize and minimize the
+  // drewview screen"). The width is remembered.
+  var WKEY = 'plansman_draft_talk';
+  function setTalk(w) {
+    w = Math.max(0, Math.min(window.innerWidth - 240, Math.round(w)));
+    if (w < 140) w = 0;                                  // too narrow to read: closed
+    document.getElementById('main').style.setProperty('--talk', w + 'px');
+    try { localStorage.setItem(WKEY, String(w)); } catch (e) {}
+  }
+  try { var w0 = localStorage.getItem(WKEY); if (w0 !== null) setTalk(+w0); } catch (e) {}
+  var split = $('split'), dragging = false;
+  split.addEventListener('pointerdown', function (e) { dragging = true; split.setPointerCapture(e.pointerId); e.preventDefault(); });
+  split.addEventListener('pointermove', function (e) { if (dragging) setTalk(window.innerWidth - e.clientX - 4); });
+  split.addEventListener('pointerup', function () { dragging = false; });
+  split.addEventListener('dblclick', function () {
+    var now = parseInt(getComputedStyle($('main')).getPropertyValue('--talk')); if (isNaN(now)) now = 440;
+    setTalk(now === 0 ? 440 : 0);
+  });
+  // a new version of this window reloads itself (when he is not in the middle of typing)
+  setInterval(function () {
+    if (!window.BUILD || document.hidden || $('text').value) return;
+    fetch('version.json?' + Date.now()).then(function (r) { return r.json(); }).then(function (v) { if (v && v.build && v.build !== window.BUILD) location.reload(); }).catch(function () {});
+  }, 60000);
+  // ---- Sheets: check-ins and markup (db/040). A stroke is kept as fractions of the picture, so it lands on the
+  // same place in the drawing whatever the zoom. A pencil always draws; a finger draws when Draw is on, and moves
+  // the sheet when it is off.
+  var SH = { list: [], open: null, strokes: [], zoom: 1, draw: true, cur: null };
+  function showSheets() {
+    var b = window.innerWidth > 860 ? document.querySelector('.switch [data-stage="sheets"]') : document.querySelector('.tabs [data-show="sheets"]');
+    if (b) b.click();
+  }
+  function sheetsShowing() { return !document.hidden && !$('stage-sheets').hidden && (window.innerWidth > 860 || $('main').getAttribute('data-show') === 'sheets'); }
+  function loadSheets() {
+    rpc('office_drew_checkins', { p_token: token, p_proj: NO, p_who: WHO }).then(function (d) {
+      if (!d || !d.ok) return;
+      SH.list = d.checkins || [];
+      $('sheet-list').innerHTML = SH.list.length ? SH.list.map(function (c) {
+        return '<button class="srow" type="button" data-sheet="' + c.id + '"><i class="' + (c.state === 'open' ? 'open' : '') + '">' + (c.state === 'open' ? 'Needs you' : c.state === 'ok' ? 'Right' : 'Marked') + '</i><b>' + esc(c.title) + '</b>' +
+          '<span>' + esc(stamp(c.created_at)) + (c.note ? ' · ' + esc(c.note) : '') + '</span></button>'; }).join('')
+        : '<p class="none">No check-ins on this job yet. ' + T.name + ' posts one when ' + (WHO === 'cora' ? 'she wants' : 'he wants') + ' you to look at something.</p>';
+    }).catch(function () {});
+  }
+  function paint() {
+    var cv = $('s-canvas'), img = $('s-img'), w = img.clientWidth, h = img.clientHeight, dpr = window.devicePixelRatio || 1;
+    if (!w || !h) return;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    var g = cv.getContext('2d'); g.scale(dpr, dpr); g.lineWidth = 3; g.lineCap = g.lineJoin = 'round'; g.strokeStyle = '#DC1E1E';
+    SH.strokes.concat(SH.cur ? [SH.cur] : []).forEach(function (st) {
+      g.beginPath(); st.forEach(function (p, i) { if (i) g.lineTo(p[0] * w, p[1] * h); else g.moveTo(p[0] * w, p[1] * h); });
+      if (st.length === 1) g.lineTo(st[0][0] * w + .1, st[0][1] * h + .1);
+      g.stroke();
+    });
+  }
+  function setZoom(z) { SH.zoom = Math.max(1, Math.min(6, z)); $('s-wrap').style.width = (SH.zoom * 100) + '%'; setTimeout(paint, 30); }
+  function openSheet(id) {
+    showSheets(); $('sheet-list').hidden = true; $('sheet-open').hidden = false; $('s-title').textContent = 'Opening…'; $('s-msg').textContent = '';
+    rpc('office_drew_checkin', { p_token: token, p_id: +id }).then(function (d) {
+      if (!d || !d.ok) return;
+      SH.open = d; SH.strokes = (d.marks || []).slice(); SH.cur = null;
+      $('s-title').textContent = d.title; $('s-note').textContent = d.note || ''; $('s-text').value = '';
+      $('s-img').onload = function () { setZoom(1); };
+      $('s-img').src = 'data:' + (d.mime || 'image/png') + ';base64,' + d.image;
+    }).catch(function () { $('s-title').textContent = 'Could not open it.'; });
+  }
+  function closeSheet() { SH.open = null; $('sheet-open').hidden = true; $('sheet-list').hidden = false; loadSheets(); }
+  function frac(e) { var r = $('s-img').getBoundingClientRect(); return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))]; }
+  var cvs = $('s-canvas');
+  cvs.classList.add('draw');
+  // One finger (or the mouse, or a pencil) draws. Two fingers move the sheet and pinch it bigger or smaller, the
+  // way a phone does everywhere else; the stroke the first finger had started is dropped.
+  var fingers = {}, gest = null, spent = false, sc = $('s-scroll');
+  function two() { var k = Object.keys(fingers); return k.length >= 2 ? [fingers[k[0]], fingers[k[1]]] : null; }
+  cvs.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'touch') fingers[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var t = two();
+    if (t) {                                             // a second finger: this is a move, not a mark
+      e.preventDefault(); SH.cur = null; spent = true; paint();
+      var r = sc.getBoundingClientRect(), cx = (t[0].x + t[1].x) / 2, cy = (t[0].y + t[1].y) / 2;
+      gest = { d: Math.hypot(t[0].x - t[1].x, t[0].y - t[1].y) || 1, z: SH.zoom, ax: (sc.scrollLeft + cx - r.left) / SH.zoom, ay: (sc.scrollTop + cy - r.top) / SH.zoom };
+      return;
+    }
+    if (spent || !(SH.draw || e.pointerType === 'pen')) return;
+    e.preventDefault(); try { cvs.setPointerCapture(e.pointerId); } catch (err) {}
+    SH.cur = [frac(e)]; paint();
+  });
+  cvs.addEventListener('pointermove', function (e) {
+    if (fingers[e.pointerId]) fingers[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var t = gest && two();
+    if (t) {
+      e.preventDefault();
+      var r = sc.getBoundingClientRect(), cx = (t[0].x + t[1].x) / 2, cy = (t[0].y + t[1].y) / 2;
+      var z = Math.max(1, Math.min(6, gest.z * Math.hypot(t[0].x - t[1].x, t[0].y - t[1].y) / gest.d));
+      if (Math.abs(z - SH.zoom) > 0.01) { SH.zoom = z; $('s-wrap').style.width = (z * 100) + '%'; }
+      sc.scrollLeft = gest.ax * SH.zoom - (cx - r.left); sc.scrollTop = gest.ay * SH.zoom - (cy - r.top);
+      return;
+    }
+    if (SH.cur && !gest) { e.preventDefault(); SH.cur.push(frac(e)); paint(); }
+  });
+  var endStroke = function (e) {
+    delete fingers[e.pointerId];
+    if (gest) { if (!two()) { gest = null; paint(); } }
+    else if (SH.cur) { SH.strokes.push(SH.cur); SH.cur = null; paint(); }
+    if (!Object.keys(fingers).length) spent = false;     // every finger is up: the next touch may draw again
+  };
+  cvs.addEventListener('pointerup', endStroke); cvs.addEventListener('pointercancel', endStroke);
+  $('s-draw').addEventListener('click', function () { SH.draw = !SH.draw; this.setAttribute('aria-pressed', SH.draw ? 'true' : 'false'); this.textContent = SH.draw ? 'Draw' : 'Move'; cvs.classList.toggle('draw', SH.draw); });
+  $('s-undo').addEventListener('click', function () { SH.strokes.pop(); paint(); });
+  $('s-clear').addEventListener('click', function () { SH.strokes = []; paint(); });
+  $('s-in').addEventListener('click', function () { setZoom(SH.zoom * 1.5); });
+  $('s-out').addEventListener('click', function () { setZoom(SH.zoom / 1.5); });
+  $('s-back').addEventListener('click', closeSheet);
+  window.addEventListener('resize', paint);
+  function sendMark(ok) {
+    if (!SH.open) return;
+    var text = $('s-text').value.trim();
+    // long strokes are thinned so the message stays small
+    var marks = ok ? [] : SH.strokes.map(function (st) { var k = Math.ceil(st.length / 60); return st.filter(function (_, i) { return i % k === 0 || i === st.length - 1; }).map(function (p) { return [+p[0].toFixed(4), +p[1].toFixed(4)]; }); });
+    if (!ok && !marks.length && !text) { $('s-msg').textContent = 'Draw on it or say what to change.'; return; }
+    $('s-msg').textContent = 'Sending…';
+    rpc('office_drew_mark', { p_token: token, p_id: SH.open.id, p_marks: marks, p_text: text || null, p_ok: !!ok }).then(function (d) {
+      if (d && d.ok && d.saved) { $('s-msg').textContent = ''; closeSheet(); loop(); }
+      else $('s-msg').textContent = d && d.ok ? 'Not sent: ' + (d.why || 'try again') + '.' : 'Signed out. Open the dashboard and enter your PIN.';
+    }).catch(function (e) { $('s-msg').textContent = 'Not sent (' + e.message + '). Your marks are still here.'; });
+  }
+  $('s-send').addEventListener('click', function () { sendMark(false); });
+  $('s-ok').addEventListener('click', function () { sendMark(true); });
+  document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('[data-sheet]'); if (a) openSheet(a.getAttribute('data-sheet')); });
+  setInterval(function () { if (sheetsShowing() && !SH.open) loadSheets(); }, 10000);
+  loadSheets();
+  loop();
+  live();
+})();
+</script>
+
+</html>

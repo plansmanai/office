@@ -329,7 +329,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-061733";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-065027";</script>
 </head>
 <body>
 
@@ -910,7 +910,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       tell += '<p class="note">Your instruction box goes here on the plansman.ai version. This private preview cannot save anything.</p>';
     }
     h += sec('Tell the team', tell, 'lead tell');
-    if (CFG) h += '<p style="margin:14px 0 0"><a class="go drafting" href="drafting.html#' + encodeURIComponent(p.no) + '" target="drafting-' + esc(p.no) + '">Drafting</a></p>';
+    if (CFG) h += '<p style="margin:14px 0 0"><a class="go drafting" href="drafting.html#' + encodeURIComponent(p.no) + '" target="drafting-' + esc(p.no) + '">Drafting</a> <a class="go drafting" href="permitting.html#' + encodeURIComponent(p.no) + '" target="permitting-' + esc(p.no) + '">Permitting</a></p>';
 
     // 3. what the team has
     h += sec('Who has what', others.map(function (t) { return taskItem(t, true); }).join(''), 'lead');

@@ -116,9 +116,14 @@ button.go:disabled { opacity: .45; cursor: default; }
 #s-canvas.draw { touch-action: none; cursor: crosshair; }
 .sanswer { border-top: 1px solid var(--rule); padding: 10px 14px max(12px, env(safe-area-inset-bottom, 0px)); }
 .sanswer textarea { min-height: 48px; } .sanswer .bar { flex-wrap: wrap; }
+.msg .ask { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.msg .ask button { background: none; border: 1px solid var(--ink); color: var(--ink); padding: 9px 13px 8px; cursor: pointer; font-family: var(--sans); text-transform: uppercase; letter-spacing: .14em; font-size: .62rem; }
+.msg .ask button.go { background: var(--ink); color: var(--on-ink); }
+.msg .ask input { flex: 1 1 150px; min-width: 0; padding: 9px 10px; font-size: 16px; font-family: inherit; border: 1px solid var(--rule); background: #fff; }
+.msg .ask .was { color: var(--muted); font-size: 13px; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261120-215923";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261121-065027";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -159,7 +164,13 @@ button.go:disabled { opacity: .45; cursor: default; }
   var NO = decodeURIComponent((location.hash || '').replace(/^#/, ''));
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
-  var MSGS = [], LAST = 0, BUSY = false, timer = null, sending = false;
+  // Whose window this is. The same page is Drew's Drafting window and Cora's Permitting window (db/043).
+  var WHO = window.WHO || 'drew';
+  var T = { drew: { name: 'Drew', win: 'Drafting', screen: 'Drew\'s AutoCAD', none: 'AutoCAD is not open on the AI PC right now.', looking: 'Looking for Drew\'s AutoCAD…',
+                    open: 'Drew has open: ', nothing: 'No drawing open', sheets: 'Sheets', empty: 'Tell Drew what you want done on this job.' },
+            cora: { name: 'Cora', win: 'Permitting', screen: 'Cora\'s browser', none: 'Cora\'s browser is not open on the AI PC right now.', looking: 'Looking for Cora\'s browser…',
+                    open: '', nothing: '', sheets: 'Check-ins', empty: 'Tell Cora what you want done on this job\'s permit.' } }[WHO];
+  var MSGS = [], LAST = 0, BUSY = false, timer = null, sending = false, GOS = {}, LOGIN = {};
   function stamp(iso) { var d = new Date(iso); return isNaN(d) ? '' : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); }
   function rpc(name, body) {
     return fetch(CFG.url + '/rest/v1/rpc/' + name, { method: 'POST', headers: { apikey: CFG.key, Authorization: 'Bearer ' + CFG.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -168,13 +179,27 @@ button.go:disabled { opacity: .45; cursor: default; }
   function gate(html) { $('gate').innerHTML = html; $('gate').hidden = false; $('head').hidden = $('main').hidden = $('tabs').hidden = true; }
   function draw() {
     var box = $('said'), atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+    if (document.activeElement && document.activeElement.tagName === 'INPUT' && box.contains(document.activeElement)) return;   // he is typing a login: leave it be
     box.innerHTML = MSGS.length ? MSGS.map(function (m) {
       var cls = m.who === 'lance' ? 'me' : m.kind === 'progress' ? 'drew work' : 'drew';
       if (m.state === 'failed') cls += ' failed';
-      var who = m.who === 'lance' ? 'You' : m.who === 'jake' ? 'Jake' : 'Drew';
+      var who = m.who === 'lance' ? 'You' : m.who.charAt(0).toUpperCase() + m.who.slice(1);
+      var extra = '';
+      if (m.kind === 'go' && m.files && m.files.go) {            // her request to submit or pay: his word, once
+        var g = GOS[m.files.go];
+        extra = !g || !g.answer ? '<div class="ask"><button class="go" type="button" data-go="' + m.files.go + '" data-yes="1">Go ahead</button><button type="button" data-go="' + m.files.go + '">Not yet</button></div>'
+          : '<div class="ask"><span class="was">' + (g.answer === 'yes' ? 'You said go ahead' : 'You said not yet') + ' · ' + esc(stamp(g.answered_at)) + '</span></div>';
+      }
+      if (m.kind === 'login' && m.files && m.files.login) {      // a login she asked for: typed here, kept on the AI PC
+        var L = m.files.login, v = LOGIN[m.id] || (LOGIN[m.id] = { u: L.username || '', p: '' });
+        extra = L.saved ? '<div class="ask"><span class="was">Saved' + (L.username ? ' · ' + esc(L.username) : '') + '</span></div>'
+          : '<div class="ask"><input type="text" data-login-u="' + m.id + '" value="' + esc(v.u) + '" placeholder="User name" autocomplete="off" autocapitalize="off" autocorrect="off">' +
+            '<input type="password" data-login-p="' + m.id + '" value="' + esc(v.p) + '" placeholder="Password" autocomplete="off">' +
+            '<button class="go" type="button" data-login-save="' + m.id + '">Save</button></div>';
+      }
       return '<div class="msg ' + cls + '">' + (m.kind === 'progress' ? '' : '<div class="lbl">' + who + ' · ' + esc(stamp(m.created_at)) + '</div>') +
-        '<div class="txt">' + esc(m.body) + '</div>' + (m.files && m.files.checkin && m.who === 'drew' ? '<a class="open" data-sheet="' + m.files.checkin + '">Open check-in</a>' : '') + '</div>';
-    }).join('') : '<p class="empty">Nothing said here yet. Tell Drew what you want done on this job.</p>';
+        '<div class="txt">' + esc(m.body) + '</div>' + (m.files && m.files.checkin && m.who === WHO ? '<a class="open" data-sheet="' + m.files.checkin + '">Open check-in</a>' : '') + extra + '</div>';
+    }).join('') : '<p class="empty">Nothing said here yet. ' + T.empty + '</p>';
     if (atEnd || sending) box.scrollTop = box.scrollHeight;
   }
   function status(d) {
@@ -185,16 +210,17 @@ button.go:disabled { opacity: .45; cursor: default; }
       (st.busy && st.updated_at && (Date.now() - new Date(st.updated_at).getTime() < 30 * 60000));
     BUSY = !!st.busy;
     $('dot').className = 'dot' + (!alive ? '' : BUSY ? ' busy' : ' on');
-    $('status').textContent = !alive ? 'Drew is not running' : BUSY ? 'Drew is working' + (st.doing ? ': ' + st.doing : '') : 'Drew is here';
+    $('status').textContent = !alive ? T.name + ' is not running' : BUSY ? T.name + ' is working' + (st.doing ? ': ' + st.doing : '') : T.name + ' is here';
   }
   function read() {
-    return rpc('office_drew', { p_token: token, p_proj: NO, p_after: LAST }).then(function (d) {
+    return rpc('office_drew', { p_token: token, p_proj: NO, p_after: LAST, p_who: WHO }).then(function (d) {
       if (!d || !d.ok) { gate('Signed out. <a href="./">Open the dashboard</a> and enter your PIN, then come back.'); return; }
       if (d.project) {
         $('no').textContent = d.project.proj_no; $('addr').textContent = d.project.address || '';
         if (d.project.phase) { $('phase').textContent = d.project.phase; $('phase').hidden = false; }
-        document.title = d.project.proj_no + ' Drafting';
+        document.title = d.project.proj_no + ' ' + T.win;
       }
+      (d.gos || []).forEach(function (g) { GOS[g.id] = g; });
       (d.messages || []).forEach(function (m) {
         var i = MSGS.findIndex(function (x) { return x.id === m.id; });
         if (i < 0) MSGS.push(m); else MSGS[i] = m;
@@ -214,14 +240,14 @@ button.go:disabled { opacity: .45; cursor: default; }
   function live() {
     clearTimeout(liveTimer);
     if (!liveShowing()) { liveTimer = setTimeout(live, 1500); return; }
-    rpc('office_drew_view', { p_token: token, p_after: liveAt }).then(function (d) {
+    rpc('office_drew_view', { p_token: token, p_after: liveAt, p_who: WHO }).then(function (d) {
       if (!d || !d.ok) return;
       if (d.jpeg) { $('live').src = 'data:image/jpeg;base64,' + d.jpeg; $('live').hidden = false; $('live-note').hidden = true; liveAt = d.at; }
       var age = d.at ? (Date.now() - new Date(d.at).getTime()) / 1000 : null;
-      if (!d.at || (!d.jpeg && $('live').hidden)) { $('live-note').textContent = age == null || age > 30 ? 'AutoCAD is not open on the AI PC right now.' : 'Looking for Drew\'s AutoCAD…'; }
+      if (!d.at || (!d.jpeg && $('live').hidden)) { $('live-note').textContent = age == null || age > 30 ? T.none : T.looking; }
       $('live-cap').hidden = $('live').hidden;
       var parts = (d.title || '').split(' || open: ');
-      $('live-cap').innerHTML = '<span>' + esc(parts[1] ? 'Drew has open: ' + parts[1] : 'No drawing open') + '</span><span>' + (age == null ? '' : age < 8 ? 'live' : 'as of ' + stamp(d.at)) + '</span>';
+      $('live-cap').innerHTML = '<span>' + esc(parts[1] ? T.open + parts[1] : T.nothing) + '</span><span>' + (age == null ? '' : age < 8 ? 'live' : 'as of ' + stamp(d.at)) + '</span>';
     }).catch(function () {}).then(function () { liveTimer = setTimeout(live, 2000); });
   }
   function loop() {
@@ -235,7 +261,7 @@ button.go:disabled { opacity: .45; cursor: default; }
     var t = $('text').value.trim();
     if (!t || sending) return;
     sending = true; $('send').disabled = true;
-    rpc('office_drew_say', { p_token: token, p_proj: NO, p_body: t }).then(function (d) {
+    rpc('office_drew_say', { p_token: token, p_proj: NO, p_body: t, p_who: WHO }).then(function (d) {
       if (d && d.ok && d.saved) { $('text').value = ''; $('note').textContent = 'Enter sends. Shift+Enter starts a new line.'; }
       else $('note').textContent = d && d.ok ? 'Not sent. Try again.' : 'Signed out. Open the dashboard and enter your PIN.';
     }).catch(function (err) { $('note').textContent = 'Not sent (' + err.message + '). Your words are still here.'; })
@@ -244,7 +270,36 @@ button.go:disabled { opacity: .45; cursor: default; }
   if (!CFG) { gate('This window works on plansman.ai.'); return; }
   try { token = localStorage.getItem(TOKEN_KEY); } catch (e) {}
   if (!token) { gate('<a href="./">Open the dashboard</a> and enter your PIN, then come back.'); return; }
-  if (!NO) { gate('Open a project on the <a href="./">dashboard</a> and tap Drafting.'); return; }
+  if (!NO) { gate('Open a project on the <a href="./">dashboard</a> and tap ' + T.win + '.'); return; }
+  // the page's own words, for whoever's window this is
+  document.querySelector('.tabs [data-show="drew"]').textContent = T.name;
+  document.querySelector('.tabs [data-show="sheets"]').textContent = T.sheets;
+  document.querySelector('.switch [data-stage="sheets"]').textContent = T.sheets;
+  $('text').placeholder = 'Talk to ' + T.name; $('text').setAttribute('aria-label', 'Talk to ' + T.name);
+  $('live').alt = T.screen; $('live-note').textContent = T.looking;
+  document.querySelector('#sheet-list .none').textContent = 'No check-ins on this job yet. ' + T.name + ' posts one when ' + (WHO === 'cora' ? 'she wants' : 'he wants') + ' you to look at something.';
+  // her two questions in the conversation: go ahead or not, and a login
+  $('said').addEventListener('input', function (e) {
+    var t = e.target, u = t.getAttribute && t.getAttribute('data-login-u'), p = t.getAttribute && t.getAttribute('data-login-p');
+    if (u) (LOGIN[u] = LOGIN[u] || { u: '', p: '' }).u = t.value;
+    if (p) (LOGIN[p] = LOGIN[p] || { u: '', p: '' }).p = t.value;
+  });
+  $('said').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button') : null; if (!b) return;
+    var go = b.getAttribute('data-go'), sv = b.getAttribute('data-login-save');
+    if (go) {
+      b.disabled = true;
+      rpc('office_go', { p_token: token, p_id: +go, p_yes: !!b.getAttribute('data-yes') }).catch(function () {}).then(function () { if (document.activeElement) document.activeElement.blur(); loop(); });
+    }
+    if (sv) {
+      var v = LOGIN[sv] || { u: '', p: '' };
+      if (!v.u && !v.p) return;
+      b.disabled = true;
+      rpc('office_login_save', { p_token: token, p_msg: +sv, p_username: v.u, p_password: v.p }).then(function (d) {
+        if (d && d.ok && d.saved) { delete LOGIN[sv]; var m = MSGS.filter(function (x) { return x.id === +sv; })[0]; if (m) { m.files.login.saved = true; m.files.login.username = v.u; } }
+      }).catch(function () {}).then(function () { if (document.activeElement) document.activeElement.blur(); LAST = 0; loop(); });
+    }
+  });
   $('back').href = './#p-' + encodeURIComponent(NO);
   $('head').hidden = $('main').hidden = $('tabs').hidden = false;
   $('say').addEventListener('submit', send);
@@ -296,13 +351,13 @@ button.go:disabled { opacity: .45; cursor: default; }
   }
   function sheetsShowing() { return !document.hidden && !$('stage-sheets').hidden && (window.innerWidth > 860 || $('main').getAttribute('data-show') === 'sheets'); }
   function loadSheets() {
-    rpc('office_drew_checkins', { p_token: token, p_proj: NO }).then(function (d) {
+    rpc('office_drew_checkins', { p_token: token, p_proj: NO, p_who: WHO }).then(function (d) {
       if (!d || !d.ok) return;
       SH.list = d.checkins || [];
       $('sheet-list').innerHTML = SH.list.length ? SH.list.map(function (c) {
         return '<button class="srow" type="button" data-sheet="' + c.id + '"><i class="' + (c.state === 'open' ? 'open' : '') + '">' + (c.state === 'open' ? 'Needs you' : c.state === 'ok' ? 'Right' : 'Marked') + '</i><b>' + esc(c.title) + '</b>' +
           '<span>' + esc(stamp(c.created_at)) + (c.note ? ' · ' + esc(c.note) : '') + '</span></button>'; }).join('')
-        : '<p class="none">No check-ins on this job yet. Drew posts one when he wants you to look at something.</p>';
+        : '<p class="none">No check-ins on this job yet. ' + T.name + ' posts one when ' + (WHO === 'cora' ? 'she wants' : 'he wants') + ' you to look at something.</p>';
     }).catch(function () {});
   }
   function paint() {
