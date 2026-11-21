@@ -180,6 +180,13 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .sec h3 { margin: 0 0 12px; }
 .sec.lead h3 { color: var(--ink); }
 .tl .gist { color: var(--ink); font-size: 14px; margin-top: 2px; }
+.tl.tap { cursor: pointer; }
+.mailbody { margin-top: 10px; padding: 12px 14px; border: 1px solid var(--rule); background: var(--soft); font-size: 14.5px; line-height: 1.5; overflow-wrap: anywhere; cursor: text; }
+.mailbody a.open, .reach a { font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; border: 1px solid var(--ink); padding: 6px 10px 5px 11px; display: inline-block; }
+.reach { margin-top: 8px; display: grid; gap: 8px; }
+.reach .tel { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.reach .tel b { font-weight: 400; font-variant-numeric: tabular-nums; margin-right: 4px; }
+.reach a.mailto { text-transform: none; letter-spacing: 0; font-size: 14.5px; border: 0; padding: 0; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; overflow-wrap: anywhere; }
 .marks.slim { margin-top: 6px; } .marks.slim button.text { padding: 5px 10px 4px 11px; }
 .pedit { display: grid; gap: 10px; } .pedit label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
 .pedit input { padding: 10px 11px; font-size: 16px; width: 100%; }
@@ -308,7 +315,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261120-195139";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261120-200328";</script>
 </head>
 <body>
 
@@ -351,7 +358,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   var CFG = window.OFFICE || null;                 // set on the web build: { url, key }
   var TOKEN_KEY = 'plansman_office_token';
   var DATA = null, P = [], BY = {}, SAID = [], token = null;
-  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', loose: {}, editPerson: null, personForm: {}, personMsg: '', needReply: null, needText: {}, chatAll: false, chatPending: false, chatLast: '', lastList: 'queue', decWrong: null, decText: {}, decMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null };
+  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', loose: {}, openMail: null, mailBody: {}, editPerson: null, personForm: {}, personMsg: '', needReply: null, needText: {}, chatAll: false, chatPending: false, chatLast: '', lastList: 'queue', decWrong: null, decText: {}, decMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null };
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var usd = function (n) { return n == null ? '' : (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 }); };
@@ -676,6 +683,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
         '<div class="marks"><button class="go" type="button" data-loose-send="' + esc(t.id) + '">Send to Jake</button> <button class="text" type="button" data-loose-done="' + esc(t.id) + '">Handled</button></div></div>' : '';
       return '<div class="item s' + sev(n) + '"><div class="head"><b>' + esc(t.who) + (t.channel === 'voicemail' ? ' left a voicemail' : ' texted') + '</b><span>' + bub(n, 'Reply ' + dtext(t.days)) + '</span></div>' +
         (t.summary ? '<div class="body">' + esc(t.summary) + '</div>' : '') +
+        (t.phone ? '<div class="reach">' + phoneLinks(t.phone) + '</div>' : '') +
         (t.jake && !(d && d.note) ? '<div class="body"><b>Jake: </b>' + esc(t.jake) + '</div>' : '') + (d ? draftBlock(d, true) : '') + talk + act + '</div>';
     }).filter(Boolean);
     var looseSec = loose.length ? '<h2>Texts not on a project <span class="n">' + loose.length + '</span><small>Jake could not tie these to a job.</small></h2><div class="sec need loose">' + loose.join('') + '</div>' : '';
@@ -708,6 +716,28 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   }
 
   function kv(pairs) { return '<div class="kv">' + pairs.map(function (x) { return '<span class="k' + (x[2] || '') + '">' + esc(x[0]) + '</span><span class="v' + (x[2] || '') + '">' + esc(x[1]) + '</span>'; }).join('') + '</div>'; }
+  // Contact details he can tap (Lance, 20 Nov 2026: "Emails and phone numbers should be tapable and send me to
+  // RingCentral (if possible) and Gmail app"). On his iPhone: Call and Text open the RingCentral app, so they go from
+  // the office line; Cell uses the phone itself; an address opens a new email in the Gmail app. On a computer the
+  // ordinary tel: and mailto: links are used.
+  var PHONE = /iPhone|iPad|Android/.test(navigator.userAgent);
+  function ten(n) { return String(n || '').replace(/\D/g, '').slice(-10); }
+  function pretty(n) { var t = ten(n); return t.length === 10 ? '(' + t.slice(0, 3) + ') ' + t.slice(3, 6) + '-' + t.slice(6) : String(n || ''); }
+  function phoneLinks(n) {
+    var t = ten(n); if (t.length !== 10) return esc(n);
+    var e = '+1' + t;
+    return '<span class="tel"><b>' + esc(pretty(n)) + '</b>' +
+      (PHONE ? '<a href="rcapp://r/call?number=' + e + '">Call</a><a href="rcapp://r/sms?type=new&number=' + e + '">Text</a><a href="tel:' + e + '">Cell</a>'
+             : '<a href="tel:' + e + '">Call</a>') + '</span>';
+  }
+  function mailLink(a) {
+    return '<a class="mailto" href="' + (PHONE ? 'googlegmail://co?to=' + encodeURIComponent(a) : 'mailto:' + encodeURIComponent(a)) + '">' + esc(a) + '</a>';
+  }
+  // the sender's own words, without the quoted thread under them
+  function ownWords(t) {
+    t = String(t || '').split(/\n\s*On (?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[\s\S]{0,200}?wrote:|\n-----Original Message-----|\nFrom: [^\n]+\nSent: /)[0];
+    return t.split('\n').filter(function (l) { return l.trim().charAt(0) !== '>'; }).join('\n').trim();
+  }
   var CLOSED_KEY = 'plansman_closed';
   function closedSecs() { try { return JSON.parse(localStorage.getItem(CLOSED_KEY) || '{}') || {}; } catch (e) { return {}; } }
   function sec(title, html, cls) {
@@ -908,6 +938,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
           '<button class="text quiet" type="button" data-person="cancel" data-id="' + esc(x.id) + '">Cancel</button></div></div>';
       }
       return '<div class="item"><div class="head"><b>' + esc(x.name) + '</b><span>' + esc(x.company) + '</span></div>' + (x.role ? '<div class="body">' + esc(x.role) + '</div>' : '') +
+        ((x.phones || []).length || (x.emails || []).length ? '<div class="reach">' + (x.phones || []).map(phoneLinks).join('') + (x.emails || []).map(mailLink).join('') + '</div>' : '') +
         (CFG && x.id ? '<div class="marks slim"><button class="text quiet" type="button" data-person="edit" data-id="' + esc(x.id) + '">Edit</button></div>' : '') + '</div>';
     }).join('') + (state.personMsg ? '<p class="note">' + esc(state.personMsg) + '</p>' : ''));
     if (p.files) {
@@ -933,10 +964,15 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     }).join('') + (tl.length > shown.length ? '<button class="text more" id="more" type="button">Show all ' + tl.length + ' entries</button>' : ''));
     // Mail, last and out of the way (Lance, 20 Nov 2026): each email with a one-line summary so a thing can be found
     h += sec('Mail', (p.mail || []).map(function (m) {
-      return '<div class="tl"><span class="d">' + esc(day(m.when)) + '</span><span><span class="p">' + esc(m.who) + '</span>' +
+      var open = state.openMail === m.id, full = open && state.mailBody[m.id];
+      return '<div class="tl' + (CFG && m.id ? ' tap' : '') + '"' + (CFG && m.id ? ' data-mail="' + esc(m.id) + '"' : '') + '><span class="d">' + esc(day(m.when)) + '</span><span><span class="p">' + esc(m.who) + '</span>' +
         '<div class="n">' + esc(m.subject) + (m.files ? ' · ' + m.files + (m.files === 1 ? ' file' : ' files') : '') + '</div>' +
-        (m.gist ? '<div class="gist">' + esc(m.gist) + '</div>' : '') + '</span></div>';
-    }).join('') + ((p.mail || []).length ? '<p class="note" style="margin-top:8px">The 15 most recent emails on this job.</p>' : ''));
+        (m.gist ? '<div class="gist">' + esc(m.gist) + '</div>' : '') +
+        (open ? '<div class="mailbody">' + (full ? para(ownWords(full.body) || '(no text)') +
+            ((full.files || []).length ? '<div class="note" style="margin-top:8px">Files: ' + esc(full.files.join(', ')) + '</div>' : '') +
+            (full.thread ? '<div style="margin-top:10px"><a class="open" target="_blank" rel="noopener" href="https://mail.google.com/mail/?authuser=' + encodeURIComponent(full.mailbox || '') + '#all/' + encodeURIComponent(full.thread) + '">Open in Gmail</a></div>' : '')
+            : '<span class="note">Opening…</span>') + '</div>' : '') + '</span></div>';
+    }).join('') + ((p.mail || []).length ? '<p class="note" style="margin-top:8px">The 15 most recent emails on this job. Tap one to read it.</p>' : ''));
     return h + '</div>';
   }
 
@@ -1039,6 +1075,15 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     if (moreSaid) moreSaid.addEventListener('click', function () { state.allSaid = true; render(); });
     var more = $('more');
     if (more) more.addEventListener('click', function () { state.allTimeline = true; render(); });
+    Array.prototype.forEach.call($('detail').querySelectorAll('[data-mail]'), function (r) {
+      r.addEventListener('click', function (e) {
+        if (e.target.closest && e.target.closest('a')) return;
+        var id = r.getAttribute('data-mail');
+        if (state.openMail === id) { if (window.getSelection && String(window.getSelection())) return; state.openMail = null; render(); return; }
+        state.openMail = id; render();
+        if (!state.mailBody[id]) rpc('office_message', { p_token: token, p_id: id }).then(function (d) { if (d && d.ok) { state.mailBody[id] = d; render(); } }).catch(function () {});
+      });
+    });
     Array.prototype.forEach.call($('detail').querySelectorAll('[data-person]'), function (b) {
       b.addEventListener('click', function () { if (p) personDo(p, b.getAttribute('data-id'), b.getAttribute('data-person')); });
     });
