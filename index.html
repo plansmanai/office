@@ -179,6 +179,10 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .sec { padding: 22px 0 18px; border-top: 1px solid var(--rule); margin-top: 8px; }
 .sec h3 { margin: 0 0 12px; }
 .sec.lead h3 { color: var(--ink); }
+.tl .gist { color: var(--ink); font-size: 14px; margin-top: 2px; }
+.marks.slim { margin-top: 6px; } .marks.slim button.text { padding: 5px 10px 4px 11px; }
+.pedit { display: grid; gap: 10px; } .pedit label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.pedit input { padding: 10px 11px; font-size: 16px; width: 100%; }
 .sectog { background: none; border: 0; padding: 6px 0; margin: -6px 0; width: 100%; display: flex; justify-content: space-between; align-items: center; cursor: pointer;
   font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; text-align: left; }
 .sectog i { font-style: normal; font-size: 1rem; letter-spacing: 0; color: var(--muted); padding-left: 12px; }
@@ -304,7 +308,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261120-193615";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261120-195139";</script>
 </head>
 <body>
 
@@ -347,7 +351,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   var CFG = window.OFFICE || null;                 // set on the web build: { url, key }
   var TOKEN_KEY = 'plansman_office_token';
   var DATA = null, P = [], BY = {}, SAID = [], token = null;
-  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', loose: {}, needReply: null, needText: {}, chatAll: false, chatPending: false, chatLast: '', lastList: 'queue', decWrong: null, decText: {}, decMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null };
+  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', loose: {}, editPerson: null, personForm: {}, personMsg: '', needReply: null, needText: {}, chatAll: false, chatPending: false, chatLast: '', lastList: 'queue', decWrong: null, decText: {}, decMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null };
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var usd = function (n) { return n == null ? '' : (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 }); };
@@ -885,10 +889,6 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       }).join('');
       if (m.due != null) money += '<div style="margin-top:10px">' + kv([['Balance due', usd(m.due) || '$0', ' total']]) + '</div>';
     }
-    h += sec('Mail', (p.mail || []).map(function (m) {
-      return '<div class="tl"><span class="d">' + esc(day(m.when)) + '</span><span><span class="p">' + esc(m.who) + '</span>' +
-        '<div class="n">' + esc(m.subject) + (m.files ? ' · ' + m.files + (m.files === 1 ? ' file' : ' files') : '') + '</div></span></div>';
-    }).join('') + ((p.mail || []).length ? '<p class="note" style="margin-top:8px">The 15 most recent emails, from the last 90 days. Read-only. Texts and calls are not here yet.</p>' : ''));
     h += sec('Financial', money);
     if (p.permit) {
       var pm = p.permit;
@@ -899,8 +899,17 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       h += sec('Permit', '<p class="note">Permitting not bought: the builder or client submits. No permit record.</p>');
     }
     h += sec('People', p.people.map(function (x) {
-      return '<div class="item"><div class="head"><b>' + esc(x.name) + '</b><span>' + esc(x.company) + '</span></div>' + (x.role ? '<div class="body">' + esc(x.role) + '</div>' : '') + '</div>';
-    }).join(''));
+      if (CFG && state.editPerson === x.id) {
+        var f = state.personForm;
+        return '<div class="item"><div class="pedit"><label>Name<input type="text" data-person-name value="' + esc(f.name) + '" autocomplete="off"></label>' +
+          '<label>On this job they are<input type="text" data-person-role value="' + esc(f.role) + '" placeholder="client, builder, engineer…" autocomplete="off"></label></div>' +
+          '<div class="marks"><button class="go" type="button" data-person="save" data-id="' + esc(x.id) + '">Save</button> ' +
+          '<button class="text" type="button" data-person="remove" data-id="' + esc(x.id) + '">Take off this job</button> ' +
+          '<button class="text quiet" type="button" data-person="cancel" data-id="' + esc(x.id) + '">Cancel</button></div></div>';
+      }
+      return '<div class="item"><div class="head"><b>' + esc(x.name) + '</b><span>' + esc(x.company) + '</span></div>' + (x.role ? '<div class="body">' + esc(x.role) + '</div>' : '') +
+        (CFG && x.id ? '<div class="marks slim"><button class="text quiet" type="button" data-person="edit" data-id="' + esc(x.id) + '">Edit</button></div>' : '') + '</div>';
+    }).join('') + (state.personMsg ? '<p class="note">' + esc(state.personMsg) + '</p>' : ''));
     if (p.files) {
       var fl = p.files, rows = [['Folder', fl.folder]];
       if (fl.set) rows.push(['Live plan set', day(fl.set) + (fl.set_pages ? ', ' + fl.set_pages + ' pages' : '')]);
@@ -922,6 +931,12 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       return '<div class="tl"><span class="d">' + esc(day(e.when)) + '</span><span>' + (e.phase ? '<span class="p">' + esc(e.phase) + '</span>' : '') +
         (e.note ? '<div class="n">' + esc(e.note) + '</div>' : '') + '</span></div>';
     }).join('') + (tl.length > shown.length ? '<button class="text more" id="more" type="button">Show all ' + tl.length + ' entries</button>' : ''));
+    // Mail, last and out of the way (Lance, 20 Nov 2026): each email with a one-line summary so a thing can be found
+    h += sec('Mail', (p.mail || []).map(function (m) {
+      return '<div class="tl"><span class="d">' + esc(day(m.when)) + '</span><span><span class="p">' + esc(m.who) + '</span>' +
+        '<div class="n">' + esc(m.subject) + (m.files ? ' · ' + m.files + (m.files === 1 ? ' file' : ' files') : '') + '</div>' +
+        (m.gist ? '<div class="gist">' + esc(m.gist) + '</div>' : '') + '</span></div>';
+    }).join('') + ((p.mail || []).length ? '<p class="note" style="margin-top:8px">The 15 most recent emails on this job.</p>' : ''));
     return h + '</div>';
   }
 
@@ -1024,6 +1039,12 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     if (moreSaid) moreSaid.addEventListener('click', function () { state.allSaid = true; render(); });
     var more = $('more');
     if (more) more.addEventListener('click', function () { state.allTimeline = true; render(); });
+    Array.prototype.forEach.call($('detail').querySelectorAll('[data-person]'), function (b) {
+      b.addEventListener('click', function () { if (p) personDo(p, b.getAttribute('data-id'), b.getAttribute('data-person')); });
+    });
+    Array.prototype.forEach.call($('detail').querySelectorAll('[data-person-name], [data-person-role]'), function (t) {
+      t.addEventListener('input', function () { state.personForm[t.hasAttribute('data-person-name') ? 'name' : 'role'] = t.value; });
+    });
     Array.prototype.forEach.call($('detail').querySelectorAll('[data-sec]'), function (b) {
       b.addEventListener('click', function () {
         var c = closedSecs(), t = b.getAttribute('data-sec');
@@ -1379,6 +1400,23 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       else { SAID.unshift(d.instruction); state.draft[no] = ''; state.tellMsg = 'Sent to Jake. The answer appears here, usually within a minute.'; watchReplies(); }
       render();
     }).catch(function (e) { state.sending = false; state.tellMsg = 'Not saved (' + e.message + '). Your text is still here.'; render(); });
+  }
+  // People on a job, edited by him: the name, what they are on this job, or off the job. Saved as HIS, so neither
+  // the rebuild nor Jake changes it back; a name fix also goes to Google Contacts (db/037).
+  function personDo(p, id, verb) {
+    var x = p.people.filter(function (y) { return y.id === id; })[0];
+    if (!x) return;
+    if (verb === 'edit') { state.editPerson = id; state.personForm = { name: x.name, role: x.role || '' }; state.personMsg = ''; render(); return; }
+    if (verb === 'cancel') { state.editPerson = null; render(); return; }
+    var f = state.personForm || {}, name = (f.name || '').trim(), role = (f.role || '').trim(), gone = verb === 'remove';
+    if (!gone && !name) { state.personMsg = 'The name is empty.'; render(); return; }
+    var before = p.people.slice();
+    if (gone) p.people = p.people.filter(function (y) { return y.id !== id; }); else { x.name = name; x.role = role; }
+    state.editPerson = null; state.personMsg = ''; render();
+    rpc('office_person', { p_token: token, p_proj: p.no, p_person: id, p_name: gone ? null : name, p_role: gone ? null : (role || null), p_remove: gone }).then(function (d) {
+      if (d && d.ok && d.saved) { state.personMsg = gone ? 'Taken off this job.' : 'Saved.'; render(); return; }
+      p.people = before; state.personMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN.'; render();
+    }).catch(function (e) { p.people = before; state.personMsg = 'Not saved (' + e.message + ').'; render(); });
   }
   // His reply to something in Needs you goes to Jake on that project with the item named; the answer shows on the item
   function needTell(p, key) {
