@@ -165,7 +165,8 @@ button.go:disabled { opacity: .45; cursor: default; }
       var age = d.at ? (Date.now() - new Date(d.at).getTime()) / 1000 : null;
       if (!d.at || (!d.jpeg && $('live').hidden)) { $('live-note').textContent = age == null || age > 30 ? 'AutoCAD is not open on the AI PC right now.' : 'Looking for Drew\'s AutoCAD…'; }
       $('live-cap').hidden = $('live').hidden;
-      $('live-cap').innerHTML = '<span>' + esc((d.title || '').replace(/^AutoCAD Architecture \d+ - /, '')) + '</span><span>' + (age == null ? '' : age < 8 ? 'live' : 'as of ' + stamp(d.at)) + '</span>';
+      var parts = (d.title || '').split(' || open: ');
+      $('live-cap').innerHTML = '<span>' + esc(parts[1] ? 'Drew has open: ' + parts[1] : 'No drawing open') + '</span><span>' + (age == null ? '' : age < 8 ? 'live' : 'as of ' + stamp(d.at)) + '</span>';
     }).catch(function () {}).then(function () { liveTimer = setTimeout(live, 2000); });
   }
   function loop() {
