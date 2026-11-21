@@ -127,7 +127,11 @@ button.go:disabled { opacity: .45; cursor: default; }
     if (atEnd || sending) box.scrollTop = box.scrollHeight;
   }
   function status(d) {
-    var alive = d.alive && (Date.now() - new Date(d.alive).getTime() < 60000), st = d.state || {};
+    var st = d.state || {};
+    // he is here when his heartbeat is fresh, or when he is in the middle of work on this job (a long step can run
+    // many minutes; 20 Nov 2026 the page said "not running" while he was drawing)
+    var alive = (d.alive && (Date.now() - new Date(d.alive).getTime() < 90000)) ||
+      (st.busy && st.updated_at && (Date.now() - new Date(st.updated_at).getTime() < 30 * 60000));
     BUSY = !!st.busy;
     $('dot').className = 'dot' + (!alive ? '' : BUSY ? ' busy' : ' on');
     $('status').textContent = !alive ? 'Drew is not running' : BUSY ? 'Drew is working' + (st.doing ? ': ' + st.doing : '') : 'Drew is here';
