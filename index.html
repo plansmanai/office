@@ -329,7 +329,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-065616";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-072709";</script>
 </head>
 <body>
 
@@ -760,10 +760,11 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     return t.split('\n').filter(function (l) { return l.trim().charAt(0) !== '>'; }).join('\n').trim();
   }
   var CLOSED_KEY = 'plansman_closed';
+  var SHUT_AT_FIRST = { 'Team log': 1 };                  // there when he wants it, out of the way until then
   function closedSecs() { try { return JSON.parse(localStorage.getItem(CLOSED_KEY) || '{}') || {}; } catch (e) { return {}; } }
   function sec(title, html, cls) {
     if (!html) return '';
-    var shut = !!closedSecs()[title];
+    var c0 = closedSecs(), shut = c0[title] === undefined ? !!SHUT_AT_FIRST[title] : !!c0[title];
     return '<div class="sec' + (cls ? ' ' + cls : '') + (shut ? ' shut' : '') + '"><h3><button type="button" class="sectog" data-sec="' + esc(title) + '" aria-expanded="' + (shut ? 'false' : 'true') + '">' +
       '<span>' + esc(title) + '</span><i aria-hidden="true">' + (shut ? '+' : '&minus;') + '</i></button></h3>' + (shut ? '' : html) + '</div>';
   }
@@ -1004,6 +1005,14 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     if (p.latest && !noteUp) now += '<div class="tl"><span class="d"></span><span><span class="p">Latest note</span><div class="n">' + esc(p.latest) + '</div></span></div>';
     if (p.remarks) now += '<div class="tl"><span class="d"></span><span><span class="p">Your remarks</span><div class="n">' + esc(p.remarks) + '</div></span></div>';
     var tl = p.timeline.filter(function (e) { return e !== at; }), shown = state.allTimeline ? tl : tl.slice(0, 12);
+    // The job's shared log: who is holding what right now, and what the team did and he said lately (db/046).
+    if (p.team && ((p.team.holding || []).length || (p.team.log || []).length)) {
+      h += sec('Team log', ((p.team.holding || []).length ? '<p class="note" style="margin:0 0 6px">Who is holding what right now</p>' +
+          p.team.holding.map(function (x) { return '<div class="item"><div class="body" style="color:var(--ink)">' + esc(x) + '</div></div>'; }).join('') : '') +
+        ((p.team.log || []).length ? '<p class="note" style="margin:14px 0 6px">Lately, newest first</p>' + p.team.log.map(function (e) {
+          return '<div class="tl"><span class="d">' + esc(e.when) + '</span><span><span class="p">' + esc(e.who.charAt(0).toUpperCase() + e.who.slice(1)) + '</span><div class="n">' + esc(e.line) + '</div></span></div>';
+        }).join('') : ''));
+    }
     h += sec('Status and history', now + shown.map(function (e) {
       return '<div class="tl"><span class="d">' + esc(day(e.when)) + '</span><span>' + (e.phase ? '<span class="p">' + esc(e.phase) + '</span>' : '') +
         (e.note ? '<div class="n">' + esc(e.note) + '</div>' : '') + '</span></div>';
@@ -1164,7 +1173,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     Array.prototype.forEach.call($('detail').querySelectorAll('[data-sec]'), function (b) {
       b.addEventListener('click', function () {
         var c = closedSecs(), t = b.getAttribute('data-sec');
-        if (c[t]) delete c[t]; else c[t] = 1;
+        c[t] = (c[t] === undefined ? !!SHUT_AT_FIRST[t] : !!c[t]) ? 0 : 1;
         try { localStorage.setItem(CLOSED_KEY, JSON.stringify(c)); } catch (e) {}
         render();
       });
