@@ -160,7 +160,7 @@ button.go:disabled { opacity: .45; cursor: default; }
 .msg .ask .was { color: var(--muted); font-size: 13px; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-103246";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-105101";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -447,6 +447,22 @@ button.go:disabled { opacity: .45; cursor: default; }
     if (a) { e.preventDefault(); if (a.className !== 'on') location.replace(a.getAttribute('href')); }
   });
   $('head').hidden = $('main').hidden = $('tabs').hidden = false;
+  // A quick sideways swipe goes back to the list, as on the job's page (Lance, 22 Nov 2026: "Make it swipe over from
+  // their pages too. The markup area leaves enough space on the screen to swipe not in the window"). Not when the
+  // touch starts on the sheet being marked up or on the live picture, where a sideways drag draws or moves it,
+  // and not in a box he is typing in.
+  var sw = null;
+  document.addEventListener('touchstart', function (e) {
+    var t = e.touches[0], el = e.target;
+    sw = (e.touches.length === 1 && !(el.closest && el.closest('#s-scroll, #stage-live, textarea, input'))) ? { x: t.clientX, y: t.clientY, at: Date.now() } : null;
+  }, { passive: true });
+  document.addEventListener('touchend', function (e) {
+    if (!sw) return;
+    var t = e.changedTouches[0], dx = t.clientX - sw.x, dy = t.clientY - sw.y, quick = Date.now() - sw.at < 700;
+    sw = null;
+    if (!quick || Math.abs(dx) < 70 || Math.abs(dy) > 50 || window.innerWidth >= 960) return;
+    if (history.length > 1) history.back(); else location.replace('./#queue');
+  }, { passive: true });
   $('say').addEventListener('submit', send);
   $('text').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) send(e); });
   Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function (b) {
