@@ -52,6 +52,17 @@ main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1
 .talk { min-height: 0; display: flex; flex-direction: column; }
 #said { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 18px 8px; display: flex; flex-direction: column; gap: 12px; }
 .msg { max-width: 92%; }
+/* a draft of this one's own, waiting for his Send (Lance, 22 Nov 2026) */
+.dr { border: 1px solid var(--ink); padding: 12px 14px; max-width: 100%; }
+.dr .lbl { color: var(--muted); font-size: .58rem; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 6px; }
+.dr .subj { font-weight: 500; margin-bottom: 6px; }
+.dr .txt { white-space: pre-wrap; overflow-wrap: anywhere; }
+.dr textarea { width: 100%; min-height: 160px; padding: 10px 12px; font: inherit; border: 1px solid var(--ink); background: transparent; resize: vertical; }
+.dr .note { color: var(--muted); font-size: 13.5px; margin-top: 8px; }
+.dr .note.bad { color: var(--long, #8a3b34); }
+.dr .marks { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.dr .marks button:not(.go) { font-family: var(--sans); font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; padding: 11px 14px 10px; border: 1px solid var(--ink); border-radius: 0; background: transparent; color: var(--ink); cursor: pointer; }
+.dr.gone { border-color: var(--rule); padding: 8px 12px; color: var(--muted); font-size: 13.5px; }
 .msg .lbl { color: var(--muted); font-size: .6rem; margin-bottom: 3px; }
 .msg .txt { white-space: pre-wrap; overflow-wrap: anywhere; }
 .msg.me { align-self: flex-end; text-align: left; }
@@ -139,7 +150,7 @@ button.go:disabled { opacity: .45; cursor: default; }
 .msg .ask .was { color: var(--muted); font-size: 13px; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
 </style>
-<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-064717";</script>
+<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-065819";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -195,10 +206,56 @@ button.go:disabled { opacity: .45; cursor: default; }
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
   }
   function gate(html) { $('gate').innerHTML = html; $('gate').hidden = false; $('head').hidden = $('main').hidden = $('tabs').hidden = true; }
-  function draw() {
+  // This one's own drafts on this job (an email, a text, anything held for his tap): the ones waiting sit at the bottom
+  // of the conversation with Send, Edit and Drop; what went in the last three days is one quiet line.
+  var DR = [], drAt = 0, drEdit = null, drText = {}, drMsg = {};
+  function loadDrafts() {
+    drAt = Date.now();
+    return rpc('office_drafts', { p_token: token }).then(function (d) {
+      if (d && d.ok) { DR = (d.drafts || []).filter(function (x) { return x.proj_no === NO && x.written_by === WHO; }); draw(); }
+    }).catch(function () {});
+  }
+  function draftsHtml() {
+    return DR.map(function (d) {
+      var to = (d.to_names || []).join(', '), cc = (d.cc_names || []).join(', ');
+      var what = d.channel === 'action' ? esc(d.subject) + (to ? ' · to ' + esc(to) : '') : (d.channel === 'sms' ? 'text' : 'email') + ' to ' + esc(to) + (cc ? ' · copy to ' + esc(cc) : '');
+      if (d.state === 'sent') return '<div class="dr gone">' + (d.channel === 'action' ? '' : 'Sent ') + what + ' · ' + esc(stamp(d.sent_at)) + (d.result ? ' · ' + esc(d.result) : '') + '</div>';
+      var open = d.state === 'draft' || d.state === 'failed', editing = open && drEdit === d.id, files = d.attachments || [];
+      var h = '<div class="dr"><div class="lbl">' + (d.channel === 'action' ? what : 'Draft ' + what) + ' · written ' + esc(stamp(d.created_at)) + '</div>' +
+        (d.channel === 'email' && d.subject ? '<div class="subj">' + esc(d.subject) + '</div>' : '');
+      h += editing ? '<textarea data-dr-text="' + d.id + '" aria-label="The text">' + esc(drText[d.id] != null ? drText[d.id] : d.body) + '</textarea>' : '<div class="txt">' + esc(d.body) + '</div>';
+      if (files.length) h += '<div class="note"><b>Attached: </b>' + files.map(function (a) { return esc(a.name) + ' (' + esc(a.size || '') + ')'; }).join('; ') + '</div>';
+      if (d.state === 'failed' || d.state === 'stale') h += '<div class="note bad">' + esc(d.result || 'Not sent.') + '</div>';
+      else if (d.state === 'approved' || d.state === 'sending') h += '<div class="note">' + esc(d.result || (d.channel === 'action' ? 'Doing it…' : 'Sending…')) + '</div>';
+      if (open) h += '<div class="marks"><button class="go" type="button" data-dr="approve" data-id="' + d.id + '">Send</button>' +
+        (editing ? '<button type="button" data-dr="cancel" data-id="' + d.id + '">Cancel</button>'
+                 : (d.channel === 'action' ? '' : '<button type="button" data-dr="edit" data-id="' + d.id + '">Edit</button>') + '<button type="button" data-dr="drop" data-id="' + d.id + '">Drop</button>') + '</div>' +
+        (d.channel === 'action' && !editing ? '<div class="note">To change it, tell ' + T.name + '.</div>' : '');
+      if (d.state === 'stale') h += '<div class="marks"><button type="button" data-dr="drop" data-id="' + d.id + '">Clear</button></div>';
+      if (drMsg[d.id]) h += '<div class="note bad">' + esc(drMsg[d.id]) + '</div>';
+      return h + '</div>';
+    }).join('');
+  }
+  function decideDraft(id, what) {
+    var d = DR.filter(function (x) { return x.id === id; })[0];
+    if (!d) return;
+    if (what === 'edit') { drEdit = id; drText[id] = d.body; draw(true); var t = document.querySelector('[data-dr-text="' + id + '"]'); if (t) t.focus(); return; }
+    if (what === 'cancel') { drEdit = null; delete drText[id]; draw(true); return; }
+    var text = what === 'approve' && drEdit === id ? (drText[id] || '').trim() : null;
+    if (what === 'approve' && drEdit === id && !text) { drMsg[id] = 'The text is empty.'; draw(true); return; }
+    var was = d.state;
+    d.state = what === 'approve' ? 'approved' : 'dropped'; if (text) d.body = text;
+    drEdit = null; delete drMsg[id];
+    if (what === 'drop') DR = DR.filter(function (x) { return x.id !== id; });
+    draw(true);
+    rpc('office_draft', { p_token: token, p_id: id, p_decision: what, p_text: text && text !== d.body ? text : (text || null) }).then(function (r) {
+      if (!(r && r.ok && r.saved)) { drMsg[id] = r && r.ok ? 'Not saved: ' + (r.why || 'try again') + '.' : 'Signed out. Open the dashboard and enter your PIN.'; d.state = was; }
+    }).catch(function (e) { drMsg[id] = 'Not saved (' + e.message + ').'; d.state = was; }).then(function () { loadDrafts(); setTimeout(loadDrafts, 8000); setTimeout(loadDrafts, 25000); });
+  }
+  function draw(force) {
     var box = $('said'), atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
-    if (document.activeElement && document.activeElement.tagName === 'INPUT' && box.contains(document.activeElement)) return;   // he is typing a login: leave it be
-    box.innerHTML = MSGS.length ? MSGS.map(function (m) {
+    if (!force && document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') && box.contains(document.activeElement)) return;   // he is typing a login or editing a draft: leave it be
+    box.innerHTML = (MSGS.length ? MSGS.map(function (m) {
       var cls = m.who === 'lance' ? 'me' : m.kind === 'progress' ? 'drew work' : 'drew';
       if (m.state === 'failed') cls += ' failed';
       var who = m.who === 'lance' ? 'You' : m.who.charAt(0).toUpperCase() + m.who.slice(1);
@@ -217,7 +274,7 @@ button.go:disabled { opacity: .45; cursor: default; }
       }
       return '<div class="msg ' + cls + '">' + (m.kind === 'progress' ? '' : '<div class="lbl">' + who + ' · ' + esc(stamp(m.created_at)) + '</div>') +
         '<div class="txt">' + esc(m.body).replace(/\*\*([^*]+?)\*\*/g, '<b>$1</b>') + '</div>' + (m.files && m.files.checkin && m.who === WHO ? '<a class="open" data-sheet="' + m.files.checkin + '">Open check-in</a>' : '') + extra + '</div>';
-    }).join('') : '<p class="empty">Nothing said here yet. ' + T.empty + '</p>';
+    }).join('') : DR.length ? '' : '<p class="empty">Nothing said here yet. ' + T.empty + '</p>') + draftsHtml();
     if (atEnd || sending) box.scrollTop = box.scrollHeight;
   }
   function status(d) {
@@ -246,6 +303,7 @@ button.go:disabled { opacity: .45; cursor: default; }
       });
       MSGS.sort(function (a, b) { return a.id - b.id; });
       status(d); draw();
+      if (Date.now() - drAt > 20000) loadDrafts();
     });
   }
   // The live view: the latest picture of Drew's AutoCAD, asked for every two seconds while this panel is in front.
@@ -299,12 +357,14 @@ button.go:disabled { opacity: .45; cursor: default; }
   // her two questions in the conversation: go ahead or not, and a login
   $('said').addEventListener('input', function (e) {
     var t = e.target, u = t.getAttribute && t.getAttribute('data-login-u'), p = t.getAttribute && t.getAttribute('data-login-p');
+    var dt = t.getAttribute && t.getAttribute('data-dr-text'); if (dt) drText[+dt] = t.value;
     if (u) (LOGIN[u] = LOGIN[u] || { u: '', p: '' }).u = t.value;
     if (p) (LOGIN[p] = LOGIN[p] || { u: '', p: '' }).p = t.value;
   });
   $('said').addEventListener('click', function (e) {
     var b = e.target.closest ? e.target.closest('button') : null; if (!b) return;
-    var go = b.getAttribute('data-go'), sv = b.getAttribute('data-login-save');
+    var go = b.getAttribute('data-go'), sv = b.getAttribute('data-login-save'), dr = b.getAttribute('data-dr');
+    if (dr) { decideDraft(+b.getAttribute('data-id'), dr); return; }
     if (go) {
       b.disabled = true;
       rpc('office_go', { p_token: token, p_id: +go, p_yes: !!b.getAttribute('data-yes') }).catch(function () {}).then(function () { if (document.activeElement) document.activeElement.blur(); loop(); });

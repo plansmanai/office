@@ -181,6 +181,9 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .sec h3.who { display: flex; gap: 8px; margin-bottom: 14px; }
 .sec h3.who span, .sec h3.who a { flex: 1; text-align: center; padding: 12px 8px 11px; border: 1px solid var(--ink); color: var(--ink); font-size: .7rem; }
 .sec h3.who span.on { background: var(--rule); border-color: var(--rule); color: var(--ink); }
+/* how many things Drew or Cora has waiting on him, on the button that opens that one's window */
+.sec h3.who a { position: relative; }
+.sec h3.who .badge { display: inline-block; min-width: 18px; margin-left: 8px; padding: 2px 5px 1px; background: var(--long); color: #fff; font-style: normal; font-size: .62rem; letter-spacing: .04em; line-height: 1.3; text-align: center; }
 .sec.tell .chat { margin-top: 4px; }
 /* one thread per job: what waits on him sits in it as an item, between the messages */
 .chat.need > .item { margin-top: 0; background: var(--bg, transparent); }
@@ -357,7 +360,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-064717";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-065819";</script>
 </head>
 <body>
 
@@ -614,10 +617,13 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   }
   // A draft with nothing open to sit on (he marked the email handled, or Jake drafted it because he asked)
   // is its own thing waiting on him.
+  // A draft written by Drew or Cora is theirs: it is shown in that one's window on the job, with its buttons, and
+  // counted on that one's button here (Lance, 22 Nov 2026). Jake's stay in his thread.
+  function theirs(d) { return d.written_by === 'drew' || d.written_by === 'cora'; }
   function draftNeeds(p) {
     var keys = {};
     (p.needs || []).forEach(function (n) { if (!MARKS[n.key]) keys[n.key] = 1; });
-    return DRAFTS.filter(function (d) { return d.proj_no === p.no && d.state !== 'sent' && !keys[d.item_key]; }).map(function (d) {
+    return DRAFTS.filter(function (d) { return d.proj_no === p.no && d.state !== 'sent' && !keys[d.item_key] && !theirs(d); }).map(function (d) {
       return { key: 'draft:' + d.id, kind: 'draft', draft: d, title: d.channel === 'action' ? d.subject : (d.channel === 'sms' ? 'Draft text to ' : 'Draft email to ') + (d.to_names || []).join(', '), days: daysSince(d.created_at), at: d.created_at };
     });
   }
@@ -706,7 +712,11 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   function teamNeeds(p) {
     return ((p.team || {}).waiting || []).map(function (w) {
       return { key: 'team:' + w.key, kind: 'team', who: w.who, title: w.title, detail: w.detail || '', days: daysSince(w.since), at: w.since };
-    });
+    }).concat(DRAFTS.filter(function (d) { return d.proj_no === p.no && theirs(d) && d.state !== 'sent' && d.state !== 'approved' && d.state !== 'sending'; }).map(function (d) {
+      var what = d.channel === 'action' ? d.subject : (d.channel === 'sms' ? 'a text to ' : 'an email to ') + (d.to_names || []).join(', ');
+      return { key: 'team:draft:' + d.id, kind: 'team', who: d.written_by, title: cap(d.written_by) + ' has ' + what + ' for you to send', detail: d.channel === 'email' ? d.subject : '',
+               days: daysSince(d.created_at), at: d.created_at };
+    }));
   }
   function openNeeds(p) { return actionNeeds(p).concat(decisionNeeds(p), questionNeeds(p), draftNeeds(p), teamNeeds(p), (p.needs || []).filter(function (n) { return !MARKS[n.key]; })); }
   function wait(n) { return n.days == null ? '' : n.days === 0 ? 'since today' : n.days + (n.days === 1 ? ' day' : ' days'); }
@@ -872,7 +882,9 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     //    with its buttons, and takes a reply. Pending shows only those; Show all shows the whole conversation around
     //    them. Oldest first, the box at the bottom. The page opens on Pending.
     var others = p.tasks.filter(function (t) { return !isMine(t); });
-    var open = openNeeds(p), done = (p.needs || []).filter(function (n) { return MARKS[n.key]; });
+    var theirN = { drew: 0, cora: 0 };
+    teamNeeds(p).forEach(function (n) { theirN[n.who] = (theirN[n.who] || 0) + 1; });
+    var open = openNeeds(p).filter(function (n) { return n.kind !== 'team'; }), done = (p.needs || []).filter(function (n) { return MARKS[n.key]; });
     var keyOf = function (x) { var m = /\[need:([^\]]+)\]/.exec(x.body || ''); return m ? m[1] : null; };
     var onItem = function (x) { var k = keyOf(x); return !!k && open.some(function (n) { return n.key === k; }); };
     var ms = function (at) { var t = new Date(at).getTime(); return isNaN(t) ? 0 : t; };
@@ -927,7 +939,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     SAID.forEach(function (x) { if (x.proj_no === p.no && !onItem(x)) items.push({ at: ms(x.created_at), said: x }); });
     done.forEach(function (n) { items.push({ at: ms(MARKS[n.key].marked_at), done: n }); });
     DRAFTS.forEach(function (d) {                             // what went out, said once, quietly (one sent from Jake's answer shows there)
-      if (d.proj_no === p.no && d.state === 'sent' && !openKeys[d.item_key] && !SAID.some(function (x) { return x.id === d.instruction_id; })) items.push({ at: ms(d.sent_at), sent: d });
+      if (d.proj_no === p.no && d.state === 'sent' && !theirs(d) && !openKeys[d.item_key] && !SAID.some(function (x) { return x.id === d.instruction_id; })) items.push({ at: ms(d.sent_at), sent: d });
     });
     ASKS.questions.forEach(function (q) { if (q.proj_no === p.no && q.state === 'answered') items.push({ at: ms(q.answered_at), qa: q }); });
     items.sort(function (a, b) { return a.at - b.at; });
@@ -947,7 +959,9 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
         (all ? 'Pending ' + pendingN : 'Show all' + (rest ? ' · ' + rest + ' more' : '')) + '</button>' +
         '<span class="note">' + (all ? 'The whole conversation on this job' : pendingN ? pendingN + ' waiting on you' : '') + '</span></div>' : '') +
       (thread ? '<div class="chat need">' + (earlier ? '<button class="text more" id="more-said" type="button">Show ' + earlier + ' earlier</button>' : '') + thread + '</div>'
-              : '<p class="note">' + (all ? 'Nothing here yet.' : 'Nothing is waiting on you on this job.') + '</p>') +
+              : '<p class="note">' + (all ? 'Nothing here yet.' : theirN.drew || theirN.cora ? 'Nothing from Jake is waiting on you. ' +
+                  [theirN.drew ? 'Drew has ' + theirN.drew : '', theirN.cora ? 'Cora has ' + theirN.cora : ''].filter(Boolean).join(' and ') + ': open ' + (theirN.drew && theirN.cora ? 'them' : theirN.drew ? 'him' : 'her') + ' above.'
+                : 'Nothing is waiting on you on this job.') + '</p>') +
       (state.markMsg ? '<p class="note">' + esc(state.markMsg) + '</p>' : '') + (state.decMsg ? '<p class="note">' + esc(state.decMsg) + '</p>' : '');
     // What he answered Jake lately, and what Jake wrote down from it: reference, folded, only when there is any.
     // (There is no list of things Jake did for him to check any more: Lance, 21 Nov 2026, "1 less message area".)
@@ -976,7 +990,8 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     // the heading is the team: Jake is the one talked to here; Drew and Cora each open their own window on this job
     var formAt = tell.indexOf('<form id="tell">'), before = formAt >= 0 ? tell.slice(0, formAt) : tell, box = formAt >= 0 ? tell.slice(formAt) : '';
     h = h.replace('<!--TEAM-->', '<div class="sec lead tell"><h3 class="who"><span class="on">Jake</span>' +
-      (CFG ? '<a href="drafting.html#' + encodeURIComponent(p.no) + '" target="drafting-' + esc(p.no) + '">Drew</a><a href="permitting.html#' + encodeURIComponent(p.no) + '" target="permitting-' + esc(p.no) + '">Cora</a>' : '') +
+      (CFG ? '<a href="drafting.html#' + encodeURIComponent(p.no) + '" target="drafting-' + esc(p.no) + '">Drew' + (theirN.drew ? '<i class="badge" aria-label="' + theirN.drew + ' waiting on you">' + theirN.drew + '</i>' : '') +
+        '</a><a href="permitting.html#' + encodeURIComponent(p.no) + '" target="permitting-' + esc(p.no) + '">Cora' + (theirN.cora ? '<i class="badge" aria-label="' + theirN.cora + ' waiting on you">' + theirN.cora + '</i>' : '') + '</a>' : '') +
       '</h3>' + talk2 + box + '</div>');
     if (before) h += '<div class="sec">' + before + '</div>';      // the record of what he changed stays down here, below what needs him
 
