@@ -359,7 +359,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-082107";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-083138";</script>
 </head>
 <body>
 
@@ -1506,9 +1506,16 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (e) {
     if (e.data && e.data.p4Open) { if (window.caches) caches.open('p4-open').then(function (c) { return c.delete('pending'); }).catch(function () {}); p4Open(e.data.p4Open); }
   });
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) p4Pending(); });
-  window.addEventListener('pageshow', p4Pending);
-  p4Pending();
+  // The app can come to the front a moment BEFORE the note is written (the phone raises the app first, then runs the
+  // notification's handler), so look now and a few more times over the next seconds. And make the phone fetch the
+  // current handler every time a page opens: an installed app otherwise keeps an old one, which only brought the app
+  // forward wherever it was (22 Nov 2026: a tap on a check-in landed on the queue).
+  function p4Look() { [0, 300, 800, 1600, 3000, 5000].forEach(function (ms) { setTimeout(p4Pending, ms); }); }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) p4Look(); });
+  window.addEventListener('pageshow', p4Look);
+  window.addEventListener('focus', p4Look);
+  p4Look();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then(function (reg) { try { reg.update(); } catch (e) {} }).catch(function () {});
   function notifySetup() {
     var box = $('notify');
     if (!CFG || !CFG.push || !('serviceWorker' in navigator)) return;

@@ -1,6 +1,8 @@
 // P4's notifications (Lance, 20 Nov 2026: "I love the idea of the notification taking me right to the project page").
 // A notification carries {title, body, url}; tapping it opens that page in P4 (or brings the open one to it).
+var P4_SW = 3;      // raised when this file changes how a tap is handled
 self.addEventListener('install', function () { self.skipWaiting(); });
+self.addEventListener('message', function (e) { if (e.data === 'p4-version' && e.source) e.source.postMessage({ p4Version: P4_SW }); });
 self.addEventListener('activate', function (e) { e.waitUntil(self.clients.claim()); });
 
 self.addEventListener('push', function (e) {
