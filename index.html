@@ -318,6 +318,16 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
 /* two lines of summary and no sliver of a third: the space below is margin, not padding */
 .row .what { padding: 0; margin: 8px 14px 12px 17px; }
 @media (min-width: 720px) { .facts { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* on a phone the summary is compact, so Needs you and the Jake / Drew / Cora row are reached sooner (Lance, 21 Nov 2026) */
+@media (max-width: 719px) {
+  .facts { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 14px; }
+  .fact { padding: 6px 8px 7px; min-height: 0; }
+  .fact .k { font-size: .5rem; letter-spacing: .14em; }
+  .fact .v { margin-top: 3px; font-size: 13px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .fact .v .ph, .fact .v .bub { font-size: .5rem; padding: 2px 5px 1px; white-space: normal; }
+  .sec h3.who { margin: 14px 0 10px; }
+  .sec.tell #tell-text { min-height: 54px; }
+}
 @media (min-width: 1280px) { .facts { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 @media (max-width: 719px) {
   .pathlab { display: none; }
@@ -334,7 +344,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-183912";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-203431";</script>
 </head>
 <body>
 
@@ -655,7 +665,14 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       }).join('') : '';
     }).join('') + '</div>';
   }
-  function openNeeds(p) { return actionNeeds(p).concat(decisionNeeds(p), questionNeeds(p), draftNeeds(p), (p.needs || []).filter(function (n) { return !MARKS[n.key]; })); }
+  // What Drew or Cora is waiting on him for (a check-in to look at, his word to submit or pay, a login): on the list like
+  // everything else, with the button that opens that one's window on the job.
+  function teamNeeds(p) {
+    return ((p.team || {}).waiting || []).map(function (w) {
+      return { key: 'team:' + w.key, kind: 'team', who: w.who, title: w.title, detail: w.detail || '', days: daysSince(w.since) };
+    });
+  }
+  function openNeeds(p) { return actionNeeds(p).concat(decisionNeeds(p), questionNeeds(p), draftNeeds(p), teamNeeds(p), (p.needs || []).filter(function (n) { return !MARKS[n.key]; })); }
   function wait(n) { return n.days == null ? '' : n.days === 0 ? 'since today' : n.days + (n.days === 1 ? ' day' : ' days'); }
   function longest(ns) { var m = -1; ns.forEach(function (n) { if (n.days != null && n.days > m) m = n.days; }); return m; }
   function whoHasWhat(p) {
@@ -768,7 +785,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     return t.split('\n').filter(function (l) { return l.trim().charAt(0) !== '>'; }).join('\n').trim();
   }
   var CLOSED_KEY = 'plansman_closed';
-  var SHUT_AT_FIRST = { 'Team log': 1 };                  // there when he wants it, out of the way until then
+  var SHUT_AT_FIRST = { 'Team log': 1, 'Jake history': 1, 'Jake did, check it': 1 };                  // there when he wants it, out of the way until then
   function closedSecs() { try { return JSON.parse(localStorage.getItem(CLOSED_KEY) || '{}') || {}; } catch (e) { return {}; } }
   function sec(title, html, cls) {
     if (!html) return '';
@@ -819,6 +836,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       fact('Needs you', pb ? '<span class="bubs">' + pb + '</span>' : '<span class="note">Nothing</span>') +
       fact('Balance due', bal == null ? '<span class="note">Not on record</span>' : usd(bal) || '$0') +
       fact('Schedule date', p.due ? esc(p.due) : '<span class="note">None</span>') + '</div>';
+    h += '<!--TEAM-->';                                   // the Jake / Drew / Cora row and Jake's conversation go here, at the top
 
     // 1. what needs Lance: each thing waiting on him, longest wait first, with the two taps that clear it
     var others = p.tasks.filter(function (t) { return !isMine(t); });
@@ -847,6 +865,8 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
         h3 += actLines(n.act) + (CFG ? '<div class="marks"><button class="go" type="button" data-act="approve" data-id="' + n.act.id + '">Do it</button> <button class="text quiet" type="button" data-act="cancel" data-id="' + n.act.id + '">Cancel</button></div>' : '');
       } else if (n.kind === 'decision') {
         h3 += decAsk(n.dec);
+      } else if (n.kind === 'team') {
+        h3 += '<div class="marks"><a class="go drafting" href="' + (n.who === 'cora' ? 'permitting' : 'drafting') + '.html#' + encodeURIComponent(p.no) + '" target="' + (n.who === 'cora' ? 'permitting-' : 'drafting-') + esc(p.no) + '">Open ' + (n.who === 'cora' ? 'Cora' : 'Drew') + '</a></div>';
       } else if (n.kind === 'question') {
         if (n.why) h3 += '<div class="body note">Waiting on this: ' + esc(n.why) + '</div>';
         if (CFG) h3 += '<div class="answer"><textarea data-ans="' + n.qid + '" placeholder="Your answer" aria-label="Your answer">' + esc(state.ans[n.qid] || '') + '</textarea>' +
@@ -898,18 +918,19 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var KEEP = 3, earlier = state.allSaid ? 0 : Math.max(0, said.length - KEEP);
     var tell = '', talk2 = '';
     // the history folds away with the minus at its right, like every other section (it stays as he left it)
-    var c1 = closedSecs(), histShut = !!c1['Jake history'];
+    var c1 = closedSecs(), histShut = c1['Jake history'] === undefined ? true : !!c1['Jake history'];     // folded until he opens it
     if (said.length) talk2 += '<button type="button" class="sectog histog" data-sec="Jake history" aria-expanded="' + (histShut ? 'false' : 'true') + '" aria-label="' +
       (histShut ? 'Show' : 'Hide') + ' the conversation with Jake"><span>' + (histShut ? said.length + (said.length === 1 ? ' earlier message' : ' earlier messages') : '') + '</span><i>' + (histShut ? '+' : '&minus;') + '</i></button>';
     if (said.length && !histShut) talk2 += '<div class="chat">' +
-      said.slice(earlier).reverse().map(function (s) {
-        // newest first all the way down: Jake's answer sits above what Lance wrote, since it came after it
+      (earlier ? '<button class="text more" id="more-said" type="button">Show ' + earlier + ' earlier</button>' : '') +
+      said.slice(earlier).map(function (s) {
+        // oldest first, the newest just above the box, like every other conversation
         var mine = '<div class="msg me"><div class="lbl">You · ' + esc(stamp(s.created_at)) + '</div><div class="txt">' + para(tidy(s.body)) + '</div></div>', h2 = '';
         if (s.reply) h2 += '<div class="msg jake"><div class="lbl">Jake' + (s.replied_at ? ' · ' + esc(stamp(s.replied_at)) : '') + '</div><div class="txt">' + para(s.reply) + '</div>' +
           DRAFTS.filter(function (d) { return d.instruction_id === s.id && d.proj_no === p.no; }).map(function (d) { return draftBlock(d); }).join('') + '</div>';
         else h2 += '<div class="msg jake wait"><div class="lbl">Jake</div><div class="txt">' + (s.state === 'working' ? 'Working on it…' : 'Picking it up…') + '</div></div>';
-        return h2 + mine;
-      }).join('') + (earlier ? '<button class="text more" id="more-said" type="button">Show ' + earlier + ' earlier</button>' : '') + '</div>';
+        return mine + h2;
+      }).join('') + '</div>';
     var acts = ACTS.filter(function (a) { return a.proj_no === p.no && a.state !== 'proposed' && a.state !== 'cancelled'; });
     if (acts.length) tell += '<div class="said">' + acts.map(actItem).join('') + '</div>';
     if (state.actMsg) tell += '<p class="note">' + esc(state.actMsg) + '</p>';
@@ -925,9 +946,11 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       tell += '<p class="note">Your instruction box goes here on the plansman.ai version. This private preview cannot save anything.</p>';
     }
     // the heading is the team: Jake is the one talked to here; Drew and Cora each open their own window on this job
-    h += '<div class="sec lead tell"><h3 class="who"><span class="on">Jake</span>' +
+    var formAt = tell.indexOf('<form id="tell">'), before = formAt >= 0 ? tell.slice(0, formAt) : tell, box = formAt >= 0 ? tell.slice(formAt) : '';
+    h = h.replace('<!--TEAM-->', '<div class="sec lead tell"><h3 class="who"><span class="on">Jake</span>' +
       (CFG ? '<a href="drafting.html#' + encodeURIComponent(p.no) + '" target="drafting-' + esc(p.no) + '">Drew</a><a href="permitting.html#' + encodeURIComponent(p.no) + '" target="permitting-' + esc(p.no) + '">Cora</a>' : '') +
-      '</h3>' + tell + talk2 + '</div>';
+      '</h3>' + talk2 + box + '</div>');
+    if (before) h += '<div class="sec">' + before + '</div>';      // the record of what he changed stays down here, below what needs him
 
     // 3. what the team has
     h += sec('Who has what', others.map(function (t) { return taskItem(t, true); }).join(''), 'lead');
