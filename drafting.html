@@ -139,7 +139,7 @@ button.go:disabled { opacity: .45; cursor: default; }
 .msg .ask .was { color: var(--muted); font-size: 13px; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261121-210255";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261121-215019";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -214,7 +214,7 @@ button.go:disabled { opacity: .45; cursor: default; }
             '<button class="go" type="button" data-login-save="' + m.id + '">Save</button></div>';
       }
       return '<div class="msg ' + cls + '">' + (m.kind === 'progress' ? '' : '<div class="lbl">' + who + ' · ' + esc(stamp(m.created_at)) + '</div>') +
-        '<div class="txt">' + esc(m.body) + '</div>' + (m.files && m.files.checkin && m.who === WHO ? '<a class="open" data-sheet="' + m.files.checkin + '">Open check-in</a>' : '') + extra + '</div>';
+        '<div class="txt">' + esc(m.body).replace(/\*\*([^*]+?)\*\*/g, '<b>$1</b>') + '</div>' + (m.files && m.files.checkin && m.who === WHO ? '<a class="open" data-sheet="' + m.files.checkin + '">Open check-in</a>' : '') + extra + '</div>';
     }).join('') : '<p class="empty">Nothing said here yet. ' + T.empty + '</p>';
     if (atEnd || sending) box.scrollTop = box.scrollHeight;
   }
@@ -398,7 +398,7 @@ button.go:disabled { opacity: .45; cursor: default; }
       var score = (d.score || []).filter(function (s) { return s.shown; });
       var html = order.map(function (g) {
         var G = groups[g], waiting = G.items.filter(function (c) { return c.state === 'open'; }).length, P = plotted[g];
-        var isOpen = SH.openGroups[g] === undefined ? (g === newest || waiting > 0) : SH.openGroups[g];
+        var isOpen = !!SH.openGroups[g];      // every sheet starts shut, so he finds the one to review at a glance (Lance, 21 Nov 2026)
         // where the sheet stands, from its newest check-in: with him, back with Drew, right, or only plotted so far
         var top = G.items[0], stands = waiting ? '' : !top ? 'Plotted' : top.state === 'marked' ? 'With ' + T.name : top.state === 'ok' ? 'Right' : '';
         return '<details class="sgroup" data-group="' + esc(g) + '"' + (isOpen ? ' open' : '') + '><summary><b>' + esc(g) + '</b><span>' + esc(label[G.kind] || '') +
