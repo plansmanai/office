@@ -181,7 +181,8 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .sec h3.who { display: flex; gap: 8px; margin-bottom: 14px; }
 .sec h3.who span, .sec h3.who a { flex: 1; text-align: center; padding: 12px 8px 11px; border: 1px solid var(--ink); color: var(--ink); font-size: .7rem; }
 .sec h3.who span.on { background: var(--rule); border-color: var(--rule); color: var(--ink); }
-.sec.tell .chat { margin-top: 14px; }
+.sec.tell .chat { margin-top: 4px; }
+.sectog.histog { margin: 10px 0 0; padding: 8px 0; color: var(--muted); font-size: 13.5px; }
 .sec.lead h3 { color: var(--ink); }
 .tl .gist { color: var(--ink); font-size: 14px; margin-top: 2px; }
 .tl.tap { cursor: pointer; }
@@ -333,7 +334,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-183530";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-183912";</script>
 </head>
 <body>
 
@@ -896,7 +897,11 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var said = SAID.filter(function (s) { return s.proj_no === p.no && !onItem(s); }).slice().reverse();      // oldest first
     var KEEP = 3, earlier = state.allSaid ? 0 : Math.max(0, said.length - KEEP);
     var tell = '', talk2 = '';
-    if (said.length) talk2 += '<div class="chat">' +
+    // the history folds away with the minus at its right, like every other section (it stays as he left it)
+    var c1 = closedSecs(), histShut = !!c1['Jake history'];
+    if (said.length) talk2 += '<button type="button" class="sectog histog" data-sec="Jake history" aria-expanded="' + (histShut ? 'false' : 'true') + '" aria-label="' +
+      (histShut ? 'Show' : 'Hide') + ' the conversation with Jake"><span>' + (histShut ? said.length + (said.length === 1 ? ' earlier message' : ' earlier messages') : '') + '</span><i>' + (histShut ? '+' : '&minus;') + '</i></button>';
+    if (said.length && !histShut) talk2 += '<div class="chat">' +
       said.slice(earlier).reverse().map(function (s) {
         // newest first all the way down: Jake's answer sits above what Lance wrote, since it came after it
         var mine = '<div class="msg me"><div class="lbl">You · ' + esc(stamp(s.created_at)) + '</div><div class="txt">' + para(tidy(s.body)) + '</div></div>', h2 = '';
