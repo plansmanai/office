@@ -150,7 +150,7 @@ button.go:disabled { opacity: .45; cursor: default; }
 .msg .ask .was { color: var(--muted); font-size: 13px; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-071044";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-073744";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -280,7 +280,11 @@ button.go:disabled { opacity: .45; cursor: default; }
   function draw(force) {
     var box = $('said'), atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
     if (!force && document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') && box.contains(document.activeElement)) return;   // he is typing a login or editing a draft: leave it be
-    box.innerHTML = (MSGS.length ? MSGS.map(function (m) {
+    // a line said while working that is then the answer itself is shown once, as the answer (22 Nov 2026: the same words twice)
+    var finals = {};
+    MSGS.forEach(function (m) { if (m.kind !== 'progress') finals[m.who + '|' + (m.body || '').trim()] = 1; });
+    var LIST = MSGS.filter(function (m) { return !(m.kind === 'progress' && finals[m.who + '|' + (m.body || '').trim()]); });
+    box.innerHTML = (LIST.length ? LIST.map(function (m) {
       var cls = m.who === 'lance' ? 'me' : m.kind === 'progress' ? 'drew work' : 'drew';
       if (m.state === 'failed') cls += ' failed';
       var who = m.who === 'lance' ? 'You' : m.who.charAt(0).toUpperCase() + m.who.slice(1);
