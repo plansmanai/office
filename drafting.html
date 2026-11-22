@@ -42,9 +42,29 @@ header .brand { display: none; }
   header .teambar { grid-column: 2; grid-row: 1; margin: 0; align-self: start; }
   header .jobrow { grid-column: 1 / -1; grid-row: 2; }
 }
+.teambar span, .teambar a { height: 42px; box-sizing: border-box; padding: 0 8px; display: flex; align-items: center; justify-content: center; }
+header .brand a { display: inline-flex; align-items: baseline; }
+/* whether he is here: said only while it is not so (connecting, not running, cannot be reached), on the live picture */
+header .status { display: none; }
+body.off header .status { display: flex; }
+.view.live { position: relative; }
+.view.live > .status { display: none; position: absolute; top: 12px; left: 14px; z-index: 6; margin: 0; padding: 7px 11px; background: var(--bg); border: 1px solid var(--rule);
+  font-size: 13px; color: var(--muted); align-items: center; gap: 8px; }
+body.off .view.live > .status { display: flex; }
+.view.live > .status .dot { width: 8px; height: 8px; background: var(--rule); display: inline-block; }
 @media (min-width: 1500px) {
-  header .hin { max-width: none; margin: 0; grid-template-columns: 880px minmax(0, 1fr); }
-  header .brand { width: 400px; }
+  /* THE TOP ROW, identical in dashboard.html and drafting.html: 22px from the top, 18px from the left, 42px high;
+     columns 400px | 440px | the rest, 40px apart. Change a number here and change it in the other file. */
+  header { padding: 22px 18px 0; border-bottom: 0; }
+  header .hin { max-width: none; margin: 0; grid-template-columns: 400px 440px minmax(0, 1fr); column-gap: 40px; row-gap: 0; align-items: stretch; height: 42px; }
+  header .brand { width: auto; grid-column: 1; grid-row: 1; height: 42px; box-sizing: border-box; padding: 0; align-items: center; }
+  header .jobrow { grid-column: 2; grid-row: 1; height: 42px; box-sizing: border-box; flex: none; flex-wrap: nowrap; align-items: center; gap: 12px; min-width: 0;
+                   border-bottom: 1px solid var(--rule); }
+  header .jobrow h1 { font-size: 13px; letter-spacing: .1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  header .jobrow .phase { white-space: nowrap; }
+  header .teambar { grid-column: 3; grid-row: 1; margin: 0; }
+  nav.tabs { display: none; }
+  main { margin-top: 14px; border-top: 1px solid var(--rule); }
 }
 /* Jake / Drew / Cora along the top, the same bar as on the job's page; this window's own name is the grey one */
 .teambar { flex: 0 0 100%; display: flex; gap: 8px; margin: 0 0 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .18em; }
@@ -179,12 +199,12 @@ button.go:disabled { opacity: .45; cursor: default; }
 .msg .ask .was { color: var(--muted); font-size: 13px; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-111603";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-114243";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
 <header id="head" hidden><div class="hin">
-  <div class="brand"><b>Plansman</b><span id="read"></span></div>
+  <div class="brand"><a href="./#queue" aria-label="Plansman: back to the queue"><b>Plansman</b></a><span id="read"></span></div>
   <nav class="teambar" id="teambar" aria-label="The team on this job"><a id="tb-jake" href="./" data-team="1">Jake</a><a id="tb-drew" href="drafting.html" data-team="1">Drew</a><a id="tb-cora" href="permitting.html" data-team="1">Cora</a></nav>
   <div class="jobrow"><h1><span class="no" id="no"></span><span id="addr"></span></h1>
   <span class="phase" id="phase" hidden></span>
@@ -360,6 +380,7 @@ button.go:disabled { opacity: .45; cursor: default; }
     var alive = (d.alive && (Date.now() - new Date(d.alive).getTime() < 90000)) ||
       (st.busy && st.updated_at && (Date.now() - new Date(st.updated_at).getTime() < 30 * 60000));
     BUSY = !!st.busy;
+    document.body.classList.toggle('off', !alive);          // the line shows only while he is not there
     $('dot').className = 'dot' + (!alive ? '' : BUSY ? ' busy' : ' on');
     $('status').textContent = !alive ? T.name + ' is not running' : BUSY ? T.name + ' is working' + (st.doing ? ': ' + st.doing : '') : T.name + ' is here';
   }
@@ -408,7 +429,7 @@ button.go:disabled { opacity: .45; cursor: default; }
   }
   function loop() {
     clearTimeout(timer);
-    read().catch(function () { $('status').textContent = 'Cannot reach the dashboard'; }).then(function () {
+    read().catch(function () { $('status').textContent = 'Cannot reach the dashboard'; document.body.classList.add('off'); }).then(function () {
       timer = setTimeout(loop, BUSY || sending ? 1500 : 4000);
     });
   }
@@ -484,6 +505,16 @@ button.go:disabled { opacity: .45; cursor: default; }
     if (!quick || Math.abs(dx) < 70 || Math.abs(dy) > 50 || window.innerWidth >= 960) return;
     if (history.length > 1) history.back(); else location.replace('./#queue');
   }, { passive: true });
+  // on a PC the "is he here" line sits on the live picture, and only while he is not there
+  document.body.classList.add('off');
+  function placeStatus() {
+    var st = document.querySelector('.status'), wide = window.innerWidth > 860;
+    if (!st) return;
+    if (wide && st.parentNode !== $('stage-live')) $('stage-live').appendChild(st);
+    if (!wide && st.parentNode === $('stage-live')) document.querySelector('header .jobrow').appendChild(st);
+  }
+  placeStatus();
+  window.addEventListener('resize', placeStatus);
   $('say').addEventListener('submit', send);
   $('text').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) send(e); });
   Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function (b) {

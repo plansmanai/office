@@ -351,32 +351,42 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   body[data-show="detail"] #list { display: none; }
   body[data-show="list"] #detail { display: none; }
 }
-/* A wide screen: three columns, the general chat | the list | the job (Lance, 22 Nov 2026: "show the general chat on
-   the left while on this screen"). The columns start at the page's left edge so that the Jake / Drew / Cora bar sits at
-   the same place here and in Drew's and Cora's windows (their header uses the same widths). */
-@media (min-width: 1500px) {
-  .shell { max-width: none !important; margin: 0 !important; grid-template-columns: 400px 440px minmax(0, 1fr) !important; column-gap: 40px; row-gap: 0;
-           grid-template-rows: auto auto auto 1fr auto; }
-  #list { display: contents; }
-  .brand { grid-column: 1; grid-row: 1; }
-  .nav { grid-column: 2; grid-row: 1; margin-top: 0; align-self: end; }
-  #nav-chat { display: none; }
-  #notice { grid-column: 2; grid-row: 2; }
-  #notify { grid-column: 2; grid-row: 3; }
-  #chatview { grid-column: 1; grid-row: 2 / 6; display: flex; flex-direction: column; position: sticky; top: 22px; height: calc(100vh - 44px); margin-top: 14px; min-height: 0; }
-  #chatview #chatlog { flex: 1; min-height: 0; overflow-y: auto; padding-right: 8px; }
-  #listview { grid-column: 2; grid-row: 4; position: sticky; top: 22px; max-height: calc(100vh - 44px); overflow-y: auto; padding-right: 12px; }
-  .foot { grid-column: 2; grid-row: 5; }
-  #detail { grid-column: 3; grid-row: 1 / 6; }
-}
 @media (min-width: 960px) {
   .shell { grid-template-columns: 440px minmax(0, 1fr); gap: 40px; align-items: start; }
   #list { position: sticky; top: 22px; max-height: calc(100vh - 44px); overflow-y: auto; padding-right: 12px; }
   .back { display: none; }
   .sheet { padding: 38px 42px 14px; }
 }
+#teamslot { display: none; }
+.teambar span, .teambar a { height: 42px; box-sizing: border-box; padding: 0 8px; display: flex; align-items: center; justify-content: center; }
+.brand a { display: inline-flex; align-items: baseline; }
+/* A wide screen: the general chat | the list | the job, under one fixed top row. Each of the three scrolls by itself
+   and the page never does, so the wheel only moves what the mouse is over (Lance, 22 Nov 2026). */
+@media (min-width: 1500px) {
+  /* THE TOP ROW, identical in dashboard.html and drafting.html: 22px from the top, 18px from the left, 42px high;
+     columns 400px | 440px | the rest, 40px apart. Change a number here and change it in the other file. */
+  html, body { height: 100%; }
+  body { overflow: hidden; box-sizing: border-box; padding-block: 22px 0; }
+  .shell { max-width: none; margin: 0; height: 100%; grid-template-columns: 400px 440px minmax(0, 1fr); column-gap: 40px; row-gap: 0;
+           grid-template-rows: 42px auto auto minmax(0, 1fr) auto; align-items: stretch; }
+  #list { display: contents; }
+  .brand { grid-column: 1; grid-row: 1; height: 42px; box-sizing: border-box; padding: 0; align-items: center; }
+  .nav { grid-column: 2; grid-row: 1; height: 42px; box-sizing: border-box; margin: 0; align-items: flex-end; }
+  #nav-chat { display: none; }
+  #teamslot { display: block; grid-column: 3; grid-row: 1; }
+  #teamslot .teambar { position: static; padding: 0; }
+  #notice { grid-column: 2; grid-row: 2; }
+  #notify { grid-column: 2; grid-row: 3; }
+  #chatview { grid-column: 1; grid-row: 2 / 6; display: flex; flex-direction: column; min-height: 0; margin-top: 14px; padding-bottom: 16px; }
+  #chatview[hidden] { display: none; }
+  #chatview #chatlog { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 8px; }
+  #listview { grid-column: 2; grid-row: 4; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 12px; }
+  #listview #q { margin-top: 14px; }
+  .foot { grid-column: 2; grid-row: 5; margin: 8px 0 10px; }
+  #detail { grid-column: 3; grid-row: 2 / 6; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin-top: 14px; }
+}
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-111603";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-114243";</script>
 </head>
 <body>
 
@@ -391,7 +401,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
 
 <div class="shell" id="shell" hidden>
   <div class="pane" id="list">
-    <div class="brand"><b>Plansman</b><span id="read"></span></div>
+    <div class="brand"><a href="#queue" aria-label="Plansman: back to the queue"><b>Plansman</b></a><span id="read"></span></div>
     <div id="notice" hidden></div>
     <div id="notify" hidden></div>
     <nav class="nav" aria-label="Views"><a href="#chat" id="nav-chat">Chat<i id="chat-dot" hidden></i></a><a href="#queue" id="nav-queue">Queue</a><a href="#projects" id="nav-projects">All projects</a></nav>
@@ -410,6 +420,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     </div>
     <p class="foot" id="foot"></p>
   </div>
+  <div id="teamslot"></div>
   <div class="pane" id="detail"></div>
 </div>
 
@@ -1201,6 +1212,9 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     $('decisions').innerHTML = '';                     // what is about no one project lives in the Chat thread
     var p = state.no && BY[state.no];
     $('detail').innerHTML = p ? project(p) : '<div class="blank">Pick a project on the left.</div>';
+    var slot = $('teamslot'), barEl = wide3 ? $('detail').querySelector('.teambar') : null;
+    slot.innerHTML = '';
+    if (barEl) slot.appendChild(barEl);
     Array.prototype.forEach.call(document.querySelectorAll('[data-rule]'), function (b) {
       b.addEventListener('click', function () { decideRule(b.getAttribute('data-id'), b.getAttribute('data-rule')); });
     });
@@ -1361,19 +1375,20 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     if (state.no && !prev && state.routed) keepPlace();     // leaving the list for a job: remember where the list was
     if (state.no !== prev) { state.mailQ = ''; state.openMail = null; state.allTimeline = false; state.allSaid = false; state.jobAll = {}; state.tellMsg = ''; state.pick = null; state.markMsg = ''; }
     render();
-    if (state.no && state.no !== prev) window.scrollTo(0, 0);
+    if (state.no && state.no !== prev) { window.scrollTo(0, 0); $('detail').scrollTop = 0; }
     if (!state.no && state.view !== 'chat' && (prev || !state.routed || moved)) backToPlace();      // back on the list (or the page just opened on it): where he left it
     state.routed = true;
   }
   // The list's place, per list, kept for the session: the page's own scroll on a phone, the list's on a PC.
+  function listBox() { return $(window.innerWidth >= 1500 ? 'listview' : 'list'); }      // what scrolls the list on a PC
   function keepPlace(which) {
-    try { sessionStorage.setItem('p4_place_' + (which || state.lastList || 'queue'), JSON.stringify([window.scrollY || 0, $('list').scrollTop || 0])); } catch (e) {}
+    try { sessionStorage.setItem('p4_place_' + (which || state.lastList || 'queue'), JSON.stringify([window.scrollY || 0, listBox().scrollTop || 0])); } catch (e) {}
   }
   function backToPlace() {
     var at = null;
     try { at = JSON.parse(sessionStorage.getItem('p4_place_' + state.view) || 'null'); } catch (e) {}
     if (!at) { if (window.innerWidth < 960) window.scrollTo(0, 0); return; }
-    var go = function () { if (window.innerWidth < 960) window.scrollTo(0, at[0]); else $('list').scrollTop = at[1]; };
+    var go = function () { if (window.innerWidth < 960) window.scrollTo(0, at[0]); else listBox().scrollTop = at[1]; };
     go(); setTimeout(go, 60); setTimeout(go, 300);      // again once the list has laid itself out
   }
 
