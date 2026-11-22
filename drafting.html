@@ -156,7 +156,7 @@ button.go:disabled { opacity: .45; cursor: default; }
 .msg .ask .was { color: var(--muted); font-size: 13px; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-094052";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-094913";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -174,7 +174,7 @@ button.go:disabled { opacity: .45; cursor: default; }
     <div class="view sheets" id="stage-sheets" hidden>
       <div id="sheet-list"><p class="none">No check-ins on this job yet. Drew posts one when he wants you to look at something.</p></div>
       <div id="sheet-open" hidden>
-        <div class="sbar"><button type="button" id="s-back">&lsaquo; All</button><b id="s-title"></b>
+        <div class="sbar"><b id="s-title"></b>
           <span class="tools"><button type="button" id="s-draw" aria-pressed="true">Draw</button><button type="button" id="s-undo">Undo</button><button type="button" id="s-clear">Clear</button>
           <button type="button" id="s-out">&minus;</button><button type="button" id="s-in">+</button></span></div>
         <div id="s-note"></div>
@@ -430,16 +430,20 @@ button.go:disabled { opacity: .45; cursor: default; }
   $('text').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) send(e); });
   Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function (b) {
     b.addEventListener('click', function () {
+      var was = sheetsShowing();
       Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function (x) { x.removeAttribute('aria-current'); });
       b.setAttribute('aria-current', 'true'); $('main').setAttribute('data-show', b.getAttribute('data-show'));
       var s = b.getAttribute('data-show'); if (s !== 'drew') { $('stage-live').hidden = s !== 'live'; $('stage-sheets').hidden = s !== 'sheets'; }
+      if (s === 'sheets' && was && SH.open && !SH.staying) closeSheet();      // already on a sheet: back to the list of sheets
     });
   });
   Array.prototype.forEach.call(document.querySelectorAll('.switch button'), function (b) {
     b.addEventListener('click', function () {
       Array.prototype.forEach.call(document.querySelectorAll('.switch button'), function (x) { x.removeAttribute('aria-current'); });
+      var was = sheetsShowing();
       b.setAttribute('aria-current', 'true'); var s = b.getAttribute('data-stage');
       $('stage-live').hidden = s !== 'live'; $('stage-sheets').hidden = s !== 'sheets';
+      if (s === 'sheets' && was && SH.open && !SH.staying) closeSheet();
     });
   });
   // The bar between the view and the chat (Lance: "a slider left and right so I can maximize and minimize the
@@ -474,7 +478,9 @@ button.go:disabled { opacity: .45; cursor: default; }
   }, true);
   function showSheets() {
     var b = window.innerWidth > 860 ? document.querySelector('.switch [data-stage="sheets"]') : document.querySelector('.tabs [data-show="sheets"]');
+    SH.staying = true;                                     // the page itself bringing Sheets forward is not him asking for the list
     if (b) b.click();
+    SH.staying = false;
   }
   function sheetsShowing() { return !document.hidden && !$('stage-sheets').hidden && (window.innerWidth > 860 || $('main').getAttribute('data-show') === 'sheets'); }
   function loadSheets() {
@@ -615,7 +621,6 @@ button.go:disabled { opacity: .45; cursor: default; }
   $('s-clear').addEventListener('click', function () { SH.strokes = []; paint(); });
   $('s-in').addEventListener('click', function () { setZoom(SH.zoom * 1.5); });
   $('s-out').addEventListener('click', function () { setZoom(SH.zoom / 1.5); });
-  $('s-back').addEventListener('click', closeSheet);
   window.addEventListener('resize', paint);
   function sendMark(ok) {
     if (!SH.open) return;
