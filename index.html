@@ -358,7 +358,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-105253";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-110439";</script>
 </head>
 <body>
 
@@ -1891,6 +1891,22 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     state.swipe = dx > 0 ? 'slide-r' : 'slide-l';
     location.hash = '#' + to;
   }, { passive: true });
+  // On a PC the left side and the job on the right are two things: choosing Chat, Queue or All projects on the left
+  // keeps the job open on the right (Lance, 22 Nov 2026: "on the desktop can this page show the general chat on the
+  // left while on this screen"). On a phone there is one page at a time, so a tab is a page of its own, as before.
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest && e.target.closest('.nav a');
+    if (!t || window.innerWidth < 960 || !state.no) return;
+    var v = (t.getAttribute('href') || '').slice(1);
+    if (PAGES.indexOf(v) < 0) return;
+    e.preventDefault();
+    if (state.view !== 'chat' && v !== state.view) keepPlace(state.view);
+    var was = state.view;
+    state.view = v;
+    if (v === 'chat') state.chatStick = true; else state.lastList = v;
+    render();
+    if (v !== 'chat' && v !== was) backToPlace();
+  });
   document.addEventListener('click', function (e) {
     var a = e.target.closest && e.target.closest('a[data-team]');
     if (a) { e.preventDefault(); location.replace(a.getAttribute('href')); }
