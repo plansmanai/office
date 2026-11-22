@@ -360,7 +360,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-073744";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-080318";</script>
 </head>
 <body>
 
@@ -572,7 +572,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   var ACTS = [];
   // DRAFTS: emails Jake has drafted (db/015). One goes out only after Lance taps Approve on it; he can edit
   // the wording first, or drop it. A draft answering an email that waits on him is shown on that email.
-  var DRAFTS = [], PUSHED = null;
+  var DRAFTS = [], PUSHED = null, WAITING = null;      // WAITING: what Drew and Cora have waiting on him, read live with the drafts
   var BLANK = /\[[A-Z][^\]\[a-z]{1,200}\]/g;                  // [FEE]: a fact only he has, left for him to fill
   var ATTACH = /\battach(?:ed|ment|ments|ing)?\b|\benclosed\b/i;     // P4 cannot attach a file yet
   function blanksIn(t) { return (t || '').match(BLANK) || []; }
@@ -710,7 +710,8 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   // What Drew or Cora is waiting on him for (a check-in to look at, his word to submit or pay, a login): on the list like
   // everything else, with the button that opens that one's window on the job.
   function teamNeeds(p) {
-    return ((p.team || {}).waiting || []).map(function (w) {
+    // live when it has been read (so a count goes the moment he has opened the sheet), else as the page's data had it
+    return (WAITING ? WAITING.filter(function (w) { return w.proj_no === p.no; }) : ((p.team || {}).waiting || [])).map(function (w) {
       return { key: 'team:' + w.key, kind: 'team', who: w.who, title: w.title, detail: w.detail || '', days: daysSince(w.since), at: w.since };
     }).concat(DRAFTS.filter(function (d) { return d.proj_no === p.no && theirs(d) && d.state !== 'sent' && d.state !== 'approved' && d.state !== 'sending'; }).map(function (d) {
       var what = d.channel === 'action' ? d.subject : (d.channel === 'sms' ? 'a text to ' : 'an email to ') + (d.to_names || []).join(', ');
@@ -1372,7 +1373,9 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       if (!d || !d.ok) return;
       var before = JSON.stringify(DRAFTS);
       DRAFTS = d.drafts || [];
-      if (JSON.stringify(DRAFTS) !== before && !typing()) render();
+      var wasWaiting = JSON.stringify(WAITING);
+      if (d.waiting) WAITING = d.waiting;
+      if ((JSON.stringify(DRAFTS) !== before || JSON.stringify(WAITING) !== wasWaiting) && !typing()) render();
       if (d.pushed_at && PUSHED && d.pushed_at !== PUSHED) refreshData();
       PUSHED = d.pushed_at || PUSHED;
     }).catch(function () {});
