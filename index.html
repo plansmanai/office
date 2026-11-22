@@ -333,7 +333,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-183009";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-183530";</script>
 </head>
 <body>
 
@@ -509,7 +509,10 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       if (it.note) {
         var n = it.note, p = n.proj_no && BY[n.proj_no];
         return '<div class="msg jake"><div class="lbl">' + esc(cap(n.who || 'jake')) + ' · ' + esc(stamp(n.created_at)) + '</div><div class="txt"><b>' + esc(n.title) + '</b><br>' + para(n.body) + '</div>' +
-          (p ? '<a class="open" href="#p-' + esc(n.proj_no) + '">Open ' + esc(n.proj_no) + '</a>' : '') + '</div>';
+          // what Drew or Cora sent opens in that one's own window on the job, where the thing itself is; Jake's opens the job's page
+          (p ? (n.who === 'drew' || n.who === 'cora'
+                ? '<a class="open" href="' + (n.who === 'drew' ? 'drafting' : 'permitting') + '.html#' + encodeURIComponent(n.proj_no) + '" target="' + (n.who === 'drew' ? 'drafting-' : 'permitting-') + esc(n.proj_no) + '">Open ' + (n.who === 'drew' ? 'Drew' : 'Cora') + ' · ' + esc(n.proj_no) + '</a>'
+                : '<a class="open" href="#p-' + esc(n.proj_no) + '">Open ' + esc(n.proj_no) + '</a>') : '') + '</div>';
       }
       var x = it.said, wait = chatPending(it);
       var h = '<div class="msg me"><div class="lbl">You · ' + esc(stamp(x.created_at)) + '</div><div class="txt">' + para(tidy(x.body)) + '</div></div>';
