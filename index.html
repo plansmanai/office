@@ -90,9 +90,9 @@ input:focus, textarea:focus { border-color: var(--ink); outline: none; }
 #ask-text { width: 100%; min-height: 58px; max-height: 40vh; resize: none; padding: 10px 11px; display: block; }
 #ask .bar { display: flex; gap: 14px; align-items: center; margin-top: 8px; }
 #ask .bar span { color: var(--muted); font-size: 13px; flex: 1; min-width: 0; }
-#pend-btn { margin-left: auto; white-space: nowrap; background: none; color: var(--ink); border: 1px solid var(--ink); padding: 11px 14px; cursor: pointer;
+#pend-btn, #job-pend { margin-left: auto; white-space: nowrap; background: none; color: var(--ink); border: 1px solid var(--ink); padding: 11px 14px; cursor: pointer;
   font-family: var(--sans); text-transform: uppercase; letter-spacing: .18em; font-size: .66rem; }
-#pend-btn[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); }
+#pend-btn[aria-pressed="true"], #job-pend[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); }
 #chatlog .msg.pend { border-color: var(--ink); border-left: 3px solid var(--oak); }
 #chatlog .msg .item { padding: 0; }
 #chatlog .msg .item .head span { display: none; }
@@ -189,8 +189,6 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 /* one thread per job: what waits on him sits in it as an item, between the messages */
 .chat.need > .item { margin-top: 0; background: var(--bg, transparent); }
 .chat.need > .cleared { margin-top: 0; }
-.pendbar { display: flex; align-items: baseline; gap: 12px; margin: 2px 0 10px; }
-.pendbar button[aria-pressed="true"] { color: var(--ink); }
 .sectog.histog { margin: 10px 0 0; padding: 8px 0; color: var(--muted); font-size: 13.5px; }
 .sec.lead h3 { color: var(--ink); }
 .tl .gist { color: var(--ink); font-size: 14px; margin-top: 2px; }
@@ -361,7 +359,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-080708";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-081217";</script>
 </head>
 <body>
 
@@ -972,10 +970,11 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       return '<div class="cleared"><div class="item"><div class="head"><span>' + esc(cap(it.qa.agent)) + ' asked: ' + esc(it.qa.body) + '</span><span>' + esc(stamp(it.qa.answered_at)) + '</span></div><div class="body">You answered: ' + para(it.qa.answer || '') + '</div></div></div>';
     }).join('');
     var rest = items.length - items.filter(inPending).length;
-    var talk2 = (pendingN || rest ? '<div class="pendbar"><button class="text" id="job-pend" type="button" aria-pressed="' + (all ? 'false' : 'true') + '">' +
-        (all ? 'Pending ' + pendingN : 'Show all' + (rest ? ' · ' + rest + ' earlier' : '')) + '</button>' +
-        '<span class="note">' + (all ? 'The whole conversation on this job' : pendingN ? pendingN + ' waiting on you' : '') + '</span></div>' : '') +
-      (thread ? '<div class="chat need">' + (earlier ? '<button class="text more" id="more-said" type="button">Show ' + earlier + ' earlier</button>' : '') + thread + '</div>'
+    // With nothing waiting on him there is no Pending button: the thread shows what was said lately, and the rest of
+    // the conversation is one tap away at its top, as on the Chat page.
+    var older = !all && !pendingN && rest ? '<button class="text more" id="job-more" type="button">Show ' + rest + ' earlier</button>' : '';
+    var talk2 = (thread ? '' : older) +
+      (thread ? '<div class="chat need">' + older + (earlier ? '<button class="text more" id="more-said" type="button">Show ' + earlier + ' earlier</button>' : '') + thread + '</div>'
               : '<p class="note">' + (all ? 'Nothing here yet.' : theirN.drew || theirN.cora ? 'Nothing from Jake is waiting on you. ' +
                   [theirN.drew ? 'Drew has ' + theirN.drew : '', theirN.cora ? 'Cora has ' + theirN.cora : ''].filter(Boolean).join(' and ') + ': open ' + (theirN.drew && theirN.cora ? 'them' : theirN.drew ? 'him' : 'her') + ' above.'
                 : 'Nothing is waiting on you on this job.') + '</p>') +
@@ -997,7 +996,8 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     if (CFG) {
       tell += '<form id="tell"><textarea id="tell-text" placeholder="What&#39;s next" aria-label="Instruction to the team">' + esc(state.draft[p.no] || '') + '</textarea>' +
         '<div class="bar"><button class="go" id="tell-btn" type="submit"' + (state.sending ? ' disabled' : '') + '>' + (state.sending ? 'Sending…' : 'Send') + '</button>' +
-        '<span id="tell-msg">' + esc(state.tellMsg || 'Enter sends. Shift+Enter starts a new line.') + '</span></div></form>';
+        '<span id="tell-msg">' + esc(state.tellMsg || 'Enter sends. Shift+Enter starts a new line.') + '</span>' +
+        (pendingN ? '<button type="button" id="job-pend" aria-pressed="' + (all ? 'false' : 'true') + '">' + (all ? 'Pending ' + pendingN : 'Show all') + '</button>' : '') + '</div></form>';
     } else {
       tell += '<p class="note">Your instruction box goes here on the plansman.ai version. This private preview cannot save anything.</p>';
     }
@@ -1225,6 +1225,8 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     });
     var jp = $('job-pend');
     if (jp) jp.addEventListener('click', function () { state.jobAll[state.no] = !state.jobAll[state.no]; state.allSaid = false; render(); });
+    var jm = $('job-more');
+    if (jm) jm.addEventListener('click', function () { state.jobAll[state.no] = true; state.allSaid = false; render(); });
     Array.prototype.forEach.call(document.querySelectorAll('[data-dec-text]'), function (t) {
       var did = t.getAttribute('data-dec-text');
       t.addEventListener('input', function () { state.decText[did] = t.value; });
@@ -1321,7 +1323,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       }
       state.swipe = null;
     }
-    if (state.no !== prev) { state.mailQ = ''; state.openMail = null; state.allTimeline = false; state.allSaid = false; state.tellMsg = ''; state.pick = null; state.markMsg = ''; }
+    if (state.no !== prev) { state.mailQ = ''; state.openMail = null; state.allTimeline = false; state.allSaid = false; state.jobAll = {}; state.tellMsg = ''; state.pick = null; state.markMsg = ''; }
     render();
     if (state.no && state.no !== prev) window.scrollTo(0, 0);
   }
