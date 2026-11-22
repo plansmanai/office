@@ -178,6 +178,10 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .status { margin: 22px 0 6px; font-family: var(--serif); font-weight: 500; font-size: 1.36rem; line-height: 1.35; overflow-wrap: anywhere; max-width: 44rem; }
 .sec { padding: 22px 0 18px; border-top: 1px solid var(--rule); margin-top: 8px; }
 .sec h3 { margin: 0 0 12px; }
+.sec h3.who { display: flex; gap: 8px; margin-bottom: 14px; }
+.sec h3.who span, .sec h3.who a { flex: 1; text-align: center; padding: 12px 8px 11px; border: 1px solid var(--ink); color: var(--ink); font-size: .7rem; }
+.sec h3.who span.on { background: var(--rule); border-color: var(--rule); color: var(--ink); }
+.sec.tell .chat { margin-top: 14px; }
 .sec.lead h3 { color: var(--ink); }
 .tl .gist { color: var(--ink); font-size: 14px; margin-top: 2px; }
 .tl.tap { cursor: pointer; }
@@ -329,7 +333,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-162200";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-182501";</script>
 </head>
 <body>
 
@@ -883,19 +887,20 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     h += sec('Jake, in shadow', live.map(shadowItem).join('') + (live.length ? '<p class="note" style="margin-top:8px">Written by Jake in 4.0 as a trial. Nothing was sent to anyone.</p>' : ''), 'lead need');
 
     // 2. his line to the team, as a conversation: he is on the right, Jake on the left, newest at the bottom
-    //    just above the box. The last 15 exchanges show; the rest are one tap away.
+    //    The box is first and the conversation runs under it NEWEST FIRST, the last three exchanges showing and the
+    //    rest one tap away: the section stays short however long the conversation gets, and Drew and Cora, in its
+    //    heading beside Jake, never move down the page.
     var said = SAID.filter(function (s) { return s.proj_no === p.no && !onItem(s); }).slice().reverse();      // oldest first
-    var KEEP = 15, earlier = state.allSaid ? 0 : Math.max(0, said.length - KEEP);
-    var tell = '';
-    if (said.length) tell += '<div class="chat">' +
-      (earlier ? '<button class="text more" id="more-said" type="button">Show ' + earlier + ' earlier</button>' : '') +
-      said.slice(earlier).map(function (s) {
+    var KEEP = 3, earlier = state.allSaid ? 0 : Math.max(0, said.length - KEEP);
+    var tell = '', talk2 = '';
+    if (said.length) talk2 += '<div class="chat">' +
+      said.slice(earlier).reverse().map(function (s) {
         var h2 = '<div class="msg me"><div class="lbl">You · ' + esc(stamp(s.created_at)) + '</div><div class="txt">' + para(tidy(s.body)) + '</div></div>';
         if (s.reply) h2 += '<div class="msg jake"><div class="lbl">Jake' + (s.replied_at ? ' · ' + esc(stamp(s.replied_at)) : '') + '</div><div class="txt">' + para(s.reply) + '</div>' +
           DRAFTS.filter(function (d) { return d.instruction_id === s.id && d.proj_no === p.no; }).map(function (d) { return draftBlock(d); }).join('') + '</div>';
         else h2 += '<div class="msg jake wait"><div class="lbl">Jake</div><div class="txt">' + (s.state === 'working' ? 'Working on it…' : 'Picking it up…') + '</div></div>';
         return h2;
-      }).join('') + '</div>';
+      }).join('') + (earlier ? '<button class="text more" id="more-said" type="button">Show ' + earlier + ' earlier</button>' : '') + '</div>';
     var acts = ACTS.filter(function (a) { return a.proj_no === p.no && a.state !== 'proposed' && a.state !== 'cancelled'; });
     if (acts.length) tell += '<div class="said">' + acts.map(actItem).join('') + '</div>';
     if (state.actMsg) tell += '<p class="note">' + esc(state.actMsg) + '</p>';
@@ -910,8 +915,10 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     } else {
       tell += '<p class="note">Your instruction box goes here on the plansman.ai version. This private preview cannot save anything.</p>';
     }
-    h += sec('Tell the team', tell, 'lead tell');
-    if (CFG) h += '<p style="margin:14px 0 0"><a class="go drafting" href="drafting.html#' + encodeURIComponent(p.no) + '" target="drafting-' + esc(p.no) + '">Drew</a> <a class="go drafting" href="permitting.html#' + encodeURIComponent(p.no) + '" target="permitting-' + esc(p.no) + '">Cora</a></p>';
+    // the heading is the team: Jake is the one talked to here; Drew and Cora each open their own window on this job
+    h += '<div class="sec lead tell"><h3 class="who"><span class="on">Jake</span>' +
+      (CFG ? '<a href="drafting.html#' + encodeURIComponent(p.no) + '" target="drafting-' + esc(p.no) + '">Drew</a><a href="permitting.html#' + encodeURIComponent(p.no) + '" target="permitting-' + esc(p.no) + '">Cora</a>' : '') +
+      '</h3>' + tell + talk2 + '</div>';
 
     // 3. what the team has
     h += sec('Who has what', others.map(function (t) { return taskItem(t, true); }).join(''), 'lead');
