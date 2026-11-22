@@ -350,7 +350,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-225107";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-233544";</script>
 </head>
 <body>
 
@@ -466,8 +466,8 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   // after his tap (db/010).
   var ASKS = { questions: [], rules: [] };
   // DEC: Jake's judgment calls (db/028). open = what he ASKS before acting (state 'asked': it waits on Lance, so
-  // it counts as Needs you on its project) and what he did and shows ('shown': Right or Wrong, never a thing
-  // waiting on Lance); recent = Lance's last verdicts and what Jake learned from each; kinds = the score.
+  // it counts as Needs you on its project); recent = Lance's last answers and what Jake learned from each; kinds
+  // = the score. Nothing is shown just to be checked any more (21 Nov 2026).
   var DEC = { open: [], recent: [], kinds: [] };
   // NOTES: the news Jake sent him (db/034, notices). With what he writes to Jake outside any project and Jake's
   // answers, they are the Chat page: the general conversation (Lance, 20 Nov 2026: "I can use that as the telegram").
@@ -519,7 +519,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     return (earlier ? '<button class="text more" id="more-chat" type="button">Show ' + earlier + ' earlier</button>' : '') + items.slice(earlier).map(function (it) {
       if (it.dec) {
         var d = it.dec;
-        return '<div class="msg jake pend"><div class="lbl">' + (d.state === 'asked' ? 'Jake asks' : 'Jake did, check it') + ' · ' + esc(stamp(d.created_at)) + '</div>' +
+        return '<div class="msg jake pend"><div class="lbl">' + 'Jake asks' + ' · ' + esc(stamp(d.created_at)) + '</div>' +
           (d.state === 'asked' ? '<div class="item"><div class="head"><b>' + esc(d.what) + '</b></div>' + decAsk(d) + '</div>' : decShown(d)) + '</div>';
       }
       if (it.done) return '<div class="msg jake"><div class="lbl">Jake · ' + esc(stamp(it.done.decided_at)) + '</div>' + decRecent(it.done) + '</div>';
@@ -659,15 +659,10 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       '<div class="body note">' + (d.handled_at ? 'Jake has dealt with it.' : 'Jake is on it…') + '</div>' +
       (d.learned ? '<div class="body"><b>Learned: </b>' + esc(d.learned) + '</div>' : '') + '</div>';
   }
-  function decDid(list, recent, allKey) {
-    if (!list.length && !recent.length) return '';
-    return (list.length > 1 && CFG ? '<div class="marks all"><button class="text" type="button" data-dec="allright" data-id="' + esc(allKey) + '">All ' + list.length + ' right</button></div>' : '') +
-      list.map(decShown).join('') + (recent.length ? '<div class="cleared">' + recent.map(decRecent).join('') + '</div>' : '');
-  }
   // The score: each kind of decision, where it stands today, and how his verdicts on it have gone
   function scoreBoard() {
     if (!DEC.kinds.length) return '';
-    var T = [['ask', 'He asks you first'], ['show', 'He does it and shows you'], ['do', 'He does it without telling you']];
+    var T = [['ask', 'He asks you first'], ['do', 'He does it without telling you']];
     return '<h2>How Jake is doing</h2><div class="sec score">' + T.map(function (t) {
       var ks = DEC.kinds.filter(function (k) { return k.tier === t[0]; });
       return ks.length ? '<h3>' + t[1] + '</h3>' + ks.map(function (k) {
@@ -741,14 +736,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
         (t.jake && !(d && d.note) ? '<div class="body"><b>Jake: </b>' + esc(t.jake) + '</div>' : '') + (d ? draftBlock(d, true) : '') + talk + act + '</div>';
     }).filter(Boolean);
     var looseSec = loose.length ? '<h2>Texts not on a project <span class="n">' + loose.length + '</span><small>Jake could not tie these to a job.</small></h2><div class="sec need loose">' + loose.join('') + '</div>' : '';
-    var didBy = {};
-    DEC.open.forEach(function (d) { if (d.state === 'shown' && BY[d.proj_no]) (didBy[d.proj_no] = didBy[d.proj_no] || []).push(d); });
-    var didRows = Object.keys(didBy).sort(function (a, b) { return didBy[b].length - didBy[a].length; }).map(function (no) {
-      var ds = didBy[no];
-      return row(BY[no], ds.slice(0, 2).map(function (d) { return d.what; }).join(' · ') + (ds.length > 2 ? ' · and ' + (ds.length - 2) + ' more' : ''), '', false, BY[no].phase || 'No phase');
-    });
     return looseSec + section('Needs you', '', needRows, dist) +
-      (didRows.length ? section('Jake did, check it', '', didRows) : '') +
       (cleared.length ? section('Nothing open for you', 'In our court. You marked everything handled or not your move.', cleared) : '') +
       section('Waiting on the client', '', group('client')) +
       section('At the city', '', group('city')) +
@@ -800,7 +788,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     return t.split('\n').filter(function (l) { return l.trim().charAt(0) !== '>'; }).join('\n').trim();
   }
   var CLOSED_KEY = 'plansman_closed';
-  var SHUT_AT_FIRST = { 'Team log': 1, 'Jake history': 1, 'Jake did, check it': 1 };                  // there when he wants it, out of the way until then
+  var SHUT_AT_FIRST = { 'Team log': 1, 'Jake history': 1, 'Your answers to Jake': 1 };                  // there when he wants it, out of the way until then
   function closedSecs() { try { return JSON.parse(localStorage.getItem(CLOSED_KEY) || '{}') || {}; } catch (e) { return {}; } }
   function sec(title, html, cls) {
     if (!html) return '';
@@ -919,8 +907,9 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     });
     if (state.decMsg) need += '<p class="note">' + esc(state.decMsg) + '</p>';
     h += sec('Needs you', need || '<p class="note">Nothing is waiting on you on this project.</p>', 'lead need');
-    h += sec('Jake did, check it', decDid(DEC.open.filter(function (d) { return d.proj_no === p.no && d.state === 'shown'; }),
-      DEC.recent.filter(function (d) { return d.proj_no === p.no; }), p.no), 'lead need did');
+    // What he answered Jake lately, and what Jake wrote down from it: reference, folded, only when there is any.
+    // (There is no list of things Jake did for him to check any more: Lance, 21 Nov 2026, "1 less message area".)
+    h += sec('Your answers to Jake', DEC.recent.filter(function (d) { return d.proj_no === p.no; }).map(decRecent).join(''), 'lead');
 
     // 1b. what Jake would do (shadow: nothing is sent)
     var live = (p.shadow || []).filter(function (x) { return x.mode === 'waiting'; });
