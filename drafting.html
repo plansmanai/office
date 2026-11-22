@@ -200,7 +200,7 @@ button.go:disabled { opacity: .45; cursor: default; }
 .msg .ask .was { color: var(--muted); font-size: 13px; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-120920";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-121124";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -342,7 +342,7 @@ button.go:disabled { opacity: .45; cursor: default; }
     if (what === 'drop') DR = DR.filter(function (x) { return x.id !== id; });
     draw(true);
     rpc('office_draft', { p_token: token, p_id: id, p_decision: what, p_text: text && text !== d.body ? text : (text || null) }).then(function (r) {
-      if (!(r && r.ok && r.saved)) { drMsg[id] = r && r.ok ? 'Not saved: ' + (r.why || 'try again') + '.' : 'Signed out. Open the dashboard and enter your PIN.'; d.state = was; }
+      if (!(r && r.ok && r.saved)) { drMsg[id] = r && r.ok ? 'Not saved: ' + (r.why || 'try again') + '.' : 'Signed out. Open the dashboard and sign in.'; d.state = was; }
     }).catch(function (e) { drMsg[id] = 'Not saved (' + e.message + ').'; d.state = was; }).then(function () { loadDrafts(); setTimeout(loadDrafts, 8000); setTimeout(loadDrafts, 25000); });
   }
   function draw(force) {
@@ -387,7 +387,7 @@ button.go:disabled { opacity: .45; cursor: default; }
   }
   function read() {
     return rpc('office_drew', { p_token: token, p_proj: NO, p_after: LAST, p_who: WHO }).then(function (d) {
-      if (!d || !d.ok) { gate('Signed out. <a href="./">Open the dashboard</a> and enter your PIN, then come back.'); return; }
+      if (!d || !d.ok) { gate('Signed out. <a href="./">Open the dashboard</a> and sign in, then come back.'); return; }
       if (d.project) {
         $('no').textContent = d.project.proj_no; $('addr').textContent = d.project.address || '';
         if (d.project.phase) { $('phase').textContent = d.project.phase; $('phase').hidden = false; }
@@ -441,13 +441,13 @@ button.go:disabled { opacity: .45; cursor: default; }
     sending = true; $('send').disabled = true;
     rpc('office_drew_say', { p_token: token, p_proj: NO, p_body: t, p_who: WHO }).then(function (d) {
       if (d && d.ok && d.saved) { $('text').value = ''; $('note').textContent = 'Enter sends. Shift+Enter starts a new line.'; }
-      else $('note').textContent = d && d.ok ? 'Not sent. Try again.' : 'Signed out. Open the dashboard and enter your PIN.';
+      else $('note').textContent = d && d.ok ? 'Not sent. Try again.' : 'Signed out. Open the dashboard and sign in.';
     }).catch(function (err) { $('note').textContent = 'Not sent (' + err.message + '). Your words are still here.'; })
       .then(function () { sending = false; $('send').disabled = false; loop(); setTimeout(function () { sending = false; }, 4000); });
   }
   if (!CFG) { gate('This window works on plansman.ai.'); return; }
   try { token = localStorage.getItem(TOKEN_KEY); } catch (e) {}
-  if (!token) { gate('<a href="./">Open the dashboard</a> and enter your PIN, then come back.'); return; }
+  if (!token) { gate('<a href="./">Open the dashboard</a> and sign in, then come back.'); return; }
   if (!NO) { gate('Open a project on the <a href="./">dashboard</a> and tap ' + T.name + '.'); return; }
   // the page's own words, for whoever's window this is
   document.querySelector('.tabs [data-show="drew"]').textContent = T.name;
@@ -722,7 +722,7 @@ button.go:disabled { opacity: .45; cursor: default; }
     if (!SH.open.current) return;
     rpc('office_sheet_say', { p_token: token, p_proj: NO, p_sheet: SH.open.current, p_who: WHO, p_marks: marks, p_text: text || null, p_ok: !!ok }).then(function (d) {
       if (d && d.ok && d.saved) { $('s-msg').textContent = ''; closeSheet(); loop(); }
-      else $('s-msg').textContent = d && d.ok ? 'Not sent: ' + (d.why || 'try again') + '.' : 'Signed out. Open the dashboard and enter your PIN.';
+      else $('s-msg').textContent = d && d.ok ? 'Not sent: ' + (d.why || 'try again') + '.' : 'Signed out. Open the dashboard and sign in.';
     }).catch(function (e) { $('s-msg').textContent = 'Not sent (' + e.message + '). Your marks are still here.'; });
   }
   $('s-send').addEventListener('click', function () { sendMark(false); });

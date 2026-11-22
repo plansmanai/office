@@ -70,7 +70,12 @@ input:focus, textarea:focus { border-color: var(--ink); outline: none; }
 #login { max-width: 340px; margin: 18vh auto 0; display: grid; gap: 16px; }
 #login b, .brand b { font-weight: 300; letter-spacing: .5em; font-size: 15px; text-transform: uppercase; }
 #login p { margin: 0; color: var(--muted); }
-#login input { width: 100%; padding: 12px; font-size: 20px; letter-spacing: .3em; }
+#login input { width: 100%; padding: 12px; font-size: 18px; letter-spacing: .08em; }
+/* the name a password manager files the password under: in the form, out of sight */
+.offscreen { position: absolute !important; left: -9999px; width: 1px !important; height: 1px; opacity: 0; }
+#pwform { display: grid; gap: 8px; margin-top: 10px; max-width: 340px; }
+#pwform input { width: 100%; padding: 10px 12px; font-size: 16px; }
+#pwform .marks { margin-top: 4px; }
 #login .err { color: var(--long); min-height: 1.4em; font-size: 14px; }
 
 /* list pane */
@@ -387,15 +392,16 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   #detail { grid-column: 3; grid-row: 2 / 6; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin-top: 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-120920";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-121124";</script>
 </head>
 <body>
 
 
 <form id="login" hidden>
   <b>Plansman</b>
-  <p>Dashboard. Enter your PIN.</p>
-  <input id="pin" type="password" inputmode="numeric" autocomplete="one-time-code" aria-label="PIN">
+  <p>Dashboard. Enter your password.</p>
+  <input class="offscreen" type="text" name="username" autocomplete="username" value="plansman" tabindex="-1" aria-hidden="true" readonly>
+  <input id="pin" type="password" name="password" autocomplete="current-password" aria-label="Password">
   <button class="go" id="pin-btn" type="submit">Open</button>
   <div class="err" id="login-err" role="alert"></div>
 </form>
@@ -1398,13 +1404,14 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     return fetch(CFG.url + '/rest/v1/rpc/' + name, { method: 'POST', headers: { apikey: CFG.key, Authorization: 'Bearer ' + CFG.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
   }
+  var drawFoot = function () {};
   function showLogin(msg) {
     $('shell').hidden = true; $('login').hidden = false; $('login-err').textContent = msg || '';
     setTimeout(function () { $('pin').focus(); }, 50);
   }
   function load() {
     return rpc('office_read', { p_token: token }).then(function (d) {
-      if (!d || !d.ok) { token = null; try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} showLogin('Signed out. Enter the PIN again.'); return; }
+      if (!d || !d.ok) { token = null; try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} showLogin('Signed out. Enter your password again.'); return; }
       if (!d.data) { showLogin('Nothing has been published to the app yet.'); return; }
       SAID = d.instructions || [];
       start(d.data, 'Sheets read ' + d.read_at);
@@ -1506,7 +1513,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       state.draftMsg = msg; render();
     }
     rpc('office_draft', { p_token: token, p_id: id, p_decision: what, p_text: what === 'approve' && text && text !== was.body ? text : null }).then(function (r) {
-      if (!r || !r.ok) return back('Signed out. Reload and enter the PIN; your text is still here.');
+      if (!r || !r.ok) return back('Signed out. Reload and sign in; your text is still here.');
       if (!r.saved) return back('Not saved: ' + (r.why || 'try again') + '.');
       delete state.draftText[id];
       if (what === 'approve' && !draftWatch) {
@@ -1534,7 +1541,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
             loadActs();
           }, 5000);
         }
-      } else { state.actMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN.'; }
+      } else { state.actMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and sign in.'; }
       render();
     }).catch(function (e) { state.actMsg = 'Not saved (' + e.message + ').'; render(); });
   }
@@ -1660,7 +1667,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       var bad = rs.filter(function (d) { return !(d && d.ok && d.saved); })[0];
       if (!bad) { delete state.decText[id]; setTimeout(loadDecisions, 45000); return; }
       DEC.open = before; DEC.recent = beforeRecent; if (verdict === 'wrong') state.decWrong = +id;
-      state.decMsg = bad && bad.ok ? 'Not saved: ' + (bad.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN.'; render();
+      state.decMsg = bad && bad.ok ? 'Not saved: ' + (bad.why || 'try again') + '.' : 'Signed out. Reload and sign in.'; render();
       if (ids.length > 1) loadDecisions();
     }).catch(function (e) {
       DEC.open = before; DEC.recent = beforeRecent; if (verdict === 'wrong') state.decWrong = +id;
@@ -1686,7 +1693,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     rpc('office_rule', { p_token: token, p_id: id, p_decision: decision, p_text: mine }).then(function (d) {
       if (d && d.ok && d.saved) { delete state.ruleText[id]; state.ruleMsg = decision === 'approve' ? (mine ? 'Approved in your words. The team follows it from the next job.' : 'Approved. The team follows it from the next job.') : 'Refused. It will not be used.'; render(); return; }
       if (mine) { state.editRule = id; }
-      ASKS.rules = before; state.ruleMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN.'; render();
+      ASKS.rules = before; state.ruleMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and sign in.'; render();
     }).catch(function (e) { ASKS.rules = before; state.ruleMsg = 'Not saved (' + e.message + ').'; render(); });
   }
   function answerQuestion(qid) {
@@ -1696,7 +1703,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       if (d && d.ok && d.saved) {
         ASKS.questions.forEach(function (q) { if (q.id === qid) { q.state = 'answered'; q.answer = text; q.answered_at = new Date().toISOString(); } });
         delete state.ans[qid]; state.ansMsg = ''; setTimeout(loadAsks, 45000);
-      } else { state.ansMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN; your answer is still here.'; }
+      } else { state.ansMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and sign in; your answer is still here.'; }
       render();
     }).catch(function (e) { state.ansMsg = 'Not saved (' + e.message + '). Your answer is still here.'; render(); });
   }
@@ -1708,7 +1715,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     rpc('office_mark', { p_token: token, p_proj: no, p_key: key, p_mark: what, p_who: who || null }).then(function (d) {
       if (d && d.ok && d.saved) return;
       if (before) MARKS[key] = before; else delete MARKS[key];
-      state.markMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN.'; render();
+      state.markMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and sign in.'; render();
     }).catch(function (e) {
       if (before) MARKS[key] = before; else delete MARKS[key];
       state.markMsg = 'Not saved (' + e.message + ').'; render();
@@ -1720,7 +1727,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     state.sending = true; render();
     rpc('office_tell', { p_token: token, p_proj: no, p_text: text }).then(function (d) {
       state.sending = false;
-      if (!d || !d.ok) { state.tellMsg = 'Signed out. Reload and enter the PIN; your text is still here.'; }
+      if (!d || !d.ok) { state.tellMsg = 'Signed out. Reload and sign in; your text is still here.'; }
       else if (!d.saved) { state.tellMsg = 'Not saved: ' + (d.why || 'unknown reason') + '.'; }
       else { SAID.unshift(d.instruction); state.draft[no] = ''; state.tellMsg = 'Sent to Jake. The answer appears here, usually within a minute.'; watchReplies(); }
       render();
@@ -1774,7 +1781,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       state.personMsg = 'Connecting…'; render();
       rpc('office_person', { p_token: token, p_proj: p.no, p_person: id, p_join: other }).then(function (d) {
         if (d && d.ok && d.saved) { took(d, ''); keepPerson(p, x, false, d.joined); render(); return; }
-        state.personMsg = d && d.ok ? 'Not connected: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN.'; render();
+        state.personMsg = d && d.ok ? 'Not connected: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and sign in.'; render();
       }).catch(function (e) { state.personMsg = 'Not connected (' + e.message + ').'; render(); });
       return;
     }
@@ -1797,7 +1804,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     state.editPerson = null; state.personMsg = ''; state.personAsk = null; render();
     rpc('office_person', { p_token: token, p_proj: p.no, p_person: id, p_name: gone ? null : name, p_role: gone ? null : (role || null), p_remove: gone, p_contact: contact }).then(function (d) {
       if (d && d.ok && d.saved) { if (gone) state.personMsg = 'Taken off this job.'; else took(d, 'Saved.'); keepPerson(p, x, gone, d.joined); render(); return; }
-      undo(); state.personMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN.'; render();
+      undo(); state.personMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and sign in.'; render();
     }).catch(function (e) { undo(); state.personMsg = 'Not saved (' + e.message + ').'; render(); });
   }
   // His reply to something in Needs you goes to Jake on that project with the item named; the answer shows on the item
@@ -1819,7 +1826,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     }
     rpc('office_tell', { p_token: token, p_proj: proj, p_text: about + '\n\nLance: ' + text }).then(function (d) {
       if (d && d.ok && d.saved) { SAID.unshift(d.instruction); delete state.needText[key]; state.needReply = null; watchReplies(); }
-      else state.markMsg = d && d.ok ? 'Not sent: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN; your reply is still here.';
+      else state.markMsg = d && d.ok ? 'Not sent: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and sign in; your reply is still here.';
       render();
     }).catch(function (e) { state.markMsg = 'Not sent (' + e.message + '). Your reply is still here.'; render(); });
   }
@@ -1857,10 +1864,36 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     P.forEach(function (p) { BY[p.no] = p; });
     $('read').textContent = readLine;
     $('notice').hidden = !data.notice; $('notice').textContent = data.notice || '';
-    $('foot').innerHTML = CFG ? 'Jake changes the schedule only when you tell him to. Nothing goes out until you tap Send. <button class="text" id="out" type="button">Sign out</button>'
-                              : 'Read-only private preview. Tapping changes nothing.';
-    var out = $('out');
-    if (out) out.addEventListener('click', function () { var t = token; token = null; try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} rpc('office_logout', { p_token: t }).catch(function () {}); showLogin(''); });
+    drawFoot = function () {
+      $('foot').innerHTML = CFG ? 'Jake changes the schedule only when you tell him to. Nothing goes out until you tap Send. <button class="text" id="pw" type="button">Change password</button> · <button class="text" id="out" type="button">Sign out</button>' +
+          // He changes his password himself: his current one, the new one twice. It is checked and kept (as a one-way hash)
+          // by the record; this page never keeps it. Changing it signs his other devices out and keeps this one.
+          (state.pwOpen ? '<form id="pwform" autocomplete="on"><input class="offscreen" type="text" name="username" autocomplete="username" value="plansman" tabindex="-1" aria-hidden="true" readonly>' +
+            '<input id="pw-cur" type="password" autocomplete="current-password" placeholder="Current password (your PIN, the first time)" aria-label="Current password">' +
+            '<input id="pw-new" type="password" autocomplete="new-password" placeholder="New password, at least 12 characters" aria-label="New password">' +
+            '<input id="pw-new2" type="password" autocomplete="new-password" placeholder="New password again" aria-label="New password again">' +
+            '<div class="marks"><button class="go" type="submit">Save</button> <button class="text quiet" type="button" id="pw-cancel">Cancel</button></div>' +
+            '<span class="note" id="pw-msg">' + esc(state.pwMsg || 'A few words strung together is strong and easy to remember.') + '</span></form>'
+           : state.pwMsg ? '<p class="note">' + esc(state.pwMsg) + '</p>' : '')
+                                : 'Read-only private preview. Tapping changes nothing.';
+      var foot = $('foot'), again = function () { load(); };
+      if ($('pw')) $('pw').addEventListener('click', function () { state.pwOpen = !state.pwOpen; state.pwMsg = ''; drawFoot(); if (state.pwOpen) $('pw-cur').focus(); });
+      if ($('pw-cancel')) $('pw-cancel').addEventListener('click', function () { state.pwOpen = false; state.pwMsg = ''; drawFoot(); });
+      if ($('pwform')) $('pwform').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var cur = $('pw-cur').value.trim(), a = $('pw-new').value.trim(), b = $('pw-new2').value.trim(), say = function (m) { $('pw-msg').textContent = m; };
+        if (!cur || !a) return say('Fill in your current password and the new one.');
+        if (a !== b) return say('The two new ones are not the same.');
+        say('Saving…');
+        rpc('office_set_password', { p_token: token, p_current: cur, p_new: a }).then(function (d) {
+          if (d && d.ok && d.saved) { state.pwOpen = false; state.pwMsg = 'Password changed. Your other devices are signed out; this one stays signed in.'; drawFoot(); }
+          else say(d && d.ok ? 'Not changed: ' + (d.why || 'try again') + '.' : 'Signed out. Sign in again first.');
+        }).catch(function (err) { say('Not changed (' + err.message + ').'); });
+      });
+      var out = $('out');
+      if (out) out.addEventListener('click', function () { var t = token; token = null; try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} rpc('office_logout', { p_token: t }).catch(function () {}); showLogin(''); });
+    };
+    drawFoot();
     $('login').hidden = true; $('shell').hidden = false;
     $('ask').hidden = !CFG;
     route();
@@ -1878,7 +1911,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     rpc('office_tell', { p_token: token, p_proj: 'office', p_text: text }).then(function (d) {
       b.disabled = false;
       if (d && d.ok && d.saved) { SAID.unshift(d.instruction); $('ask-text').value = ''; $('ask-note').textContent = 'Enter sends. Shift+Enter starts a new line.'; watchReplies(); render(); }
-      else { $('ask-note').textContent = d && d.ok ? 'Not sent: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and enter the PIN.'; }
+      else { $('ask-note').textContent = d && d.ok ? 'Not sent: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and sign in.'; }
     }).catch(function () { b.disabled = false; $('ask-note').textContent = 'Could not reach the dashboard. Your words are still here.'; });
   });
   $('pend-btn').addEventListener('click', function () { state.chatPending = !state.chatPending; state.chatStick = true; render(); });
@@ -1960,7 +1993,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     rpc('office_login', { p_pin: pin }).then(function (d) {
       b.disabled = false; b.textContent = 'Open'; $('pin').value = '';
       if (d && d.ok) { token = d.token; try { localStorage.setItem(TOKEN_KEY, token); } catch (err) {} return load(); }
-      $('login-err').textContent = d && d.hard ? 'Locked after too many wrong PINs. It stays locked until the PIN is set again from the AI PC.' : d && d.locked ? 'Too many wrong PINs. Try again in 15 minutes.' : d && d.no_pin ? 'No PIN has been set yet.' : 'That PIN is not recognized.';
+      $('login-err').textContent = d && d.hard ? 'Locked for the rest of the day after thirty wrong tries. Resetting the password from the AI PC opens it at once.' : d && d.locked ? 'Too many wrong tries. Try again in 15 minutes.' : d && d.no_pin ? 'No password has been set yet.' : 'That password is not right.';
     }).catch(function (err) { b.disabled = false; b.textContent = 'Open'; $('login-err').textContent = 'Could not reach the dashboard (' + err.message + ').'; });
   });
 
