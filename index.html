@@ -359,7 +359,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-081217";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-082107";</script>
 </head>
 <body>
 
@@ -489,6 +489,8 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   function tidy(body) {
     var m = /^About the (text|voicemail) from (.+?) that is not on a project \[text:[^\]]+\][\s\S]*?\n\nLance: ([\s\S]*)$/.exec(body || '');
     if (m) return 'About the ' + m[1] + ' from ' + m[2] + ': ' + m[3];
+    m = /^About the rule waiting for my OK \[need:[^\]]+\][\s\S]*?\n\nLance: ([\s\S]*)$/.exec(body || '');
+    if (m) return 'About the rule waiting for your OK: ' + m[1];
     m = /^About your question to me, decision \d+ \[need:[^\]]+\]: "([\s\S]*?)"[\s\S]*?\n\nLance: ([\s\S]*)$/.exec(body || '');
     if (m) return 'About your question "' + m[1] + '": ' + m[2];
     m = /^About "([\s\S]*?)" in Needs you \[need:[^\]]+\][\s\S]*?\n\nLance: ([\s\S]*)$/.exec(body || '');
@@ -517,6 +519,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var noProj = function (d) { return !d.proj_no || !BY[d.proj_no]; };
     var openDec = {};
     DEC.open.forEach(function (d) { openDec['decision:' + d.id] = 1; });
+    ASKS.rules.forEach(function (r) { openDec['rule:' + r.id] = 1; });
     var onDec = function (x) { var m = /\[need:([^\]]+)\]/.exec(x.body || ''); return !!m && openDec[m[1]]; };
     var items = SAID.filter(function (x) { return x.proj_no === 'office' && !onDec(x); }).map(function (x) { return { at: x.created_at, said: x }; })
       .concat(NOTES.map(function (n) { return { at: n.created_at, note: n }; }))
@@ -1138,11 +1141,14 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
         (r.applies_when ? '<div class="body note">When: ' + esc(r.applies_when) + '</div>' : '') +
         (r.replaces_rule && !r.retire_only ? '<div class="body note">It replaces: ' + esc(r.replaces_rule) + '</div>' : '') +
         (said ? '<div class="body note">' + (mine ? 'From what you said: "' + esc(said) + '"' : (r.retire_only ? 'Why retire it: ' : 'Why: ') + esc(said)) + '</div>' : '') +
-        '<div class="marks"><button class="text" type="button" data-rule="approve" data-id="' + esc(r.id) + '">' + (r.retire_only ? 'Retire' : 'Approve') + '</button> ' +
-        (r.retire_only ? '' : state.editRule === r.id
-          ? '<button class="text quiet" type="button" data-rule="cancel" data-id="' + esc(r.id) + '">Cancel</button> '
-          : '<button class="text" type="button" data-rule="edit" data-id="' + esc(r.id) + '">Edit</button> ') +
-        (state.editRule === r.id ? '' : '<button class="text" type="button" data-rule="reject" data-id="' + esc(r.id) + '">' + (r.retire_only ? 'Keep' : 'No') + '</button>') + '</div></div>';
+        // Reply is how he says something else about it (a different rule, a question): it goes to Jake with the rule
+        // named and does not decide it (Lance, 22 Nov 2026: "There was no option to change it so I typed a message")
+        replyRow('rule:' + r.id, r.proj_no && BY[r.proj_no] ? r.proj_no : 'office',
+          '<button class="text" type="button" data-rule="approve" data-id="' + esc(r.id) + '">' + (r.retire_only ? 'Retire' : 'Approve') + '</button> ' +
+          (r.retire_only ? '' : state.editRule === r.id
+            ? '<button class="text quiet" type="button" data-rule="cancel" data-id="' + esc(r.id) + '">Cancel</button> '
+            : '<button class="text" type="button" data-rule="edit" data-id="' + esc(r.id) + '">Edit</button> ') +
+          (state.editRule === r.id ? '' : '<button class="text" type="button" data-rule="reject" data-id="' + esc(r.id) + '">' + (r.retire_only ? 'Keep' : 'No') + '</button> ')) + '</div>';
     }
   function render() {
     var q = state.q.trim().toLowerCase();
@@ -1736,6 +1742,10 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       var d = DEC.open.filter(function (x) { return 'decision:' + x.id === key; })[0];
       if (!d) return;
       about = 'About your question to me, decision ' + d.id + ' [need:' + key + ']: "' + d.what + '"' + (d.guess ? ' (your guess: ' + d.guess + ')' : '') + '.';
+    } else if (key.indexOf('rule:') === 0) {
+      var r = ASKS.rules.filter(function (x) { return 'rule:' + x.id === key; })[0];
+      if (!r) return;
+      about = 'About the rule waiting for my OK [need:' + key + '] (' + (r.retire_only ? 'you proposed retiring it' : 'you proposed it') + '): "' + r.rule + '".';
     } else {
       var n = BY[proj] ? openNeeds(BY[proj]).filter(function (x) { return x.key === key; })[0] : null;
       if (!n) return;
