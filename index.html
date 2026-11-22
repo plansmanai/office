@@ -360,7 +360,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-065819";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-070752";</script>
 </head>
 <body>
 
@@ -943,7 +943,12 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     });
     ASKS.questions.forEach(function (q) { if (q.proj_no === p.no && q.state === 'answered') items.push({ at: ms(q.answered_at), qa: q }); });
     items.sort(function (a, b) { return a.at - b.at; });
-    var all = !!state.jobAll[p.no], shown = all ? items : items.filter(function (it) { return it.need; });
+    // Pending is what waits on him AND what he has just said: a message he sends, and Jake's answer to it, stay in
+    // view (22 Nov 2026: he asked Jake to save photos, the message "went away", he asked again and that went too;
+    // Jake had answered both, out of sight). Recent means not answered yet, or from the last 12 hours.
+    var fresh = Date.now() - 12 * 3600000;
+    var inPending = function (it) { return it.need || (it.said && (!it.said.reply || it.at > fresh || ms(it.said.replied_at) > fresh)); };
+    var all = !!state.jobAll[p.no], shown = all ? items : items.filter(inPending);
     var KEEP = 20, earlier = !all || state.allSaid ? 0 : Math.max(0, shown.length - KEEP);
     var thread = shown.slice(earlier).map(function (it) {
       if (it.need) return needHtml(it.need);
@@ -954,9 +959,9 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       if (it.sent) return '<div class="cleared"><div class="item"><div class="head"><span>' + esc(it.sent.subject) + '</span><span>' + esc(stamp(it.sent.sent_at)) + '</span></div><div class="body ok">' + esc(it.sent.result || 'Sent.') + '</div></div></div>';
       return '<div class="cleared"><div class="item"><div class="head"><span>' + esc(cap(it.qa.agent)) + ' asked: ' + esc(it.qa.body) + '</span><span>' + esc(stamp(it.qa.answered_at)) + '</span></div><div class="body">You answered: ' + para(it.qa.answer || '') + '</div></div></div>';
     }).join('');
-    var rest = items.length - pendingN;
+    var rest = items.length - items.filter(inPending).length;
     var talk2 = (pendingN || rest ? '<div class="pendbar"><button class="text" id="job-pend" type="button" aria-pressed="' + (all ? 'false' : 'true') + '">' +
-        (all ? 'Pending ' + pendingN : 'Show all' + (rest ? ' · ' + rest + ' more' : '')) + '</button>' +
+        (all ? 'Pending ' + pendingN : 'Show all' + (rest ? ' · ' + rest + ' earlier' : '')) + '</button>' +
         '<span class="note">' + (all ? 'The whole conversation on this job' : pendingN ? pendingN + ' waiting on you' : '') + '</span></div>' : '') +
       (thread ? '<div class="chat need">' + (earlier ? '<button class="text more" id="more-said" type="button">Show ' + earlier + ' earlier</button>' : '') + thread + '</div>'
               : '<p class="note">' + (all ? 'Nothing here yet.' : theirN.drew || theirN.cora ? 'Nothing from Jake is waiting on you. ' +
