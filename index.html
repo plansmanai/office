@@ -102,12 +102,13 @@ input:focus, textarea:focus { border-color: var(--ink); outline: none; }
 #pullbar { position: fixed; top: 0; left: 0; right: 0; z-index: 20; text-align: center; padding: calc(env(safe-area-inset-top, 0px) + 10px) 0 10px; background: var(--ink); color: var(--on-ink);
   font-family: var(--sans); text-transform: uppercase; letter-spacing: .18em; font-size: .62rem; transform: translateY(-100%); transition: transform .15s ease-out; pointer-events: none; }
 #pullbar.show { transform: none; }
-#chat-dot { display: inline-block; width: 7px; height: 7px; background: var(--long); margin-left: 7px; vertical-align: 2px; }
+#chat-dot { display: inline-block; width: 7px; height: 7px; background: var(--long); margin-left: 7px; vertical-align: 2px; font-style: normal; }
+/* with a number: that many things in the Chat thread wait on him (Lance, 22 Nov 2026: "the badge should show on it that there's something to resolve") */
+#chat-dot.n { width: auto; height: auto; min-width: 18px; padding: 2px 5px 1px; color: #fff; font-size: .62rem; letter-spacing: .04em; line-height: 1.3; text-align: center; vertical-align: 1px; }
 @keyframes slideL { from { transform: translateX(32px); opacity: .2; } to { transform: none; opacity: 1; } }
 @keyframes slideR { from { transform: translateX(-32px); opacity: .2; } to { transform: none; opacity: 1; } }
 .slide-l { animation: slideL .2s ease-out; } .slide-r { animation: slideR .2s ease-out; }
-#rules .item { padding: 12px 0 8px; }
-#rules .rule { font-size: 15.5px; }
+.msg .item .rule, .need .item .rule { font-size: 15.5px; }
 .nav { display: flex; gap: 26px; margin-top: 22px; border-bottom: 1px solid var(--rule); }
 .nav a { padding: 8px 0 11px; border-bottom: 1px solid transparent; margin-bottom: -1px; }
 .nav a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--ink); }
@@ -360,7 +361,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-080318";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-080708";</script>
 </head>
 <body>
 
@@ -522,14 +523,15 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var items = SAID.filter(function (x) { return x.proj_no === 'office' && !onDec(x); }).map(function (x) { return { at: x.created_at, said: x }; })
       .concat(NOTES.map(function (n) { return { at: n.created_at, note: n }; }))
       .concat(DEC.open.filter(noProj).map(function (d) { return { at: d.created_at, dec: d }; }))
-      .concat(DEC.recent.filter(noProj).map(function (d) { return { at: d.decided_at, done: d }; }));
+      .concat(DEC.recent.filter(noProj).map(function (d) { return { at: d.decided_at, done: d }; }))
+      .concat(ASKS.rules.filter(noProj).map(function (r) { return { at: r.created_at, rule: r }; }));      // a rule waiting for his OK (one from a job is in that job's thread)
     items.sort(function (a, b) { return new Date(a.at) - new Date(b.at); });
     return items;
   }
   // Pending: something in the thread still waits on him (a question of Jake's, something Jake did that he has not
   // checked, a draft with Send on it). It stops being pending the moment he deals with it.
   function chatPending(it) {
-    if (it.dec) return true;
+    if (it.dec || it.rule) return true;
     if (it.said) return DRAFTS.some(function (d) { return d.instruction_id === it.said.id && (d.state === 'draft' || d.state === 'stale' || d.state === 'failed'); });
     return false;
   }
@@ -538,6 +540,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     SAID.forEach(function (x) { if (x.proj_no === 'office' && x.replied_at && x.replied_at > t) t = x.replied_at; });
     NOTES.forEach(function (n) { if (n.created_at > t) t = n.created_at; });
     DEC.open.forEach(function (d) { if ((!d.proj_no || !BY[d.proj_no]) && d.created_at > t) t = d.created_at; });
+    ASKS.rules.forEach(function (r) { if ((!r.proj_no || !BY[r.proj_no]) && r.created_at > t) t = r.created_at; });
     return t;
   }
   function chat() {
@@ -551,6 +554,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
         return '<div class="msg jake pend"><div class="lbl">' + 'Jake asks' + ' · ' + esc(stamp(d.created_at)) + '</div>' +
           (d.state === 'asked' ? '<div class="item"><div class="head"><b>' + esc(d.what) + '</b></div>' + decAsk(d) + '</div>' : decShown(d)) + '</div>';
       }
+      if (it.rule) return '<div class="msg jake pend"><div class="lbl">' + (it.rule.retire_only ? 'A rule to retire' : 'A rule for your OK') + ' · ' + esc(stamp(it.rule.created_at)) + '</div>' + ruleItem(it.rule) + '</div>';
       if (it.done) return '<div class="msg jake"><div class="lbl">Jake · ' + esc(stamp(it.done.decided_at)) + '</div>' + decRecent(it.done) + '</div>';
       if (it.note) {
         var n = it.note, p = n.proj_no && BY[n.proj_no];
@@ -566,7 +570,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
         DRAFTS.filter(function (d) { return d.instruction_id === x.id && d.state !== 'dropped'; }).map(function (d) { return draftBlock(d); }).join('') + '</div>';
       else h += '<div class="msg jake wait"><div class="lbl">Jake</div><div class="txt">' + (x.state === 'working' ? 'Working on it…' : 'Picking it up…') + '</div></div>';
       return h;
-    }).join('') + (state.decMsg ? '<p class="note">' + esc(state.decMsg) + '</p>' : '');
+    }).join('') + (state.decMsg ? '<p class="note">' + esc(state.decMsg) + '</p>' : '') + (state.ruleMsg ? '<p class="note">' + esc(state.ruleMsg) + '</p>' : '');
   }
   // ACTS: changes Jake has proposed to the schedule. One is written only after Lance taps Do it (db/012).
   var ACTS = [];
@@ -719,7 +723,13 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
                days: daysSince(d.created_at), at: d.created_at };
     }));
   }
-  function openNeeds(p) { return actionNeeds(p).concat(decisionNeeds(p), questionNeeds(p), draftNeeds(p), teamNeeds(p), (p.needs || []).filter(function (n) { return !MARKS[n.key]; })); }
+  // A rule proposed from what was said on this job, waiting for his OK: in this job's thread, with its buttons.
+  function ruleNeeds(p) {
+    return ASKS.rules.filter(function (r) { return r.proj_no === p.no; }).map(function (r) {
+      return { key: 'rule:' + r.id, kind: 'rule', rule: r, title: r.retire_only ? 'A rule to retire' : 'A rule for your OK', days: daysSince(r.created_at), at: r.created_at };
+    });
+  }
+  function openNeeds(p) { return actionNeeds(p).concat(decisionNeeds(p), questionNeeds(p), draftNeeds(p), ruleNeeds(p), teamNeeds(p), (p.needs || []).filter(function (n) { return !MARKS[n.key]; })); }
   function wait(n) { return n.days == null ? '' : n.days === 0 ? 'since today' : n.days + (n.days === 1 ? ' day' : ' days'); }
   function longest(ns) { var m = -1; ns.forEach(function (n) { if (n.days != null && n.days > m) m = n.days; }); return m; }
   function whoHasWhat(p) {
@@ -890,6 +900,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var onItem = function (x) { var k = keyOf(x); return !!k && open.some(function (n) { return n.key === k; }); };
     var ms = function (at) { var t = new Date(at).getTime(); return isNaN(t) ? 0 : t; };
     function needHtml(n) {
+      if (n.kind === 'rule') return ruleItem(n.rule);
       var h3 = '<div class="item' + (n.days != null ? ' s' + sev(n) : '') + '"><div class="head"><b>' + esc(n.title) + '</b><span>' + (n.days != null ? bub(n, (isReply(n) ? 'Reply ' : 'Waiting ') + dtext(n.days)) : '') + '</span></div>' + whenLine(n.at || n.since);
       var drHere = isMsg(n) ? draftOn(p, n.key) : null;
       var words = textWords(n.kind === 'draft' ? (n.draft || {}).item_key : n.key);
@@ -968,7 +979,8 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
               : '<p class="note">' + (all ? 'Nothing here yet.' : theirN.drew || theirN.cora ? 'Nothing from Jake is waiting on you. ' +
                   [theirN.drew ? 'Drew has ' + theirN.drew : '', theirN.cora ? 'Cora has ' + theirN.cora : ''].filter(Boolean).join(' and ') + ': open ' + (theirN.drew && theirN.cora ? 'them' : theirN.drew ? 'him' : 'her') + ' above.'
                 : 'Nothing is waiting on you on this job.') + '</p>') +
-      (state.markMsg ? '<p class="note">' + esc(state.markMsg) + '</p>' : '') + (state.decMsg ? '<p class="note">' + esc(state.decMsg) + '</p>' : '');
+      (state.markMsg ? '<p class="note">' + esc(state.markMsg) + '</p>' : '') + (state.decMsg ? '<p class="note">' + esc(state.decMsg) + '</p>' : '') +
+      (state.ruleMsg ? '<p class="note">' + esc(state.ruleMsg) + '</p>' : '');
     // What he answered Jake lately, and what Jake wrote down from it: reference, folded, only when there is any.
     // (There is no list of things Jake did for him to check any more: Lance, 21 Nov 2026, "1 less message area".)
     h += sec('Your answers to Jake', DEC.recent.filter(function (d) { return d.proj_no === p.no; }).map(decRecent).join(''), 'lead');
@@ -982,10 +994,6 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var acts = ACTS.filter(function (a) { return a.proj_no === p.no && a.state !== 'proposed' && a.state !== 'cancelled'; });
     if (acts.length) tell += '<div class="said">' + acts.map(actItem).join('') + '</div>';
     if (state.actMsg) tell += '<p class="note">' + esc(state.actMsg) + '</p>';
-    var here = ASKS.rules.filter(function (r) { return r.proj_no === p.no; });
-    if (here.length) tell += '<div class="said"><p class="note" style="margin:10px 0 0">' + (here.length === 1 ? 'A rule from what you said here is' : 'Rules from what you said here are') +
-      ' waiting for your OK. Approved, the team follows it on every job it applies to.</p>' + here.map(ruleItem).join('') +
-      (state.ruleMsg ? '<p class="note">' + esc(state.ruleMsg) + '</p>' : '') + '</div>';
     if (CFG) {
       tell += '<form id="tell"><textarea id="tell-text" placeholder="What&#39;s next" aria-label="Instruction to the team">' + esc(state.draft[p.no] || '') + '</textarea>' +
         '<div class="bar"><button class="go" id="tell-btn" type="submit"' + (state.sending ? ' disabled' : '') + '>' + (state.sending ? 'Sending…' : 'Send') + '</button>' +
@@ -1151,16 +1159,18 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       $('listbody').innerHTML = q ? projects(P.filter(function (p) { return matches(p, q); })) : (state.view === 'projects' ? projects(P) : queue());
     }
     ['chat', 'queue', 'projects'].forEach(function (v) { if (state.view === v && (!q || v === 'chat')) $('nav-' + v).setAttribute('aria-current', 'page'); else $('nav-' + v).removeAttribute('aria-current'); });
-    $('chat-dot').hidden = inChat || !(chatNewest() > chatSeen());
-    var waiting = chatItems().filter(chatPending).length, pb = $('pend-btn');
+    var waiting = chatItems().filter(chatPending).length, pb = $('pend-btn'), dot = $('chat-dot');
+    dot.textContent = waiting ? waiting : ''; dot.className = waiting ? 'n' : '';
+    dot.setAttribute('aria-label', waiting ? waiting + ' to resolve' : 'new');
+    dot.hidden = !waiting && (inChat || !(chatNewest() > chatSeen()));
     pb.hidden = !waiting && !state.chatPending;
     pb.textContent = state.chatPending ? 'Show all' : 'Pending ' + waiting;
     pb.setAttribute('aria-pressed', state.chatPending ? 'true' : 'false');
-    $('rules').innerHTML = (ASKS.rules.length ? '<h2>Rules waiting for your OK <small>' + ASKS.rules.length + '</small></h2>' + ASKS.rules.map(ruleItem).join('') : '') + (state.ruleMsg ? '<p class="note">' + esc(state.ruleMsg) + '</p>' : '');
+    $('rules').innerHTML = '';                         // a rule waiting for his OK is in a thread: Chat, or its job's
     $('decisions').innerHTML = '';                     // what is about no one project lives in the Chat thread
     var p = state.no && BY[state.no];
     $('detail').innerHTML = p ? project(p) : '<div class="blank">Pick a project on the left.</div>';
-    Array.prototype.forEach.call(document.querySelectorAll('#rules [data-rule], #detail [data-rule]'), function (b) {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-rule]'), function (b) {
       b.addEventListener('click', function () { decideRule(b.getAttribute('data-id'), b.getAttribute('data-rule')); });
     });
     Array.prototype.forEach.call($('detail').querySelectorAll('[data-act]'), function (b) {
