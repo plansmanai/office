@@ -207,6 +207,12 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .pfoot .pleft { flex: 1; min-width: 0; }
 .pfoot .marks.slim { flex: none; margin: 6px 0 0; }
 .item .body.pnote { margin-top: 8px; white-space: pre-wrap; }
+/* a text as it was written (Lance, 21 Nov 2026: "show me exactly what they say") */
+.item .words { margin: 8px 0 4px; border-left: 2px solid var(--ink); padding: 2px 0 2px 12px; }
+.item .words p { margin: 0 0 8px; font-size: 15.5px; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+.item .words p:last-child { margin-bottom: 0; }
+.item .words p.out { color: var(--muted); }
+.item .words p i { display: block; font-style: normal; font-size: .58rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 1px; }
 .pask { margin-top: 10px; padding: 12px 14px; border: 1px solid var(--ink); }
 .pask p { margin: 0; font-size: 15.5px; }
 .sectog { background: none; border: 0; padding: 6px 0; margin: -6px 0; width: 100%; display: flex; justify-content: space-between; align-items: center; cursor: pointer;
@@ -344,7 +350,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-215019";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-223631";</script>
 </head>
 <body>
 
@@ -542,6 +548,15 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   var ATTACH = /\battach(?:ed|ment|ments|ing)?\b|\benclosed\b/i;     // P4 cannot attach a file yet
   function blanksIn(t) { return (t || '').match(BLANK) || []; }
   function typing() { return document.activeElement && /^(TEXTAREA|INPUT)$/.test(document.activeElement.tagName); }
+  // The words of a text or voicemail, as written, with the few before it in the same conversation. key is 'text:<id>'.
+  function textWords(key) {
+    var w = key && key.indexOf('text:') === 0 ? ((DATA || {}).text_words || {})[key.slice(5)] : null;
+    if (!w || !w.length) return '';
+    return '<div class="words">' + w.map(function (l) {
+      return '<p' + (l.out ? ' class="out"' : '') + '><i>' + esc(l.out ? 'We wrote' : (l.who || 'They') + (l.voicemail ? ', voicemail' : '')) + ' · ' + esc(stamp(l.when)) + '</i>' +
+        esc(l.body || (l.voicemail ? '(no words could be made out)' : '(a picture or a file, no words)')) + '</p>';
+    }).join('') + '</div>';
+  }
   function draftOn(p, key) {
     return DRAFTS.filter(function (d) { return d.proj_no === p.no && d.item_key === key; }).slice(-1)[0] || null;
   }
@@ -710,7 +725,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     }
     var cleared = group('ours');
     // Texts and voicemails that are about no project (a new caller, a question Jake could not place): shown only
-    // when one needs him or has a draft waiting, with Jake's read of it. No number and no message text.
+    // when one needs him or has a draft waiting, with the text in its own words and what Jake asks.
     var loose = (DATA.loose_texts || []).map(function (t) {
       var d = DRAFTS.filter(function (x) { return x.item_key === 'text:' + t.id && x.state !== 'sent'; }).slice(-1)[0];
       if (!d && !t.needs_lance) return '';
@@ -721,7 +736,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       var act = CFG ? '<div class="answer"><textarea data-loose="' + esc(t.id) + '" placeholder="Tell Jake what to do with it: which job, text back, ignore" aria-label="Tell Jake">' + esc(state.loose[t.id] || '') + '</textarea>' +
         '<div class="marks"><button class="go" type="button" data-loose-send="' + esc(t.id) + '">Send to Jake</button> <button class="text" type="button" data-loose-done="' + esc(t.id) + '">Handled</button></div></div>' : '';
       return '<div class="item s' + sev(n) + '"><div class="head"><b>' + esc(t.who) + (t.channel === 'voicemail' ? ' left a voicemail' : ' texted') + '</b><span>' + bub(n, 'Reply ' + dtext(t.days)) + '</span></div>' +
-        (t.summary ? '<div class="body">' + esc(t.summary) + '</div>' : '') +
+        (textWords('text:' + t.id) || (t.summary ? '<div class="body">' + esc(t.summary) + '</div>' : '')) +
         (t.phone ? '<div class="reach">' + phoneLinks(t.phone) + '</div>' : '') +
         (t.jake && !(d && d.note) ? '<div class="body"><b>Jake: </b>' + esc(t.jake) + '</div>' : '') + (d ? draftBlock(d, true) : '') + talk + act + '</div>';
     }).filter(Boolean);
@@ -854,9 +869,12 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       if (n.kind === 'draft' && n.draft && SAID.some(function (x) { return x.id === n.draft.instruction_id && onItem(x); })) return '';   // it is on the item it answers
       var h3 = '<div class="item' + (n.days != null ? ' s' + sev(n) : '') + '"><div class="head"><b>' + esc(n.title) + '</b><span>' + (n.days != null ? bub(n, (isReply(n) ? 'Reply ' : 'Waiting ') + dtext(n.days)) : '') + '</span></div>';
       var drHere = isMsg(n) ? draftOn(p, n.key) : null;
+      var words = textWords(n.kind === 'draft' ? (n.draft || {}).item_key : n.key);
+      h3 += words;
       if (n.jake && !(drHere && drHere.note)) h3 += '<div class="body"><b>Jake: </b>' + esc(n.jake) + '</div>';
       if (n.by) h3 += '<div class="body note">Needed by ' + esc(n.by) + '</div>';
-      if (n.detail && n.kind !== 'note' || n.kind === 'note') h3 += '<div class="body' + (n.jake ? ' note' : '') + '">' + esc(n.detail) + (n.snippet ? '<div class="note" style="margin-top:4px">' + esc(n.snippet) + '</div>' : '') + '</div>';
+      if (words && n.kind === 'text') { /* the text is there in its own words: no summary of it */ }
+      else if (n.detail && n.kind !== 'note' || n.kind === 'note') h3 += '<div class="body' + (n.jake ? ' note' : '') + '">' + esc(n.detail) + (n.snippet ? '<div class="note" style="margin-top:4px">' + esc(n.snippet) + '</div>' : '') + '</div>';
       var dr = n.kind === 'draft' ? n.draft : isMsg(n) ? draftOn(p, n.key) : null;
       if (dr) h3 += draftBlock(dr, isMsg(n));
       if (n.kind === 'draft') {
