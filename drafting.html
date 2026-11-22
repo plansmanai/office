@@ -139,7 +139,7 @@ button.go:disabled { opacity: .45; cursor: default; }
 .msg .ask .was { color: var(--muted); font-size: 13px; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261121-203431";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261121-210255";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -391,7 +391,7 @@ button.go:disabled { opacity: .45; cursor: default; }
       order.sort(function (a, b) { var x = groups[a], y = groups[b]; return ((ord[x.kind] || 999) - (ord[y.kind] || 999)) || (a < b ? -1 : 1); });
       var newest = SH.list.length ? (SH.list[0].sheet || 'Other') : null;
       var row = function (c, first) {
-        return '<button class="srow' + (first ? ' latest' : '') + '" type="button" data-sheet="' + c.id + '"><i class="' + (c.state === 'open' ? 'open' : '') + '">' + (c.state === 'open' ? 'Needs you' : c.state === 'ok' ? 'Right' : 'Marked') + '</i><b>' + esc(c.title) + '</b>' +
+        return '<button class="srow' + (first ? ' latest' : '') + '" type="button" data-sheet="' + c.id + '"><i class="' + (c.state === 'open' ? 'open' : '') + '">' + (c.state === 'open' ? 'Needs you' : c.state === 'ok' ? 'Right' : c.state === 'replaced' ? 'Earlier' : 'Marked') + '</i><b>' + esc(c.title) + '</b>' +
           '<span>' + esc(stamp(c.created_at)) + (c.note ? ' · ' + esc(c.note) : '') + '</span>' +
           (c.state === 'marked' ? '<span class="said">You' + (c.marks ? ' drew ' + c.marks + (c.marks === 1 ? ' mark' : ' marks') : '') + (c.lance_said ? (c.marks ? ' and said: ' : ' said: ') + esc(c.lance_said) : '') + '</span>' : '') + '</button>';
       };
