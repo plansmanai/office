@@ -120,14 +120,17 @@ button.go:disabled { opacity: .45; cursor: default; }
 .sgroup > summary::-webkit-details-marker { display: none; }
 .sgroup > summary b { font-family: var(--sans); font-weight: 500; letter-spacing: .14em; text-transform: uppercase; font-size: .78rem; }
 .sgroup > summary span { color: var(--muted); font-size: 13.5px; flex: 1; }
-.sgroup > summary em { font-style: normal; font-size: .6rem; letter-spacing: .16em; text-transform: uppercase; border: 1px solid var(--ink); padding: 2px 7px 1px; }
+.sgroup > summary em { font-style: normal; font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; border: 1px solid var(--ink); padding: 8px 11px 7px; white-space: nowrap; cursor: pointer; }
+.sgroup > summary em.need { background: var(--ink); color: var(--on-ink); }
+.sgroup > summary span small { display: block; font-size: 13px; color: var(--ink); margin-top: 2px; }
+.sgroup > summary { align-items: center; }
 .sgroup > summary::after { content: "+"; color: var(--muted); } .sgroup[open] > summary::after { content: "\2212"; }
 .sgroup .srow { padding-left: 30px; }
 .sgroup .shist { padding: 10px 18px 2px 30px; font-family: var(--sans); font-size: .56rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
 .sgroup .srow.hist b { font-weight: 400; }
 .sgroup .srow.hist { opacity: .92; } .sgroup .srow:last-child { border-bottom: 0; }
 .srow.latest b::after { content: "latest"; margin-left: 10px; font-size: .58rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 400; }
-.sgroup > summary em.q { border-color: var(--rule); color: var(--muted); }
+.sgroup > summary em.q { border-color: var(--ink); color: var(--ink); }
 .srow.cur b { font-weight: 400; }
 .srow .said { display: block; margin-top: 4px; color: var(--ink); font-size: 14px; }
 .sscore { padding: 12px 18px 16px; border-bottom: 1px solid var(--rule); color: var(--muted); font-size: 13.5px; }
@@ -153,7 +156,7 @@ button.go:disabled { opacity: .45; cursor: default; }
 .msg .ask .was { color: var(--muted); font-size: 13px; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
 </style>
-<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-083138";</script>
+<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-094052";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -509,15 +512,13 @@ button.go:disabled { opacity: .45; cursor: default; }
         var G = groups[g], waiting = G.items.filter(function (c) { return c.state === 'open'; }).length, P = plotted[g];
         var isOpen = !!SH.openGroups[g];      // every sheet starts shut, so he finds the one to review at a glance (Lance, 21 Nov 2026)
         var shown = G.items.filter(function (c) { return !mine(c); })[0], top = G.items[0];
-        // where the sheet stands: with him, back with the team member, right, or only plotted so far
-        var stands = waiting ? '' : !top ? 'Plotted' : mine(top) ? 'With ' + T.name : top.state === 'ok' ? 'Right' : top.state === 'marked' ? 'With ' + T.name : '';
-        var when = P ? P.pdf_modified : shown ? shown.created_at : null;
-        return '<details class="sgroup" data-group="' + esc(g) + '"' + (isOpen ? ' open' : '') + '><summary><b>' + esc(g) + '</b><span>' + esc(label[G.kind] || '') + '</span>' +
-          (waiting ? '<em>Needs you</em>' : stands ? '<em class="q">' + stands + '</em>' : '') + '</summary>' +
-          (P || shown ? '<button class="srow cur" type="button" data-cur="' + esc(g) + '"><i class="' + (waiting ? 'open' : '') + '">' + (waiting ? 'Needs you' : 'Open') + '</i><b>' +
-            (P ? 'The sheet as last plotted' : 'The latest picture') + '</b><span>' + (when ? esc(stamp(when)) : '') +
-            (waiting && shown ? ' · ' + T.name + ': ' + esc(shown.title) + (shown.note ? '. ' + esc(shown.note) : '') : ' · open it to look, mark it up there') + '</span></button>' : '') +
-          (G.items.length ? '<div class="shist">History</div>' + G.items.map(row).join('') : '') + '</details>';
+        // The tag on the row is the button into the sheet's latest drawing, and says where the sheet stands: Needs you,
+        // With Drew (he has your marks), or simply Open. The plus and minus fold the history under it and nothing else.
+        var tag = waiting ? 'Needs you' : top && (mine(top) || top.state === 'marked') ? 'With ' + T.name : 'Open';
+        return '<details class="sgroup" data-group="' + esc(g) + '"' + (isOpen ? ' open' : '') + '><summary><b>' + esc(g) + '</b><span>' + esc(label[G.kind] || '') +
+          (waiting && shown ? '<small>' + T.name + ': ' + esc(shown.title) + '</small>' : '') + '</span>' +
+          (P || shown ? '<em role="button" tabindex="0" data-cur="' + esc(g) + '" class="' + (waiting ? 'need' : 'q') + '">' + tag + '</em>' : '') + '</summary>' +
+          (G.items.length ? '<div class="shist">History</div>' + G.items.map(row).join('') : '<div class="shist">No history yet</div>') + '</details>';
       }).join('');
       if (score.length) {
         html += '<details class="sscore"' + (SH.openGroups._score ? ' open' : '') + ' data-group="_score"><summary>How ' + T.name + ' is doing, last 30 days, all jobs</summary><table><tr><th>Kind of sheet</th><th>Shown</th><th>You drew on</th><th>Marks</th></tr>' +
@@ -632,7 +633,7 @@ button.go:disabled { opacity: .45; cursor: default; }
   $('s-send').addEventListener('click', function () { sendMark(false); });
   $('s-ok').addEventListener('click', function () { sendMark(true); });
   document.addEventListener('click', function (e) {
-    var c = e.target.closest && e.target.closest('[data-cur]'); if (c) { openCurrent(c.getAttribute('data-cur')); return; }
+    var c = e.target.closest && e.target.closest('[data-cur]'); if (c) { e.preventDefault(); openCurrent(c.getAttribute('data-cur')); return; }
     var a = e.target.closest && e.target.closest('[data-sheet]'); if (a) openSheet(a.getAttribute('data-sheet'));
   });
   setInterval(function () { if (sheetsShowing() && !SH.open) loadSheets(); }, 10000);
