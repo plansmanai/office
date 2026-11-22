@@ -139,7 +139,7 @@ button.go:disabled { opacity: .45; cursor: default; }
 .msg .ask .was { color: var(--muted); font-size: 13px; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
 </style>
-<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261121-233544";</script>
+<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-063317";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -187,7 +187,9 @@ button.go:disabled { opacity: .45; cursor: default; }
             cora: { name: 'Cora', win: 'Permitting', screen: 'Cora\'s browser', none: 'Cora\'s browser is not open on the AI PC right now.', looking: 'Looking for Cora\'s browser…',
                     open: '', nothing: '', sheets: 'Check-ins', empty: 'Tell Cora what you want done on this job\'s permit.' } }[WHO];
   var MSGS = [], LAST = 0, BUSY = false, timer = null, sending = false, GOS = {}, LOGIN = {};
-  function stamp(iso) { var d = new Date(iso); return isNaN(d) ? '' : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); }
+  // date and time, always, the same as on the dashboard: "21 Nov, 10:50 PM" (Lance, 22 Nov 2026: "It's hard to tell what's current or outdated")
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function stamp(iso) { var d = new Date(iso); return isNaN(d) ? '' : d.getDate() + ' ' + MONTHS[d.getMonth()] + ', ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); }
   function rpc(name, body) {
     return fetch(CFG.url + '/rest/v1/rpc/' + name, { method: 'POST', headers: { apikey: CFG.key, Authorization: 'Bearer ' + CFG.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });

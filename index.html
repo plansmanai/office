@@ -231,6 +231,8 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .item + .item { border-top: 1px solid var(--rule); }
 .item .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .item .head b { font-weight: 500; }
+/* the date and time on every Needs you item (Lance, 22 Nov 2026: "hard to tell what's current or outdated") */
+.item .when { font-family: var(--sans); font-size: .58rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 2px 0 4px; }
 .item .head span { color: var(--muted); font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .item .head span.bub { font-size: .62rem; }
 .item .head span.bub.g { color: var(--sage); } .item .head span.bub.a { color: var(--oak-ink); } .item .head span.bub.r { color: var(--long); }
@@ -350,7 +352,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-233544";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-063317";</script>
 </head>
 <body>
 
@@ -406,6 +408,8 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     if (days === 0) return { t: 'due today', late: true };
     return { t: 'due in ' + days + (days === 1 ? ' day' : ' days'), late: false };
   }
+  // When a thing in Needs you began: date and time when the record has the time, the date alone when it only has the day.
+  function whenLine(at) { var t = !at ? '' : /^\d{4}-\d\d-\d\d$/.test(at) ? day(at) : stamp(at); return t ? '<div class="when">' + esc(t) + '</div>' : ''; }
   function ago(days) { return days === 0 ? 'today' : days === 1 ? 'yesterday' : days + ' days ago'; }
   var LANE = { Invoice: 'Invoice', Design: 'Design', Arch: 'Drafting', Engin: 'Engineering', T24: 'Title 24', Consult: 'Consult', Permit: 'Permit' };
   function isMine(t) { return t.who.toLowerCase() === 'lance'; }
@@ -566,7 +570,8 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     // Jake's one line on what he needs from Lance comes first; the subject is not repeated under the email it answers
     var h = (d.note && d.state !== 'sent' ? '<div class="body"><b>Jake: </b>' + esc(d.note) + '</div>' : '') +
       '<div class="draft mail"><div class="lbl">' + (d.channel === 'action' ? esc(d.subject) + (to ? ' · to ' + esc(to) : '') :
-        (d.channel === 'sms' ? (d.state === 'sent' ? 'Text' : 'Draft text') : (d.state === 'sent' ? 'Email' : 'Draft email')) + ' to ' + esc(to) + (cc ? ' · copy to ' + esc(cc) : '')) + '</div>' +
+        (d.channel === 'sms' ? (d.state === 'sent' ? 'Text' : 'Draft text') : (d.state === 'sent' ? 'Email' : 'Draft email')) + ' to ' + esc(to) + (cc ? ' · copy to ' + esc(cc) : '')) +
+        (d.state === 'sent' && d.sent_at ? ' · sent ' + esc(stamp(d.sent_at)) : d.created_at ? ' · written ' + esc(stamp(d.created_at)) : '') + '</div>' +
       (onItem || d.channel !== 'email' ? '' : '<div class="subj">' + esc(d.subject) + '</div>');
     if (editing) h += '<textarea data-draft-text="' + d.id + '" aria-label="The email text">' + esc(state.draftText[d.id] != null ? state.draftText[d.id] : d.body) + '</textarea>';
     else h += '<div class="txt">' + para(d.body) + '</div>';
@@ -591,7 +596,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var keys = {};
     (p.needs || []).forEach(function (n) { if (!MARKS[n.key]) keys[n.key] = 1; });
     return DRAFTS.filter(function (d) { return d.proj_no === p.no && d.state !== 'sent' && !keys[d.item_key]; }).map(function (d) {
-      return { key: 'draft:' + d.id, kind: 'draft', draft: d, title: d.channel === 'action' ? d.subject : (d.channel === 'sms' ? 'Draft text to ' : 'Draft email to ') + (d.to_names || []).join(', '), days: daysSince(d.created_at) };
+      return { key: 'draft:' + d.id, kind: 'draft', draft: d, title: d.channel === 'action' ? d.subject : (d.channel === 'sms' ? 'Draft text to ' : 'Draft email to ') + (d.to_names || []).join(', '), days: daysSince(d.created_at), at: d.created_at };
     });
   }
   var CHANGE_LABEL = { phase: 'Phase', due: 'Due date', status: 'Status note' };
@@ -614,17 +619,17 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   function cap(w) { return w ? w.charAt(0).toUpperCase() + w.slice(1) : ''; }
   function questionNeeds(p) {
     return ASKS.questions.filter(function (q) { return q.proj_no === p.no && q.state === 'open'; }).map(function (q) {
-      return { key: 'question:' + q.id, kind: 'question', qid: q.id, title: cap(q.agent) + ' asks', detail: q.body, why: q.why, days: daysSince(q.asked_at) };
+      return { key: 'question:' + q.id, kind: 'question', qid: q.id, title: cap(q.agent) + ' asks', detail: q.body, why: q.why, days: daysSince(q.asked_at), at: q.asked_at };
     });
   }
   function actionNeeds(p) {
     return ACTS.filter(function (a) { return a.proj_no === p.no && a.state === 'proposed'; }).map(function (a) {
-      return { key: 'action:' + a.id, kind: 'action', act: a, title: 'Schedule change waiting for your OK', days: daysSince(a.proposed_at) };
+      return { key: 'action:' + a.id, kind: 'action', act: a, title: 'Schedule change waiting for your OK', days: daysSince(a.proposed_at), at: a.proposed_at };
     });
   }
   function decisionNeeds(p) {
     return DEC.open.filter(function (d) { return d.proj_no === p.no && d.state === 'asked'; }).map(function (d) {
-      return { key: 'decision:' + d.id, kind: 'decision', dec: d, title: 'Jake asks', detail: d.what, days: daysSince(d.created_at) };
+      return { key: 'decision:' + d.id, kind: 'decision', dec: d, title: 'Jake asks', detail: d.what, days: daysSince(d.created_at), at: d.created_at };
     });
   }
   // What Jake asks before acting: why, his guess (Yes is one tap), and a box to say something else
@@ -679,7 +684,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   // everything else, with the button that opens that one's window on the job.
   function teamNeeds(p) {
     return ((p.team || {}).waiting || []).map(function (w) {
-      return { key: 'team:' + w.key, kind: 'team', who: w.who, title: w.title, detail: w.detail || '', days: daysSince(w.since) };
+      return { key: 'team:' + w.key, kind: 'team', who: w.who, title: w.title, detail: w.detail || '', days: daysSince(w.since), at: w.since };
     });
   }
   function openNeeds(p) { return actionNeeds(p).concat(decisionNeeds(p), questionNeeds(p), draftNeeds(p), teamNeeds(p), (p.needs || []).filter(function (n) { return !MARKS[n.key]; })); }
@@ -730,7 +735,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       var talk = itemThread(SAID.filter(function (x) { return x.proj_no === 'office' && (x.body || '').indexOf('[text:' + t.id + ']') >= 0; }));
       var act = CFG ? '<div class="answer"><textarea data-loose="' + esc(t.id) + '" placeholder="Tell Jake what to do with it: which job, text back, ignore" aria-label="Tell Jake">' + esc(state.loose[t.id] || '') + '</textarea>' +
         '<div class="marks"><button class="go" type="button" data-loose-send="' + esc(t.id) + '">Send to Jake</button> <button class="text" type="button" data-loose-done="' + esc(t.id) + '">Handled</button></div></div>' : '';
-      return '<div class="item s' + sev(n) + '"><div class="head"><b>' + esc(t.who) + (t.channel === 'voicemail' ? ' left a voicemail' : ' texted') + '</b><span>' + bub(n, 'Reply ' + dtext(t.days)) + '</span></div>' +
+      return '<div class="item s' + sev(n) + '"><div class="head"><b>' + esc(t.who) + (t.channel === 'voicemail' ? ' left a voicemail' : ' texted') + '</b><span>' + bub(n, 'Reply ' + dtext(t.days)) + '</span></div>' + whenLine(t.when) +
         (textWords('text:' + t.id) || (t.summary ? '<div class="body">' + esc(t.summary) + '</div>' : '')) +
         (t.phone ? '<div class="reach">' + phoneLinks(t.phone) + '</div>' : '') +
         (t.jake && !(d && d.note) ? '<div class="body"><b>Jake: </b>' + esc(t.jake) + '</div>' : '') + (d ? draftBlock(d, true) : '') + talk + act + '</div>';
@@ -854,7 +859,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var below = 0;
     var need = open.map(function (n) {
       if (n.kind === 'draft' && n.draft && SAID.some(function (x) { return x.id === n.draft.instruction_id && onItem(x); })) return '';   // it is on the item it answers
-      var h3 = '<div class="item' + (n.days != null ? ' s' + sev(n) : '') + '"><div class="head"><b>' + esc(n.title) + '</b><span>' + (n.days != null ? bub(n, (isReply(n) ? 'Reply ' : 'Waiting ') + dtext(n.days)) : '') + '</span></div>';
+      var h3 = '<div class="item' + (n.days != null ? ' s' + sev(n) : '') + '"><div class="head"><b>' + esc(n.title) + '</b><span>' + (n.days != null ? bub(n, (isReply(n) ? 'Reply ' : 'Waiting ') + dtext(n.days)) : '') + '</span></div>' + whenLine(n.at || n.since);
       var drHere = isMsg(n) ? draftOn(p, n.key) : null;
       var words = textWords(n.kind === 'draft' ? (n.draft || {}).item_key : n.key);
       h3 += words;
