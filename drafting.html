@@ -27,7 +27,11 @@ body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--s
 a { color: inherit; text-decoration: none; }
 .lbl, .tabs button, button.go, .back { font-family: var(--sans); text-transform: uppercase; letter-spacing: .18em; font-weight: 400; font-size: .66rem; }
 header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; padding: 16px 18px 12px; border-bottom: 1px solid var(--ink); }
-header .back { color: var(--muted); }
+/* Jake / Drew / Cora along the top, the same bar as on the job's page; this window's own name is the grey one */
+.teambar { flex: 0 0 100%; display: flex; gap: 8px; margin: 0 0 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .18em; }
+.teambar a { flex: 1; text-align: center; padding: 12px 8px 11px; border: 1px solid var(--ink); color: var(--ink); font-size: .7rem; text-decoration: none; }
+.teambar a.on { background: var(--rule); border-color: var(--rule); pointer-events: none; }
+.teambar .badge { display: inline-block; min-width: 18px; margin-left: 8px; padding: 2px 5px 1px; background: var(--long, #9b3a32); color: #fff; font-style: normal; font-size: .62rem; letter-spacing: .04em; line-height: 1.3; }
 header h1 { margin: 0; font-weight: 300; font-size: 17px; letter-spacing: .12em; text-transform: uppercase; }
 header h1 .no { margin-right: 12px; }
 header .phase { font-size: .62rem; letter-spacing: .18em; text-transform: uppercase; border: 1px solid var(--rule); padding: 2px 7px 1px; color: var(--muted); }
@@ -156,12 +160,12 @@ button.go:disabled { opacity: .45; cursor: default; }
 .msg .ask .was { color: var(--muted); font-size: 13px; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-094913";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-103246";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
 <header id="head" hidden>
-  <a class="back" id="back" href="./">&lsaquo; Dashboard</a>
+  <nav class="teambar" id="teambar" aria-label="The team on this job"><a id="tb-jake" href="./" data-team="1">Jake</a><a id="tb-drew" href="drafting.html" data-team="1">Drew</a><a id="tb-cora" href="permitting.html" data-team="1">Cora</a></nav>
   <h1><span class="no" id="no"></span><span id="addr"></span></h1>
   <span class="phase" id="phase" hidden></span>
   <span class="status"><i class="dot" id="dot"></i><span id="status">Connecting…</span></span>
@@ -250,7 +254,16 @@ button.go:disabled { opacity: .45; cursor: default; }
   function loadDrafts() {
     drAt = Date.now();
     return rpc('office_drafts', { p_token: token }).then(function (d) {
-      if (d && d.ok) { DR = (d.drafts || []).filter(function (x) { return x.proj_no === NO && x.written_by === WHO; }); draw(); }
+      if (d && d.ok) {
+        DR = (d.drafts || []).filter(function (x) { return x.proj_no === NO && x.written_by === WHO; }); draw();
+        ['drew', 'cora'].forEach(function (w) {              // what the other one (and this one) has waiting on him, on the bar
+          var n = (d.waiting || []).filter(function (x) { return x.proj_no === NO && x.who === w; }).length +
+                  (d.drafts || []).filter(function (x) { return x.proj_no === NO && x.written_by === w && (x.state === 'draft' || x.state === 'failed' || x.state === 'stale'); }).length;
+          var a = $('tb-' + w), old = a.querySelector('.badge');
+          if (old) a.removeChild(old);
+          if (n) { var i = document.createElement('i'); i.className = 'badge'; i.textContent = n; a.appendChild(i); }
+        });
+      }
     }).catch(function () {});
   }
   function draftsHtml() {
@@ -424,7 +437,15 @@ button.go:disabled { opacity: .45; cursor: default; }
       }).catch(function () {}).then(function () { if (document.activeElement) document.activeElement.blur(); LAST = 0; loop(); });
     }
   });
-  $('back').href = './#p-' + encodeURIComponent(NO);
+  // the bar: Jake is the job's page, the other two are these windows; going between them replaces the page, so back is the list
+  $('tb-jake').href = './#p-' + encodeURIComponent(NO);
+  $('tb-drew').href = 'drafting.html#' + encodeURIComponent(NO);
+  $('tb-cora').href = 'permitting.html#' + encodeURIComponent(NO);
+  $('tb-' + WHO).className = 'on';
+  $('teambar').addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[data-team]');
+    if (a) { e.preventDefault(); if (a.className !== 'on') location.replace(a.getAttribute('href')); }
+  });
   $('head').hidden = $('main').hidden = $('tabs').hidden = false;
   $('say').addEventListener('submit', send);
   $('text').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) send(e); });

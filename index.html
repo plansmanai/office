@@ -179,12 +179,12 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .status { margin: 22px 0 6px; font-family: var(--serif); font-weight: 500; font-size: 1.36rem; line-height: 1.35; overflow-wrap: anywhere; max-width: 44rem; }
 .sec { padding: 22px 0 18px; border-top: 1px solid var(--rule); margin-top: 8px; }
 .sec h3 { margin: 0 0 12px; }
-.sec h3.who { display: flex; gap: 8px; margin-bottom: 14px; }
-.sec h3.who span, .sec h3.who a { flex: 1; text-align: center; padding: 12px 8px 11px; border: 1px solid var(--ink); color: var(--ink); font-size: .7rem; }
-.sec h3.who span.on { background: var(--rule); border-color: var(--rule); color: var(--ink); }
+/* Jake / Drew / Cora: one bar, pinned at the top of a job, the same on all three (Lance, 22 Nov 2026) */
+.teambar { position: sticky; top: 0; z-index: 20; display: flex; gap: 8px; padding: 10px 0; background: var(--bg); font-family: var(--sans); text-transform: uppercase; letter-spacing: .18em; }
+.teambar span, .teambar a { flex: 1; text-align: center; padding: 12px 8px 11px; border: 1px solid var(--ink); color: var(--ink); font-size: .7rem; text-decoration: none; position: relative; }
+.teambar span.on { background: var(--rule); border-color: var(--rule); }
+.teambar .badge { display: inline-block; min-width: 18px; margin-left: 8px; padding: 2px 5px 1px; background: var(--long); color: #fff; font-style: normal; font-size: .62rem; letter-spacing: .04em; line-height: 1.3; text-align: center; }
 /* how many things Drew or Cora has waiting on him, on the button that opens that one's window */
-.sec h3.who a { position: relative; }
-.sec h3.who .badge { display: inline-block; min-width: 18px; margin-left: 8px; padding: 2px 5px 1px; background: var(--long); color: #fff; font-style: normal; font-size: .62rem; letter-spacing: .04em; line-height: 1.3; text-align: center; }
 .sec.tell .chat { margin-top: 4px; }
 /* one thread per job: what waits on him sits in it as an item, between the messages */
 .chat.need > .item { margin-top: 0; background: var(--bg, transparent); }
@@ -340,7 +340,6 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .fact .k { font-size: .5rem; letter-spacing: .14em; }
   .fact .v { margin-top: 3px; font-size: 13px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .fact .v .ph, .fact .v .bub { font-size: .5rem; padding: 2px 5px 1px; white-space: normal; }
-  .sec h3.who { margin: 14px 0 10px; }
   .sec.tell #tell-text { min-height: 54px; }
 }
 @media (min-width: 1280px) { .facts { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
@@ -359,7 +358,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-094913";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-103246";</script>
 </head>
 <body>
 
@@ -875,7 +874,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   }
   function project(p) {
     var d = dueText(p.days), h = '';
-    h += '<a class="back" href="#' + state.view + '">‹ Back</a><div class="sheet">';
+    h += '<!--BAR--><div class="sheet">';              // Jake / Drew / Cora, pinned at the top of the job (filled in below, once the counts are known)
     var cut = p.address.indexOf(','), street = cut > 0 ? p.address.slice(0, cut) : p.address, city = cut > 0 ? p.address.slice(cut + 1).trim() : '';
     h += '<h1><span class="hno">' + esc(p.no) + '</span>' + esc(street) + '</h1>' + (city ? '<div class="city">' + esc(city) + '</div>' : '');
     var pb = bubsFor(openNeeds(p)), bal = (p.money || {}).due;
@@ -1006,10 +1005,14 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     }
     // the heading is the team: Jake is the one talked to here; Drew and Cora each open their own window on this job
     var formAt = tell.indexOf('<form id="tell">'), before = formAt >= 0 ? tell.slice(0, formAt) : tell, box = formAt >= 0 ? tell.slice(formAt) : '';
-    h = h.replace('<!--TEAM-->', '<div class="sec lead tell"><h3 class="who"><span class="on">Jake</span>' +
-      (CFG ? '<a href="drafting.html#' + encodeURIComponent(p.no) + '" target="drafting-' + esc(p.no) + '">Drew' + (theirN.drew ? '<i class="badge" aria-label="' + theirN.drew + ' waiting on you">' + theirN.drew + '</i>' : '') +
-        '</a><a href="permitting.html#' + encodeURIComponent(p.no) + '" target="permitting-' + esc(p.no) + '">Cora' + (theirN.cora ? '<i class="badge" aria-label="' + theirN.cora + ' waiting on you">' + theirN.cora + '</i>' : '') + '</a>' : '') +
-      '</h3>' + talk2 + box + '</div>');
+    // The three of them, along the top of the job and always there (Lance, 22 Nov 2026: "buttons along the top that
+    // toggle between them that always stay there when inside the project card"). Jake is this page; Drew and Cora are
+    // their own windows on the job. Going between them REPLACES the page, so back from any of the three is the list.
+    var bdg = function (n) { return n ? '<i class="badge" aria-label="' + n + ' waiting on you">' + n + '</i>' : ''; };
+    h = h.replace('<!--BAR-->', '<nav class="teambar" aria-label="The team on this job"><span class="on">Jake</span>' +
+      (CFG ? '<a href="drafting.html#' + encodeURIComponent(p.no) + '" data-team="1">Drew' + bdg(theirN.drew) + '</a><a href="permitting.html#' + encodeURIComponent(p.no) + '" data-team="1">Cora' + bdg(theirN.cora) + '</a>'
+           : '<span>Drew</span><span>Cora</span>') + '</nav>');
+    h = h.replace('<!--TEAM-->', '<div class="sec lead tell">' + talk2 + box + '</div>');
     if (before) h += '<div class="sec">' + before + '</div>';      // the record of what he changed stays down here, below what needs him
 
     // 3. what the team has
@@ -1329,9 +1332,23 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       }
       state.swipe = null;
     }
+    if (state.no && !prev && state.routed) keepPlace();     // leaving the list for a job: remember where the list was
     if (state.no !== prev) { state.mailQ = ''; state.openMail = null; state.allTimeline = false; state.allSaid = false; state.jobAll = {}; state.tellMsg = ''; state.pick = null; state.markMsg = ''; }
     render();
     if (state.no && state.no !== prev) window.scrollTo(0, 0);
+    if (!state.no && state.view !== 'chat' && (prev || !state.routed)) backToPlace();      // back on the list (or the page just opened on it): where he left it
+    state.routed = true;
+  }
+  // The list's place, per list, kept for the session: the page's own scroll on a phone, the list's on a PC.
+  function keepPlace() {
+    try { sessionStorage.setItem('p4_place_' + (state.lastList || 'queue'), JSON.stringify([window.scrollY || 0, $('list').scrollTop || 0])); } catch (e) {}
+  }
+  function backToPlace() {
+    var at = null;
+    try { at = JSON.parse(sessionStorage.getItem('p4_place_' + state.view) || 'null'); } catch (e) {}
+    if (!at) { if (window.innerWidth < 960) window.scrollTo(0, 0); return; }
+    var go = function () { if (window.innerWidth < 960) window.scrollTo(0, at[0]); else $('list').scrollTop = at[1]; };
+    go(); setTimeout(go, 60); setTimeout(go, 300);      // again once the list has laid itself out
   }
 
   // ---- the web version: PIN, then read through the gated functions ----
@@ -1860,10 +1877,17 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var t = e.changedTouches[0], dx = t.clientX - sw.x, dy = t.clientY - sw.y, quick = Date.now() - sw.at < 700;
     sw = null;
     if (!quick || Math.abs(dx) < 70 || Math.abs(dy) > 50 || window.innerWidth >= 960) return;
-    if (document.body.getAttribute('data-show') !== 'list') return;
+    if (document.body.getAttribute('data-show') !== 'list') {      // on a job: a swipe either way is "back to the list"
+      if (state.no) location.hash = '#' + (state.lastList || 'queue');
+      return;
+    }
     state.swipe = dx > 0 ? 'slide-r' : 'slide-l';
     location.hash = state.view === 'chat' ? '#' + (state.lastList || 'queue') : '#chat';
   }, { passive: true });
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[data-team]');
+    if (a) { e.preventDefault(); location.replace(a.getAttribute('href')); }
+  });
   window.addEventListener('hashchange', function () { if (DATA) route(); });
   $('login').addEventListener('submit', function (e) {
     e.preventDefault();
