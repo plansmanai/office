@@ -392,7 +392,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   #detail { grid-column: 3; grid-row: 2 / 6; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin-top: 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-121954";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-130406";</script>
 </head>
 <body>
 
@@ -1379,6 +1379,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       }
       state.swipe = null;
     }
+    if (state.no) { try { localStorage.setItem('p4_last_job', state.no); } catch (e) {} }
     if (state.no && !prev && state.routed) keepPlace();     // leaving the list for a job: remember where the list was
     if (state.no !== prev) { state.mailQ = ''; state.openMail = null; state.allTimeline = false; state.allSaid = false; state.jobAll = {}; state.tellMsg = ''; state.pick = null; state.markMsg = ''; }
     render();
@@ -1387,6 +1388,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     state.routed = true;
   }
   // The list's place, per list, kept for the session: the page's own scroll on a phone, the list's on a PC.
+  function lastJob() { try { return localStorage.getItem('p4_last_job') || ''; } catch (e) { return ''; } }
   function listBox() { return $(window.innerWidth >= 1500 ? 'listview' : 'list'); }      // what scrolls the list on a PC
   function keepPlace(which) {
     try { sessionStorage.setItem('p4_place_' + (which || state.lastList || 'queue'), JSON.stringify([window.scrollY || 0, listBox().scrollTop || 0])); } catch (e) {}
@@ -1952,16 +1954,22 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var t = e.changedTouches[0], dx = t.clientX - sw.x, dy = t.clientY - sw.y, quick = Date.now() - sw.at < 700;
     sw = null;
     if (!quick || Math.abs(dx) < 70 || Math.abs(dy) > 50 || window.innerWidth >= 960) return;
-    if (document.body.getAttribute('data-show') !== 'list') {      // on a job: a swipe either way is "back to the list"
-      if (state.no) location.hash = '#' + (state.lastList || 'queue');
+    // ONE ROW OF FIVE PAGES, left to right: Chat | Queue | Jake | Drew | Cora (Lance, 22 Nov 2026). Finger to the right
+    // brings in the page on the left, finger to the left the page on the right; at either end nothing happens. Jake,
+    // Drew and Cora are the job he was last on (Jake is its page here; the other two are their windows on it), so
+    // from the queue a swipe to the left lands on that job. "All projects" stands where the Queue does.
+    var back = dx > 0;
+    if (document.body.getAttribute('data-show') !== 'list') {      // on a job (Jake)
+      if (!state.no) return;
+      if (back) location.hash = '#' + (state.lastList || 'queue');
+      else location.replace('drafting.html#' + encodeURIComponent(state.no));
       return;
     }
-    // Chat | Queue | All projects, side by side as their tabs are. Finger to the right brings in the page on the left,
-    // finger to the left the page on the right; at either end nothing happens. So the swipe back is the opposite one.
-    var to = PAGES[PAGES.indexOf(state.view) + (dx > 0 ? -1 : 1)];
-    if (!to) return;
-    state.swipe = dx > 0 ? 'slide-r' : 'slide-l';
-    location.hash = '#' + to;
+    state.swipe = back ? 'slide-r' : 'slide-l';
+    if (state.view === 'chat') { if (!back) location.hash = '#' + (state.lastList || 'queue'); return; }
+    if (back) { location.hash = '#chat'; return; }
+    var last = lastJob();
+    if (last && BY[last]) location.hash = '#p-' + last;
   }, { passive: true });
   // On a PC the left side and the job on the right are two things: choosing Chat, Queue or All projects on the left
   // keeps the job open on the right (Lance, 22 Nov 2026: "on the desktop can this page show the general chat on the
