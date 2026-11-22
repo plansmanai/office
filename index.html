@@ -350,7 +350,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-223631";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-225107";</script>
 </head>
 <body>
 
@@ -562,7 +562,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   }
   function draftBlock(d, onItem) {
     var to = (d.to_names || []).join(', '), cc = (d.cc_names || []).join(', ');
-    var open = d.state === 'draft' || d.state === 'failed', editing = open && state.editDraft === d.id, blanks = blanksIn(d.body), files = d.attachments || [], file = ATTACH.test(d.body || '') && !files.length;
+    var open = d.state === 'draft' || d.state === 'failed', editing = open && state.editDraft === d.id, blanks = blanksIn(d.body), files = d.attachments || [], file = d.channel !== 'action' && ATTACH.test(d.body || '') && !files.length;     // a prepared action attaches its own file when it runs: only a plain draft is held for this
     // Jake's one line on what he needs from Lance comes first; the subject is not repeated under the email it answers
     var h = (d.note && d.state !== 'sent' ? '<div class="body"><b>Jake: </b>' + esc(d.note) + '</div>' : '') +
       '<div class="draft mail"><div class="lbl">' + (d.channel === 'action' ? esc(d.subject) + (to ? ' · to ' + esc(to) : '') :
@@ -865,7 +865,6 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     function shownInChat(d) { return d && d.instruction_id && inChat[d.instruction_id]; }
     var below = 0;
     var need = open.map(function (n) {
-      if (n.kind === 'draft' && shownInChat(n.draft)) { below++; return ''; }
       if (n.kind === 'draft' && n.draft && SAID.some(function (x) { return x.id === n.draft.instruction_id && onItem(x); })) return '';   // it is on the item it answers
       var h3 = '<div class="item' + (n.days != null ? ' s' + sev(n) : '') + '"><div class="head"><b>' + esc(n.title) + '</b><span>' + (n.days != null ? bub(n, (isReply(n) ? 'Reply ' : 'Waiting ') + dtext(n.days)) : '') + '</span></div>';
       var drHere = isMsg(n) ? draftOn(p, n.key) : null;
@@ -912,7 +911,6 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     // what went out in the last three days, said once, quietly
     var openKeys = {};
     open.forEach(function (n) { openKeys[n.key] = 1; });
-    if (below) need += '<p class="note">' + (below === 1 ? 'A draft is' : below + ' drafts are') + ' waiting below, on Jake\'s answer.</p>';
     DRAFTS.filter(function (d) { return d.proj_no === p.no && d.state === 'sent' && !openKeys[d.item_key] && !shownInChat(d); }).forEach(function (d) {
       need += '<div class="item"><div class="head"><span>' + esc(d.subject) + '</span><span>' + esc(stamp(d.sent_at)) + '</span></div><div class="body ok">' + esc(d.result || 'Sent.') + '</div></div>';
     });
@@ -945,7 +943,14 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
         // oldest first, the newest just above the box, like every other conversation
         var mine = '<div class="msg me"><div class="lbl">You · ' + esc(stamp(s.created_at)) + '</div><div class="txt">' + para(tidy(s.body)) + '</div></div>', h2 = '';
         if (s.reply) h2 += '<div class="msg jake"><div class="lbl">Jake' + (s.replied_at ? ' · ' + esc(stamp(s.replied_at)) : '') + '</div><div class="txt">' + para(s.reply) + '</div>' +
-          DRAFTS.filter(function (d) { return d.instruction_id === s.id && d.proj_no === p.no; }).map(function (d) { return draftBlock(d); }).join('') + '</div>';
+          (function () {
+            // On a job, a draft waiting on him is in Needs you, always, with its buttons (Needs you is the one list he acts on:
+            // a draft on Jake's answer was out of sight whenever the conversation was folded, 21 Nov 2026). Here: only what went.
+            var ds = DRAFTS.filter(function (d) { return d.instruction_id === s.id && d.proj_no === p.no && d.state !== 'dropped'; });
+            var waiting = ds.filter(function (d) { return d.state !== 'sent'; }).length;
+            return ds.filter(function (d) { return d.state === 'sent'; }).map(function (d) { return draftBlock(d); }).join('') +
+              (waiting ? '<p class="note">' + (waiting === 1 ? 'The draft is' : 'The ' + waiting + ' drafts are') + ' in Needs you, below.</p>' : '');
+          })() + '</div>';
         else h2 += '<div class="msg jake wait"><div class="lbl">Jake</div><div class="txt">' + (s.state === 'working' ? 'Working on it…' : 'Picking it up…') + '</div></div>';
         return mine + h2;
       }).join('') + '</div>';
