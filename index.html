@@ -333,7 +333,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-182501";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261121-183009";</script>
 </head>
 <body>
 
@@ -895,11 +895,12 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var tell = '', talk2 = '';
     if (said.length) talk2 += '<div class="chat">' +
       said.slice(earlier).reverse().map(function (s) {
-        var h2 = '<div class="msg me"><div class="lbl">You · ' + esc(stamp(s.created_at)) + '</div><div class="txt">' + para(tidy(s.body)) + '</div></div>';
+        // newest first all the way down: Jake's answer sits above what Lance wrote, since it came after it
+        var mine = '<div class="msg me"><div class="lbl">You · ' + esc(stamp(s.created_at)) + '</div><div class="txt">' + para(tidy(s.body)) + '</div></div>', h2 = '';
         if (s.reply) h2 += '<div class="msg jake"><div class="lbl">Jake' + (s.replied_at ? ' · ' + esc(stamp(s.replied_at)) : '') + '</div><div class="txt">' + para(s.reply) + '</div>' +
           DRAFTS.filter(function (d) { return d.instruction_id === s.id && d.proj_no === p.no; }).map(function (d) { return draftBlock(d); }).join('') + '</div>';
         else h2 += '<div class="msg jake wait"><div class="lbl">Jake</div><div class="txt">' + (s.state === 'working' ? 'Working on it…' : 'Picking it up…') + '</div></div>';
-        return h2;
+        return h2 + mine;
       }).join('') + (earlier ? '<button class="text more" id="more-said" type="button">Show ' + earlier + ' earlier</button>' : '') + '</div>';
     var acts = ACTS.filter(function (a) { return a.proj_no === p.no && a.state !== 'proposed' && a.state !== 'cancelled'; });
     if (acts.length) tell += '<div class="said">' + acts.map(actItem).join('') + '</div>';
