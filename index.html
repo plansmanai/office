@@ -351,6 +351,24 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   body[data-show="detail"] #list { display: none; }
   body[data-show="list"] #detail { display: none; }
 }
+/* A wide screen: three columns, the general chat | the list | the job (Lance, 22 Nov 2026: "show the general chat on
+   the left while on this screen"). The columns start at the page's left edge so that the Jake / Drew / Cora bar sits at
+   the same place here and in Drew's and Cora's windows (their header uses the same widths). */
+@media (min-width: 1500px) {
+  .shell { max-width: none !important; margin: 0 !important; grid-template-columns: 400px 440px minmax(0, 1fr) !important; column-gap: 40px; row-gap: 0;
+           grid-template-rows: auto auto auto 1fr auto; }
+  #list { display: contents; }
+  .brand { grid-column: 1; grid-row: 1; }
+  .nav { grid-column: 2; grid-row: 1; margin-top: 0; align-self: end; }
+  #nav-chat { display: none; }
+  #notice { grid-column: 2; grid-row: 2; }
+  #notify { grid-column: 2; grid-row: 3; }
+  #chatview { grid-column: 1; grid-row: 2 / 6; display: flex; flex-direction: column; position: sticky; top: 22px; height: calc(100vh - 44px); margin-top: 14px; min-height: 0; }
+  #chatview #chatlog { flex: 1; min-height: 0; overflow-y: auto; padding-right: 8px; }
+  #listview { grid-column: 2; grid-row: 4; position: sticky; top: 22px; max-height: calc(100vh - 44px); overflow-y: auto; padding-right: 12px; }
+  .foot { grid-column: 2; grid-row: 5; }
+  #detail { grid-column: 3; grid-row: 1 / 6; }
+}
 @media (min-width: 960px) {
   .shell { grid-template-columns: 440px minmax(0, 1fr); gap: 40px; align-items: start; }
   #list { position: sticky; top: 22px; max-height: calc(100vh - 44px); overflow-y: auto; padding-right: 12px; }
@@ -358,7 +376,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .sheet { padding: 38px 42px 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-110439";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BJHE1y8cz_VsoJsAIac_lzWmFjVbnqFZiMQyvDClbaqGBJU20bizn5-UaT7XjoRi-7NTWzKU8JZT2leCCPqpc18"}; window.BUILD = "20261122-111603";</script>
 </head>
 <body>
 
@@ -1155,16 +1173,20 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     }
   function render() {
     var q = state.q.trim().toLowerCase();
-    var inChat = state.view === 'chat';
-    $('chatview').hidden = !inChat; $('listview').hidden = inChat;
-    if (inChat) {
+    // On a wide screen the general chat has a column of its own beside the list, so both are always there.
+    var wide3 = window.innerWidth >= 1500;
+    if (wide3 && state.view === 'chat') state.view = state.lastList || 'queue';
+    var inChat = state.view === 'chat', showChat = inChat || wide3;
+    $('chatview').hidden = !showChat; $('listview').hidden = inChat;
+    if (showChat) {
       var all = chatItems(), last = all.length ? (all[all.length - 1].at + '|' + ((all[all.length - 1].said || {}).reply || '').length) : '';
       if (last !== state.chatLast) { state.chatLast = last; state.chatStick = true; }
       $('chatlog').innerHTML = chat();
       var newest = chatNewest();
       if (newest && newest > chatSeen() && !document.hidden) { try { localStorage.setItem(SEEN_KEY, newest); } catch (e) {} }
       var mc = $('more-chat'); if (mc) mc.addEventListener('click', function () { state.chatAll = true; render(); });
-    } else {
+    }
+    if (!inChat) {
       $('listbody').innerHTML = q ? projects(P.filter(function (p) { return matches(p, q); })) : (state.view === 'projects' ? projects(P) : queue());
     }
     ['chat', 'queue', 'projects'].forEach(function (v) { if (state.view === v && (!q || v === 'chat')) $('nav-' + v).setAttribute('aria-current', 'page'); else $('nav-' + v).removeAttribute('aria-current'); });
@@ -1247,9 +1269,10 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       b.addEventListener('click', function () { answerQuestion(+b.getAttribute('data-answer')); });
     });
     document.body.setAttribute('data-show', p ? 'detail' : 'list');
-    if (inChat && !p && state.chatStick) {             // the newest is at the bottom, by the box
+    if (showChat && state.chatStick && (wide3 || !p)) {      // the newest is at the bottom, by the box
       state.chatStick = false;
-      window.scrollTo(0, document.body.scrollHeight); $('list').scrollTop = $('list').scrollHeight;
+      if (wide3) $('chatlog').scrollTop = $('chatlog').scrollHeight;
+      else { window.scrollTo(0, document.body.scrollHeight); $('list').scrollTop = $('list').scrollHeight; }
     }
     var moreSaid = $('more-said');
     if (moreSaid) moreSaid.addEventListener('click', function () { state.allSaid = true; render(); });
@@ -1911,6 +1934,8 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var a = e.target.closest && e.target.closest('a[data-team]');
     if (a) { e.preventDefault(); location.replace(a.getAttribute('href')); }
   });
+  var wasWide = window.innerWidth >= 1500;               // the layout changes at this width: draw again when the window crosses it
+  window.addEventListener('resize', function () { var w = window.innerWidth >= 1500; if (w !== wasWide && DATA) { wasWide = w; state.chatStick = true; render(); } });
   window.addEventListener('hashchange', function () { if (DATA) route(); });
   $('login').addEventListener('submit', function (e) {
     e.preventDefault();
