@@ -12,14 +12,23 @@ self.addEventListener('push', function (e) {
   }));
 });
 
+// A tap takes him to the thing itself (Lance, 22 Nov 2026: "These notifications don't jump me to the area they
+// indicate ... They just open up the app where I currently am"). On an iPhone the installed app is simply brought to
+// the front, wherever it was: asking the phone to open a page is not honoured there, and an open page cannot be
+// steered from here. So the place to go is handed to the page two ways, and the page takes itself there
+// (the "p4Open" lines in each page): a message to any open page, and a note left in the cache for a page that is
+// only now waking up or starting.
 self.addEventListener('notificationclick', function (e) {
   e.notification.close();
   var url = new URL((e.notification.data && e.notification.data.url) || './', self.registration.scope).href;
-  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
-    for (var i = 0; i < list.length; i++) {
-      var c = list[i];
-      if (c.url.split('#')[0] === url.split('#')[0] && 'focus' in c) { c.navigate(url); return c.focus(); }
-    }
+  var note = caches.open('p4-open').then(function (c) {
+    return c.put('pending', new Response(JSON.stringify({ url: url, at: Date.now() }), { headers: { 'Content-Type': 'application/json' } }));
+  }).catch(function () {});
+  e.waitUntil(note.then(function () {
+    return self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  }).then(function (list) {
+    list.forEach(function (c) { try { c.postMessage({ p4Open: url }); } catch (err) {} });
+    if (list.length && 'focus' in list[0]) return list[0].focus().catch(function () { return self.clients.openWindow(url); });
     return self.clients.openWindow(url);
   }));
 });

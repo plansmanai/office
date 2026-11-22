@@ -150,7 +150,7 @@ button.go:disabled { opacity: .45; cursor: default; }
 .msg .ask .was { color: var(--muted); font-size: 13px; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-070752";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-071044";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -188,7 +188,32 @@ button.go:disabled { opacity: .45; cursor: default; }
 <script>
 (function () {
   var CFG = window.OFFICE || null, TOKEN_KEY = 'plansman_office_token', token = null;
-  var NO = decodeURIComponent((location.hash || '').replace(/^#/, ''));
+  // the job, and optionally what to open on it: "#26-19" or "#26-19!c123" (check-in 123, from a notification)
+  var HASH = decodeURIComponent((location.hash || '').replace(/^#/, '')).split('!'), NO = HASH[0], OPEN = HASH[1] || '';
+  // A tap on a notification: go to the thing itself. The phone only brings the app to the front, so the page takes
+  // itself there: told by a message from sw.js while it is open, or by the note sw.js leaves for a page that is waking
+  // up or starting (Lance, 22 Nov 2026: "They just open up the app where I currently am").
+  function p4Open(url) {
+    try {
+      var u = new URL(url, location.href);
+      if (u.href === location.href) return;
+      if (u.pathname === location.pathname) { location.hash = u.hash; if (/(drafting|permitting)\.html$/.test(u.pathname)) location.reload(); }
+      else location.href = u.href;
+    } catch (e) {}
+  }
+  function p4Pending() {
+    if (!window.caches) return;
+    caches.open('p4-open').then(function (c) {
+      return c.match('pending').then(function (r) { return r ? r.json().then(function (j) { return c.delete('pending').then(function () { return j; }); }) : null; });
+    }).then(function (j) { if (j && j.url && Date.now() - j.at < 120000) p4Open(j.url); }).catch(function () {});
+  }
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (e) {
+    if (e.data && e.data.p4Open) { if (window.caches) caches.open('p4-open').then(function (c) { return c.delete('pending'); }).catch(function () {}); p4Open(e.data.p4Open); }
+  });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) p4Pending(); });
+  window.addEventListener('pageshow', p4Pending);
+  p4Pending();
+
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   // Whose window this is. The same page is Drew's Drafting window and Cora's Permitting window (db/043).
@@ -303,6 +328,7 @@ button.go:disabled { opacity: .45; cursor: default; }
       });
       MSGS.sort(function (a, b) { return a.id - b.id; });
       status(d); draw();
+      if (OPEN) { var oc = /^c(\d+)$/.exec(OPEN); OPEN = ''; if (oc) openSheet(oc[1]); }      // the check-in a notification was about
       if (Date.now() - drAt > 20000) loadDrafts();
     });
   }
