@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light only">
+<title>Plansman Knowledge</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png"><link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&display=swap">
+<style>
+/* The Knowledge page (db/066). Lance, 23 Nov 2026: "Is the team's knowledge base or learned rules or whatever available
+   to me to view? I'd like to see it and be able to edit it myself. Could it be a page on P4 that I open and change there?"
+   The whole base, opened the way it is filed (core/lessons.py structure): who it is for, subject, kind of drawing sheet,
+   city and the other scopes, and the pages. What he changes here is his word and counts at once; nothing is deleted.
+   Same look as the dashboard: Volcanic Black on a near-white backdrop, Jost only, one hairline, square corners, light only. */
+:root {
+  color-scheme: light only;
+  --bg: #FCFBF9; --soft: #F4F2ED; --ink: #1B1B19; --muted: #6E695F; --rule: rgba(27, 27, 25, .2);
+  --oak: #B2906B; --sage: #4F6B66; --long: #9A3B2E; --on-ink: #FCFBF9;
+  --sans: "Jost", "Futura", "Century Gothic", "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; border-radius: 0; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15.5px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+a { color: inherit; text-decoration: none; }
+#gate { padding: 60px 20px; text-align: center; }
+#gate a, .back a, .part a { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+#wrap { max-width: 860px; margin: 0 auto; padding: 18px 18px 80px; }
+.brand { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--ink); }
+.brand b { font-weight: 300; letter-spacing: .5em; font-size: 15px; text-transform: uppercase; }
+.brand span, h2, form.edit label, button.go, .back { text-transform: uppercase; letter-spacing: .18em; font-weight: 400; font-size: .66rem; }
+#find { margin-top: 14px; }
+input, textarea, select { font: inherit; font-size: 16px; color: var(--ink); background: var(--bg); border: 1px solid var(--rule); padding: 9px 10px; width: 100%; -webkit-appearance: none; appearance: none; }
+select { background-image: linear-gradient(45deg, transparent 50%, var(--ink) 50%), linear-gradient(135deg, var(--ink) 50%, transparent 50%);
+  background-position: calc(100% - 15px) 55%, calc(100% - 10px) 55%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 28px; }
+input:focus, textarea:focus, select:focus { border-color: var(--ink); outline: none; }
+textarea { display: block; resize: vertical; min-height: 90px; line-height: 1.45; }
+h1 { font-weight: 400; font-size: 21px; line-height: 1.3; margin: 14px 0 2px; }
+h2 { margin: 30px 0 0; padding-bottom: 7px; border-bottom: 1px solid var(--ink); }
+.muted { color: var(--muted); font-size: 14px; margin: 4px 0 0; }
+.back { margin: 18px 0 0; color: var(--muted); }
+ul.list { list-style: none; margin: 0; padding: 0; }
+ul.list a { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--rule); }
+ul.list a span { color: var(--muted); font-size: 13.5px; white-space: nowrap; }
+ul.list a.none { color: var(--muted); }
+ul.list small { display: block; color: var(--muted); font-size: 13px; }
+@media (min-width: 700px) { ul.cols { columns: 2; column-gap: 40px; } ul.cols li { break-inside: avoid; } }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-top: 16px; }
+.top p { margin: 0; flex: 1 1 260px; }
+button.go, a.go { color: var(--on-ink); background: var(--ink); border: 1px solid var(--ink); padding: 11px 20px; cursor: pointer; font-family: var(--sans); }
+a.go { display: inline-block; text-transform: uppercase; letter-spacing: .18em; font-size: .66rem; white-space: nowrap; }
+button.go:disabled { opacity: .45; cursor: default; }
+button.text { background: none; border: 0; padding: 0; font: inherit; color: var(--ink); cursor: pointer; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+.narrow { display: flex; gap: 10px; margin-top: 12px; }
+.rule { padding: 14px 0; border-bottom: 1px solid var(--rule); }
+.rule .t { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rule .w, .rule .m, .rule .n { margin: 4px 0 0; color: var(--muted); font-size: 13.5px; overflow-wrap: anywhere; }
+.rule .m b { font-weight: 400; color: var(--ink); }
+.rule.off .t { color: var(--muted); }
+.acts { margin-top: 8px; display: flex; gap: 20px; font-size: 14px; }
+form.edit { padding: 2px 0 4px; }
+form.edit label { display: block; margin-top: 12px; color: var(--muted); }
+form.edit label > * { margin-top: 5px; text-transform: none; letter-spacing: 0; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+@media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
+.bar { margin-top: 14px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.msg { color: var(--long); font-size: 14px; }
+.msg.ok { color: var(--sage); }
+.part { padding: 4px 0 14px; border-bottom: 1px solid var(--rule); }
+.part h3 { font-weight: 500; font-size: 16px; margin: 16px 0 6px; }
+.part h3.l1 { font-weight: 400; font-size: 21px; } .part h3.l3 { font-size: 15.5px; }
+.part .x { white-space: pre-wrap; overflow-wrap: anywhere; }
+.part .acts { margin-top: 10px; }
+.cut { margin: 26px 0 0; padding: 10px 12px; background: var(--soft); color: var(--muted); font-size: 13.5px; }
+code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size: .9em; background: var(--soft); padding: 0 3px; }
+</style>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-075653";</script>
+</head>
+<body>
+<div id="gate" hidden></div>
+<div id="wrap" hidden>
+  <header>
+    <div class="brand"><a href="./" aria-label="Plansman: back to the dashboard"><b>Plansman</b></a><span>Knowledge</span></div>
+    <form id="find" role="search"><input id="q" type="search" placeholder="Search the rules and pages" aria-label="Search the rules and pages" autocomplete="off"></form>
+  </header>
+  <main id="main"></main>
+  <datalist id="scopes"></datalist>
+</div>
+<script>
+(function () {
+  var CFG = window.OFFICE || null, TOKEN_KEY = 'plansman_office_token', token = null;
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function day(iso) { if (!iso) return ''; var d = new Date(String(iso).length === 10 ? iso + 'T12:00:00' : iso); return isNaN(d) ? '' : d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
+  function rpc(name, body) {
+    return fetch(CFG.url + '/rest/v1/rpc/' + name, { method: 'POST', headers: { apikey: CFG.key, Authorization: 'Bearer ' + CFG.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  }
+  function gate(html) { $('gate').innerHTML = html; $('gate').hidden = false; $('wrap').hidden = true; }
+  // every read and write goes through the dashboard's sign-in; a sign-in that has ended says so once
+  function call(name, body) {
+    body.p_token = token;
+    return rpc(name, body).then(function (d) {
+      if (!d || !d.ok) { gate('Signed out. <a href="./">Open the dashboard</a> and sign in, then come back.'); throw new Error('signed out'); }
+      return d;
+    });
+  }
+  var main = $('main'), MAP = null, RULES = {}, PAGE = null, seq = 0;
+  var WHO = { everyone: 'Everyone', jake: 'Jake', drew: 'Drew', cora: 'Cora' };
+  var KINDS = { city: 'Cities', person: 'People and companies', project_type: 'Kinds of project', portal: 'Portal software', sheet: 'The spreadsheets' };
+  function names(a) { return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
+  function nice(t) { t = String(t || 'other').replace(/-/g, ' '); return t.charAt(0).toUpperCase() + t.slice(1); }
+  function sheetName(key) { var s = MAP && MAP.sheets.filter(function (x) { return x.key === key; })[0]; return s ? s.label + ' (' + s.series + ')' : key; }
+  function scopeName(sc) { var i = sc.indexOf(':'); if (i < 0) return sc; var k = sc.slice(0, i).toLowerCase(), v = sc.slice(i + 1).trim();
+    return ({ city: 'City: ', person: '', project_type: 'Project type: ', portal: 'Portal: ', sheet: 'Spreadsheet: ' }[k] || k + ': ') + v; }
+  function source(r) {
+    var lf = r.learned_from || '', d = day(r.said_on || r.decided_at || r.created_at);
+    if (lf === 'old_bots') return 'Carried over from the old Jake, Cora and Drew';
+    if (/_noticed$/.test(lf)) return '<b>Proposed by ' + esc(WHO[lf.replace('_noticed', '')] || lf) + ', approved by you</b>' + (d ? ', ' + d : '');
+    if (lf === 'claude_suggestion') return '<b>Suggested in a build session, approved by you</b>' + (d ? ', ' + d : '');
+    return '<b>Yours</b>' + (d ? ', ' + d : '');
+  }
+  function href(f) { var p = new URLSearchParams(); Object.keys(f).forEach(function (k) { if (f[k]) p.set(k, f[k]); }); return '#r?' + p.toString(); }
+  function needMap(fresh) {
+    if (MAP && !fresh) return Promise.resolve(MAP);
+    return call('office_knowledge', {}).then(function (d) {
+      MAP = d;
+      $('scopes').innerHTML = '<option value="general">' + d.scopes.map(function (s) { return '<option value="' + esc(s.scope) + '">'; }).join('');
+      return d;
+    });
+  }
+
+  // ---- the map: what the base holds, the way it is filed ----
+  function row(link, text, n, sub) {
+    return '<li><a href="' + esc(link) + '"' + (n === 0 ? ' class="none"' : '') + '><div>' + esc(text) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' + (n == null ? '' : '<span>' + n + '</span>') + '</a></li>';
+  }
+  function showMap() {
+    var mine = ++seq;
+    if (!MAP) main.innerHTML = '<p class="muted">Loading…</p>';
+    needMap(true).then(function (m) {
+      if (mine !== seq) return;
+      var who = {}; m.who.forEach(function (w) { who[w.who] = w.n; });
+      var h = '<div class="top"><p class="muted">' + m.active.toLocaleString('en-US') + ' rules in use and ' + m.pages.length + ' pages. What you change here counts at once, and nothing is deleted.</p>' +
+        '<a class="go" href="#new">Add a rule</a></div>';
+      h += '<h2>Yours</h2><ul class="list">' + row(href({ mine: '1' }), 'The rules you gave on P4', m.mine, 'Always in front of whoever they are for') + '</ul>';
+      h += '<h2>By team member</h2><ul class="list">' + ['everyone', 'jake', 'drew', 'cora'].map(function (w) { return row(href({ who: w }), WHO[w], who[w] || 0); }).join('') + '</ul>';
+      h += '<h2>By subject</h2><ul class="list cols">' + m.subjects.map(function (s) { return row(href({ topic: s.topic }), nice(s.topic), s.n); }).join('') + '</ul>';
+      h += '<h2>Drew\'s drawing rules, by sheet</h2><ul class="list cols">' + row(href({ sheet: 'SET' }), 'The whole set', m.set, 'Holds on every sheet') +
+        m.sheets.map(function (s) { return row(href({ sheet: s.key }), s.label, s.n, s.series); }).join('') + '</ul>';
+      var by = {}; m.scopes.forEach(function (s) { var k = s.scope.split(':')[0].toLowerCase(); (by[k] = by[k] || []).push(s); });
+      ['city', 'person', 'project_type', 'portal', 'sheet'].concat(Object.keys(by).filter(function (k) { return !KINDS[k]; })).forEach(function (k) {
+        if (!by[k]) return;
+        h += '<h2>' + esc(KINDS[k] || k) + '</h2><ul class="list cols">' + by[k].map(function (s) { return row(href({ scope: s.scope }), s.scope.slice(s.scope.indexOf(':') + 1).trim(), s.n); }).join('') + '</ul>';
+      });
+      h += '<h2>Pages</h2><ul class="list">' + m.pages.map(function (p) {
+        var af = (p.always_for || []).map(function (w) { return WHO[w] || w; });
+        return row('#p/' + encodeURIComponent(p.slug), p.title || p.slug, null, af.length ? 'Its working standard is always in front of ' + names(af) : 'Read when it is needed');
+      }).join('') + '</ul>';
+      h += '<h2>Not in use</h2><ul class="list">' + row(href({ status: 'conflict' }), 'Set aside as conflicting', m.conflict, 'Two carried-over rules disagreed, so neither is used') +
+        row(href({ status: 'superseded' }), 'Retired', m.retired, 'Kept, and can be put back in use') + '</ul>';
+      main.innerHTML = h;
+    }).catch(fail);
+  }
+  function fail(err) { if (err && err.message === 'signed out') return; main.innerHTML = '<p class="back"><a href="#">‹ Knowledge</a></p><p class="msg">Could not load (' + esc(err && err.message) + '). <button class="text" type="button" onclick="location.reload()">Try again</button></p>'; }
+
+  // ---- a list of rules ----
+  function title(f) {
+    var a = [];
+    if (f.q) a.push('Search: “' + f.q + '”');
+    if (f.status === 'conflict') a.push('Set aside as conflicting');
+    if (f.status === 'superseded') a.push('Retired');
+    if (f.mine) a.push('The rules you gave on P4');
+    if (f.topic) a.push(nice(f.topic));
+    if (f.sheet) a.push(f.sheet === 'SET' ? 'Drew\'s rules for the whole set' : sheetName(f.sheet));
+    if (f.scope) a.push(scopeName(f.scope));
+    if (f.who) a.push('For ' + (f.who === 'everyone' ? 'everyone' : WHO[f.who] || f.who));
+    return a.join(' · ') || 'All rules';
+  }
+  function card(r) {
+    var off = r.status !== 'active', h = '<div class="rule' + (off ? ' off' : '') + '" data-id="' + esc(r.id) + '">';
+    h += '<p class="t">' + esc(r.rule) + '</p>';
+    if (r.applies_when) h += '<p class="w">When: ' + esc(r.applies_when) + '</p>';
+    var m = ['For ' + (r.who === 'everyone' ? 'everyone' : esc(WHO[r.who] || r.who)), esc(nice(r.topic))];
+    if (r.sheet) m.push(esc(sheetName(r.sheet)));
+    if (r.scope && r.scope.toLowerCase() !== 'general') m.push(esc(scopeName(r.scope)));
+    if (r.proj_no) m.push('Job ' + esc(r.proj_no));
+    m.push(source(r));
+    h += '<p class="m">' + m.join(' · ') + '</p>';
+    if (r.said) h += '<p class="n">' + esc(r.said) + '</p>';
+    else if (off && r.note) h += '<p class="n">' + esc(r.note) + '</p>';
+    h += '<div class="acts">';
+    if (r.status === 'active') h += '<button class="text" type="button" data-edit>Edit</button><button class="text" type="button" data-do="retire">Retire</button>';
+    else if (r.status === 'conflict') h += '<button class="text" type="button" data-do="restore">Put in use</button><button class="text" type="button" data-edit>Edit</button><button class="text" type="button" data-do="retire">Retire</button>';
+    else h += '<button class="text" type="button" data-do="restore">' + (r.said ? 'Undo' : 'Put back in use') + '</button>';
+    return h + '<span class="msg" role="status"></span></div></div>';
+  }
+  function opts(list, cur) { return list.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === cur ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join(''); }
+  function form(r) {
+    var subs = MAP.subjects.map(function (s) { return s.topic; }); if (r.topic && subs.indexOf(r.topic) < 0) subs.push(r.topic);
+    return '<form class="edit" data-form="' + esc(r.id || 'new') + '">' +
+      '<label>The rule<textarea name="rule" rows="4" maxlength="2000" required>' + esc(r.rule || '') + '</textarea></label>' +
+      '<label>When it applies<input name="when" maxlength="400" value="' + esc(r.applies_when || '') + '" placeholder="Leave empty if it always applies"></label>' +
+      '<div class="row"><label>Who it is for<select name="who">' + opts([['everyone', 'Everyone'], ['jake', 'Jake'], ['drew', 'Drew'], ['cora', 'Cora']], r.who || 'everyone') + '</select></label>' +
+      '<label>Subject<select name="topic">' + (r.topic ? '' : '<option value="">Pick one</option>') + opts(subs.map(function (s) { return [s, nice(s)]; }), r.topic || '') + '<option value="__new">A new subject…</option></select></label></div>' +
+      '<label data-newsub hidden>The new subject, in a few words<input name="newtopic" maxlength="60"></label>' +
+      '<div class="row"><label>Drawing sheet<select name="sheet">' + opts([['', 'The whole set, or not about a sheet']].concat(MAP.sheets.map(function (s) { return [s.key, s.label + ' (' + s.series + ')']; })), r.sheet || '') + '</select></label>' +
+      '<label>Applies to<input name="scope" list="scopes" maxlength="120" value="' + esc(r.scope || 'general') + '" placeholder="general, or city:Tustin"></label></div>' +
+      '<div class="bar"><button class="go" type="submit">Save</button><button class="text" type="button" data-cancel>Cancel</button><span class="msg" role="status"></span></div></form>';
+  }
+  function grow(t) { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 4, Math.round(window.innerHeight * .7)) + 'px'; }
+  function showList(f) {
+    var mine = ++seq;
+    main.innerHTML = '<p class="back"><a href="#">‹ Knowledge</a></p><h1>' + esc(title(f)) + '</h1><p class="muted">Loading…</p>';
+    needMap().then(function () {
+      return call('office_knowledge_rules', { p_who: f.who || null, p_topic: f.topic || null, p_sheet: f.sheet || null, p_scope: f.scope || null, p_mine: f.mine === '1',
+                                             p_status: f.status || 'active', p_q: f.q || null });
+    }).then(function (d) {
+      if (mine !== seq) return;
+      RULES = {}; d.rules.forEach(function (r) { RULES[r.id] = r; });
+      var h = '<p class="back"><a href="#">‹ Knowledge</a></p><h1>' + esc(title(f)) + '</h1>';
+      h += '<p class="muted">' + (d.total === 1 ? '1 rule' : d.total.toLocaleString('en-US') + ' rules') +
+        (d.total > d.rules.length ? ', the first ' + d.rules.length + ' shown. Narrow it below or search.' : '') +
+        (f.status === 'conflict' ? '. When the old knowledge was carried over these disagreed with another rule, so neither is in use. Put the right one in use and retire the other.' : '') + '</p>';
+      var rest = function (k) { var g = {}; Object.keys(f).forEach(function (x) { if (x !== k) g[x] = f[x]; }); return g; };
+      h += '<div class="narrow"><select data-narrow="who" aria-label="Who it is for">' + opts([['', 'For anyone'], ['everyone', 'For everyone'], ['jake', 'For Jake'], ['drew', 'For Drew'], ['cora', 'For Cora']], f.who || '') + '</select>' +
+        '<select data-narrow="topic" aria-label="Subject">' + opts([['', 'Any subject']].concat(MAP.subjects.map(function (s) { return [s.topic, nice(s.topic)]; })), f.topic || '') + '</select></div>';
+      if (d.pages.length) h += '<h2>Pages that have these words</h2><ul class="list">' + d.pages.map(function (p) { return row('#p/' + encodeURIComponent(p.slug), p.title || p.slug, null); }).join('') + '</ul>';
+      if (!d.rules.length) h += '<p class="muted" style="margin-top:20px">No rules here.</p>';
+      var groups = {}, order = [];
+      d.rules.forEach(function (r) { if (!groups[r.topic]) { groups[r.topic] = []; order.push(r.topic); } groups[r.topic].push(r); });
+      order.sort();
+      order.forEach(function (t) { h += (f.topic && order.length === 1 ? '<h2>Rules</h2>' : '<h2>' + esc(nice(t)) + ' · ' + groups[t].length + '</h2>') + groups[t].map(card).join(''); });
+      main.innerHTML = h;
+      main.querySelectorAll('[data-narrow]').forEach(function (s) {
+        s.addEventListener('change', function () { var g = rest(s.getAttribute('data-narrow')); if (s.value) g[s.getAttribute('data-narrow')] = s.value; location.hash = href(g); });
+      });
+    }).catch(fail);
+  }
+  function showNew() {
+    ++seq;
+    needMap().then(function () {
+      main.innerHTML = '<p class="back"><a href="#">‹ Knowledge</a></p><h1>Add a rule</h1><p class="muted">It is your rule from the moment you save it: whoever it is for has it in front of them at their next run.</p>' + form({});
+      var t = main.querySelector('textarea'); if (t) t.focus();
+    }).catch(fail);
+  }
+  function redraw(id) { var el = main.querySelector('.rule[data-id="' + id + '"]'); if (el && RULES[id]) el.outerHTML = card(RULES[id]); }
+  function say(el, text, ok) { var m = el && el.querySelector('.msg'); if (m) { m.textContent = text || ''; m.className = 'msg' + (ok ? ' ok' : ''); } }
+  function saveRule(f) {
+    var id = f.getAttribute('data-form'), isNew = id === 'new', v = function (n) { return (f.elements[n].value || '').trim(); };
+    var topic = v('topic') === '__new' ? v('newtopic') : v('topic'), btn = f.querySelector('button.go');
+    if (!topic) { say(f, 'Pick the subject it is filed under.'); return; }
+    btn.disabled = true; say(f, 'Saving…', true);
+    call('office_knowledge_rule', { p_id: isNew ? null : id, p_action: isNew ? 'add' : 'save', p_rule: v('rule'), p_when: v('when'), p_who: v('who'), p_topic: topic, p_sheet: v('sheet') || null, p_scope: v('scope') || 'general' })
+      .then(function (d) {
+        if (!d.saved) { btn.disabled = false; say(f, d.why || 'Not saved. Try again.'); return; }
+        if (isNew) { location.hash = href({ mine: '1' }); return; }
+        var r = RULES[id];
+        r.rule = v('rule'); r.applies_when = v('when'); r.who = v('who'); r.topic = topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); r.sheet = v('sheet') || null; r.scope = v('scope') || 'general';
+        r.said = 'Saved. The team has it at their next run.';
+        redraw(id);
+        needMap(true).catch(function () {});                 // a new subject is on the map, and in the next form, at once
+      }).catch(function (err) { btn.disabled = false; if (err.message !== 'signed out') say(f, 'Not saved (' + err.message + '). Your words are still here.'); });
+  }
+  function act(id, what, el) {
+    say(el, what === 'retire' ? 'Retiring…' : 'Putting it in use…', true);
+    call('office_knowledge_rule', { p_id: id, p_action: what }).then(function (d) {
+      var r = RULES[id]; if (!r) return;
+      if (!d.saved) { say(el, d.why || 'Not done. Try again.'); var b = el.querySelector('[data-do]'); if (b) b.disabled = false; return; }
+      if (what === 'retire') { r.status = 'superseded'; r.said = 'Retired. The team stops using it at their next run.'; }
+      else { r.status = 'active'; r.said = 'In use again.'; }
+      redraw(id);
+    }).catch(function (err) { if (err.message !== 'signed out') say(el, 'Not done (' + err.message + ').'); });
+  }
+
+  // ---- one page, a part at a time ----
+  function split(body) {
+    var starts = [0], re = /^#{1,3} .*$/gm, m;
+    while ((m = re.exec(body))) if (m.index > 0) starts.push(m.index);
+    return starts.map(function (s, i) { return body.slice(s, i + 1 < starts.length ? starts[i + 1] : body.length); }).filter(function (p) { return p.length; });
+  }
+  // the end of a part that is kept as it is: blank lines, and the line of dashes before the earlier notes
+  function tail(raw) { return (/(\s*\n---[ \t]*\s*|\s*)$/.exec(raw) || [''])[0]; }
+  function fmt(text) {
+    // the pages are written with a line break every 115 characters or so: a paragraph is joined back up so it wraps to
+    // the screen; a blank line, a list item, a table row, a heading or a quote still starts on its own line
+    return esc(text.replace(/\n(?![ \t]*(\n|[-*] |\d+\. |\||#|>|```))[ \t]*/g, ' '))
+      .replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>').replace(/`([^`\n]+)`/g, '<code>$1</code>');
+  }
+  var EARLIER = '## Earlier notes on the same subject';
+  function partHtml(raw, i) {
+    var shown = raw.slice(0, raw.length - tail(raw).length), m = /^(#{1,3}) (.*)(\n|$)/.exec(shown), h = '';
+    if (m && m[0].indexOf(EARLIER) === 0) h += '<p class="cut">From here down are the earlier notes. The team looks them up when the working standard above is silent; they are not printed in front of anyone.</p>';
+    h += '<div class="part" data-part="' + i + '">';
+    if (m) h += '<h3 class="l' + m[1].length + '">' + fmt(m[2]) + '</h3>';
+    var text = (m ? shown.slice(m[0].length) : shown).replace(/^\n+/, '');
+    if (text) h += '<div class="x">' + fmt(text) + '</div>';
+    return h + '<div class="acts"><button class="text" type="button" data-part-edit>Edit this part</button><span class="msg" role="status"></span></div></div>';
+  }
+  function drawPage(note) {
+    var p = PAGE, af = (p.always_for || []).map(function (w) { return WHO[w] || w; });
+    p.parts = split(p.body);
+    main.innerHTML = '<p class="back"><a href="#">‹ Knowledge</a></p>' +
+      '<p class="muted">' + (af.length ? 'The working standard at the top of this page is printed in front of ' + names(af) + ' at every run.' : 'The team reads this page when it is needed.') +
+      (p.updated_at ? ' Last changed ' + day(p.updated_at) + '.' : '') + '</p>' + (note ? '<p class="msg">' + esc(note) + '</p>' : '') +
+      p.parts.map(partHtml).join('');
+  }
+  function showPage(slug) {
+    var mine = ++seq;
+    main.innerHTML = '<p class="back"><a href="#">‹ Knowledge</a></p><p class="muted">Loading…</p>';
+    call('office_knowledge_page', { p_slug: slug }).then(function (d) {
+      if (mine !== seq) return;
+      if (!d.page) { main.innerHTML = '<p class="back"><a href="#">‹ Knowledge</a></p><p class="muted">There is no such page.</p>'; return; }
+      PAGE = d.page; drawPage();
+    }).catch(fail);
+  }
+  function editPart(el) {
+    var i = +el.getAttribute('data-part'), raw = PAGE.parts[i], shown = raw.slice(0, raw.length - tail(raw).length);
+    el.innerHTML = '<form class="edit" data-part-form="' + i + '"><label>This part, as it is written<textarea name="text" rows="8">' + esc(shown) + '</textarea></label>' +
+      '<div class="bar"><button class="go" type="submit">Save</button><button class="text" type="button" data-part-cancel>Cancel</button><span class="msg" role="status"></span></div></form>';
+    var t = el.querySelector('textarea'); grow(t); t.focus();
+  }
+  function savePart(f) {
+    var i = +f.getAttribute('data-part-form'), raw = PAGE.parts[i], btn = f.querySelector('button.go');
+    var text = f.elements.text.value.replace(/\s+$/, ''), next = text ? text + tail(raw) : (/---/.test(tail(raw)) ? tail(raw) : '');
+    if (next === raw) { drawPage(); return; }
+    btn.disabled = true; say(f, 'Saving…', true);
+    var y = window.scrollY;
+    call('office_knowledge_page_save', { p_slug: PAGE.slug, p_old: raw, p_new: next }).then(function (d) {
+      if (d.body) PAGE.body = d.body;
+      if (d.saved) { PAGE.updated_at = new Date().toISOString(); drawPage(); window.scrollTo(0, y); return; }
+      if (d.changed) { drawPage(d.why); window.scrollTo(0, 0); return; }
+      btn.disabled = false; say(f, d.why || 'Not saved. Try again.');
+    }).catch(function (err) { btn.disabled = false; if (err.message !== 'signed out') say(f, 'Not saved (' + err.message + '). Your words are still here.'); });
+  }
+
+  // ---- what is on the page follows the address, so Back works ----
+  function route() {
+    var h = (location.hash || '').replace(/^#/, '');
+    try { h = decodeURIComponent(h); } catch (e) {}
+    window.scrollTo(0, 0);
+    if (h.indexOf('p/') === 0) { showPage(h.slice(2)); return; }
+    if (h === 'new') { showNew(); return; }
+    if (h.indexOf('r?') === 0) {
+      var f = {}; new URLSearchParams((location.hash || '').replace(/^#r\?/, '')).forEach(function (v, k) { f[k] = v; });
+      $('q').value = f.q || ''; showList(f); return;
+    }
+    $('q').value = ''; showMap();
+  }
+  if (!CFG) { gate('This page works on plansman.ai.'); return; }
+  try { token = localStorage.getItem(TOKEN_KEY); } catch (e) {}
+  if (!token) { gate('<a href="./">Open the dashboard</a> and sign in, then come back.'); return; }
+  $('wrap').hidden = false;
+  $('find').addEventListener('submit', function (e) { e.preventDefault(); var q = $('q').value.trim(); $('q').blur(); location.hash = q ? href({ q: q }) : ''; });
+  main.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button') : null; if (!b) return;
+    var rule = b.closest('.rule'), part = b.closest('.part');
+    if (b.hasAttribute('data-edit') && rule) { rule.innerHTML = form(RULES[rule.getAttribute('data-id')]); grow(rule.querySelector('textarea')); return; }
+    if (b.hasAttribute('data-do') && rule) { b.disabled = true; act(rule.getAttribute('data-id'), b.getAttribute('data-do'), rule); return; }
+    if (b.hasAttribute('data-cancel')) { if (rule) redraw(rule.getAttribute('data-id')); else history.back(); return; }
+    if (b.hasAttribute('data-part-edit') && part) { editPart(part); return; }
+    if (b.hasAttribute('data-part-cancel')) { var y = window.scrollY; drawPage(); window.scrollTo(0, y); }
+  });
+  main.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var f = e.target;
+    if (f.hasAttribute('data-form')) saveRule(f); else if (f.hasAttribute('data-part-form')) savePart(f);
+  });
+  main.addEventListener('change', function (e) {
+    var t = e.target; if (t.name !== 'topic') return;
+    var box = t.closest('form').querySelector('[data-newsub]'); box.hidden = t.value !== '__new'; if (!box.hidden) box.querySelector('input').focus();
+  });
+  main.addEventListener('input', function (e) { if (e.target.tagName === 'TEXTAREA') grow(e.target); });
+  window.addEventListener('hashchange', route);
+  route();
+  // a new build of the page takes over by itself, but never while he is writing
+  setInterval(function () {
+    if (document.hidden || main.querySelector('form.edit')) return;
+    fetch('version.json?' + Date.now()).then(function (r) { return r.json(); }).then(function (v) { if (v && v.build && v.build !== window.BUILD) location.reload(); }).catch(function () {});
+  }, 60000);
+})();
+</script>
+</body>
+
+</html>

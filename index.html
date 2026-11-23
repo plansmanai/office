@@ -392,7 +392,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   #detail { grid-column: 3; grid-row: 2 / 6; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin-top: 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261122-224236";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261123-075653";</script>
 </head>
 <body>
 
@@ -411,7 +411,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     <div class="brand"><a href="#queue" aria-label="Plansman: back to the queue"><b>Plansman</b></a><span id="read"></span></div>
     <div id="notice" hidden></div>
     <div id="notify" hidden></div>
-    <nav class="nav" aria-label="Views"><a href="#chat" id="nav-chat">Chat<i id="chat-dot" hidden></i></a><a href="#queue" id="nav-queue">Queue</a><a href="#projects" id="nav-projects">All projects</a></nav>
+    <nav class="nav" aria-label="Views"><a href="#chat" id="nav-chat">Chat<i id="chat-dot" hidden></i></a><a href="#queue" id="nav-queue">Queue</a><a href="#projects" id="nav-projects">All projects</a><a href="knowledge.html" id="nav-know">Knowledge</a></nav>
     <div id="chatview" hidden>
       <div class="chat" id="chatlog"></div>
       <form id="ask" hidden>
@@ -1873,6 +1873,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     P.forEach(function (p) { BY[p.no] = p; });
     $('read').textContent = readLine;
     $('notice').hidden = !data.notice; $('notice').textContent = data.notice || '';
+    $('nav-know').hidden = !CFG;                       // the Knowledge page (app/knowledge.html, db/066) reads the live record, so it is on plansman.ai only
     drawFoot = function () {
       $('foot').innerHTML = CFG ? 'Jake changes the schedule only when you tell him to. Nothing goes out until you tap Send. <button class="text" id="pw" type="button">Change password</button> · <button class="text" id="out" type="button">Sign out</button>' +
           // He changes his password himself: his current one, the new one twice. It is checked and kept (as a one-way hash)
