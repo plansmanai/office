@@ -5,12 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light only">
-<title>Plansman Knowledge</title>
+<title>Plansman Admin</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png"><link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&display=swap">
 <style>
-/* The Knowledge page (db/066). Lance, 23 Nov 2026: "Is the team's knowledge base or learned rules or whatever available
+/* The Admin page. Lance, 23 Nov 2026, drawing a box at the right of the dashboard's tabs: "Make an area here that takes
+   me to an admin page. That has the log out, the password change, and this inside of it like a settings section"
+   ("this" is the Knowledge page). So this one page is Admin: its front lists the settings (Knowledge, Password, Sign
+   out), and Knowledge opens inside it. A new setting is a new section on the front, never a link on the dashboard.
+
+   Knowledge (db/066). Lance, 23 Nov 2026: "Is the team's knowledge base or learned rules or whatever available
    to me to view? I'd like to see it and be able to edit it myself. Could it be a page on P4 that I open and change there?"
    The whole base, opened the way it is filed (core/lessons.py structure): who it is for, subject, kind of drawing sheet,
    city and the other scopes, and the pages. What he changes here is his word and counts at once; nothing is deleted.
@@ -76,15 +81,20 @@ form.edit label > * { margin-top: 5px; text-transform: none; letter-spacing: 0; 
 .part .acts { margin-top: 10px; }
 .cut { margin: 26px 0 0; padding: 10px 12px; background: var(--soft); color: var(--muted); font-size: 13.5px; }
 code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size: .9em; background: var(--soft); padding: 0 3px; }
+.set { padding: 14px 0 4px; }
+.set p { margin: 0 0 10px; }
+.offscreen { position: absolute !important; left: -9999px; width: 1px !important; height: 1px; opacity: 0; }
+#pwform { display: grid; gap: 8px; margin-top: 4px; max-width: 360px; }
+#pwform .bar { margin-top: 6px; }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-075653";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-080132";</script>
 </head>
 <body>
 <div id="gate" hidden></div>
 <div id="wrap" hidden>
   <header>
-    <div class="brand"><a href="./" aria-label="Plansman: back to the dashboard"><b>Plansman</b></a><span>Knowledge</span></div>
-    <form id="find" role="search"><input id="q" type="search" placeholder="Search the rules and pages" aria-label="Search the rules and pages" autocomplete="off"></form>
+    <div class="brand"><a href="./" aria-label="Plansman: back to the dashboard"><b>Plansman</b></a><span><a href="#">Admin</a></span></div>
+    <form id="find" role="search" hidden><input id="q" type="search" placeholder="Search the rules and pages" aria-label="Search the rules and pages" autocomplete="off"></form>
   </header>
   <main id="main"></main>
   <datalist id="scopes"></datalist>
@@ -134,7 +144,43 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
     });
   }
 
-  // ---- the map: what the base holds, the way it is filed ----
+  // ---- the front of Admin: the settings, one section each ----
+  var pw = { open: false, msg: '' };
+  function showAdmin() {
+    ++seq;
+    var h = '<p class="back"><a href="./">‹ Dashboard</a></p><h1>Admin</h1>';
+    h += '<h2>Knowledge</h2><ul class="list">' + row('#k', 'The team\'s rules and pages', null, MAP ? MAP.active.toLocaleString('en-US') + ' rules in use and ' + MAP.pages.length + ' pages. Read them, search them, change them.' : 'Read them, search them, change them.') + '</ul>';
+    // He changes his password himself: his current one, the new one twice. It is checked and kept (as a one-way hash)
+    // by the record; this page never keeps it. Changing it signs his other devices out and keeps this one.
+    h += '<h2>Password</h2><div class="set">' + (pw.open
+      ? '<form id="pwform" autocomplete="on"><input class="offscreen" type="text" name="username" autocomplete="username" value="plansman" tabindex="-1" aria-hidden="true" readonly>' +
+        '<input id="pw-cur" type="password" autocomplete="current-password" placeholder="Current password" aria-label="Current password">' +
+        '<input id="pw-new" type="password" autocomplete="new-password" placeholder="New password, at least 8 characters" aria-label="New password">' +
+        '<input id="pw-new2" type="password" autocomplete="new-password" placeholder="New password again" aria-label="New password again">' +
+        '<div class="bar"><button class="go" type="submit">Save</button><button class="text" type="button" id="pw-cancel">Cancel</button></div>' +
+        '<span class="muted" id="pw-msg" role="status">' + esc(pw.msg || 'A few words strung together is strong and easy to remember.') + '</span></form>'
+      : (pw.msg ? '<p class="muted">' + esc(pw.msg) + '</p>' : '') + '<button class="text" type="button" id="pw">Change password</button>') + '</div>';
+    h += '<h2>This device</h2><div class="set"><p class="muted">Signing out here leaves your other devices signed in.</p><button class="text" type="button" id="out">Sign out</button></div>';
+    main.innerHTML = h;
+    if (!MAP) needMap().then(function () { if (!location.hash.replace('#', '') && !pw.open) showAdmin(); }).catch(function () {});
+  }
+  function savePw() {
+    var cur = $('pw-cur').value.trim(), a = $('pw-new').value.trim(), b = $('pw-new2').value.trim(), tell = function (m) { $('pw-msg').textContent = m; };
+    if (!cur || !a) return tell('Fill in your current password and the new one.');
+    if (a !== b) return tell('The two new ones are not the same.');
+    tell('Saving…');
+    rpc('office_set_password', { p_token: token, p_current: cur, p_new: a }).then(function (d) {
+      if (d && d.ok && d.saved) { pw.open = false; pw.msg = 'Password changed. Your other devices are signed out; this one stays signed in.'; showAdmin(); }
+      else tell(d && d.ok ? 'Not changed: ' + (d.why || 'try again') + '.' : 'Signed out. Open the dashboard and sign in again first.');
+    }).catch(function (err) { tell('Not changed (' + err.message + ').'); });
+  }
+  function signOut() {
+    var t = token; token = null;
+    try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
+    rpc('office_logout', { p_token: t }).catch(function () {}).then(function () { location.href = './'; });
+  }
+
+  // ---- Knowledge, the map: what the base holds, the way it is filed ----
   function row(link, text, n, sub) {
     return '<li><a href="' + esc(link) + '"' + (n === 0 ? ' class="none"' : '') + '><div>' + esc(text) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' + (n == null ? '' : '<span>' + n + '</span>') + '</a></li>';
   }
@@ -144,7 +190,7 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
     needMap(true).then(function (m) {
       if (mine !== seq) return;
       var who = {}; m.who.forEach(function (w) { who[w.who] = w.n; });
-      var h = '<div class="top"><p class="muted">' + m.active.toLocaleString('en-US') + ' rules in use and ' + m.pages.length + ' pages. What you change here counts at once, and nothing is deleted.</p>' +
+      var h = '<p class="back"><a href="#">‹ Admin</a></p><h1>Knowledge</h1><div class="top"><p class="muted">' + m.active.toLocaleString('en-US') + ' rules in use and ' + m.pages.length + ' pages. What you change here counts at once, and nothing is deleted.</p>' +
         '<a class="go" href="#new">Add a rule</a></div>';
       h += '<h2>Yours</h2><ul class="list">' + row(href({ mine: '1' }), 'The rules you gave on P4', m.mine, 'Always in front of whoever they are for') + '</ul>';
       h += '<h2>By team member</h2><ul class="list">' + ['everyone', 'jake', 'drew', 'cora'].map(function (w) { return row(href({ who: w }), WHO[w], who[w] || 0); }).join('') + '</ul>';
@@ -165,7 +211,7 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
       main.innerHTML = h;
     }).catch(fail);
   }
-  function fail(err) { if (err && err.message === 'signed out') return; main.innerHTML = '<p class="back"><a href="#">‹ Knowledge</a></p><p class="msg">Could not load (' + esc(err && err.message) + '). <button class="text" type="button" onclick="location.reload()">Try again</button></p>'; }
+  function fail(err) { if (err && err.message === 'signed out') return; main.innerHTML = '<p class="back"><a href="#k">‹ Knowledge</a></p><p class="msg">Could not load (' + esc(err && err.message) + '). <button class="text" type="button" onclick="location.reload()">Try again</button></p>'; }
 
   // ---- a list of rules ----
   function title(f) {
@@ -214,14 +260,14 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
   function grow(t) { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 4, Math.round(window.innerHeight * .7)) + 'px'; }
   function showList(f) {
     var mine = ++seq;
-    main.innerHTML = '<p class="back"><a href="#">‹ Knowledge</a></p><h1>' + esc(title(f)) + '</h1><p class="muted">Loading…</p>';
+    main.innerHTML = '<p class="back"><a href="#k">‹ Knowledge</a></p><h1>' + esc(title(f)) + '</h1><p class="muted">Loading…</p>';
     needMap().then(function () {
       return call('office_knowledge_rules', { p_who: f.who || null, p_topic: f.topic || null, p_sheet: f.sheet || null, p_scope: f.scope || null, p_mine: f.mine === '1',
                                              p_status: f.status || 'active', p_q: f.q || null });
     }).then(function (d) {
       if (mine !== seq) return;
       RULES = {}; d.rules.forEach(function (r) { RULES[r.id] = r; });
-      var h = '<p class="back"><a href="#">‹ Knowledge</a></p><h1>' + esc(title(f)) + '</h1>';
+      var h = '<p class="back"><a href="#k">‹ Knowledge</a></p><h1>' + esc(title(f)) + '</h1>';
       h += '<p class="muted">' + (d.total === 1 ? '1 rule' : d.total.toLocaleString('en-US') + ' rules') +
         (d.total > d.rules.length ? ', the first ' + d.rules.length + ' shown. Narrow it below or search.' : '') +
         (f.status === 'conflict' ? '. When the old knowledge was carried over these disagreed with another rule, so neither is in use. Put the right one in use and retire the other.' : '') + '</p>';
@@ -243,7 +289,7 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
   function showNew() {
     ++seq;
     needMap().then(function () {
-      main.innerHTML = '<p class="back"><a href="#">‹ Knowledge</a></p><h1>Add a rule</h1><p class="muted">It is your rule from the moment you save it: whoever it is for has it in front of them at their next run.</p>' + form({});
+      main.innerHTML = '<p class="back"><a href="#k">‹ Knowledge</a></p><h1>Add a rule</h1><p class="muted">It is your rule from the moment you save it: whoever it is for has it in front of them at their next run.</p>' + form({});
       var t = main.querySelector('textarea'); if (t) t.focus();
     }).catch(fail);
   }
@@ -303,17 +349,17 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
   function drawPage(note) {
     var p = PAGE, af = (p.always_for || []).map(function (w) { return WHO[w] || w; });
     p.parts = split(p.body);
-    main.innerHTML = '<p class="back"><a href="#">‹ Knowledge</a></p>' +
+    main.innerHTML = '<p class="back"><a href="#k">‹ Knowledge</a></p>' +
       '<p class="muted">' + (af.length ? 'The working standard at the top of this page is printed in front of ' + names(af) + ' at every run.' : 'The team reads this page when it is needed.') +
       (p.updated_at ? ' Last changed ' + day(p.updated_at) + '.' : '') + '</p>' + (note ? '<p class="msg">' + esc(note) + '</p>' : '') +
       p.parts.map(partHtml).join('');
   }
   function showPage(slug) {
     var mine = ++seq;
-    main.innerHTML = '<p class="back"><a href="#">‹ Knowledge</a></p><p class="muted">Loading…</p>';
+    main.innerHTML = '<p class="back"><a href="#k">‹ Knowledge</a></p><p class="muted">Loading…</p>';
     call('office_knowledge_page', { p_slug: slug }).then(function (d) {
       if (mine !== seq) return;
-      if (!d.page) { main.innerHTML = '<p class="back"><a href="#">‹ Knowledge</a></p><p class="muted">There is no such page.</p>'; return; }
+      if (!d.page) { main.innerHTML = '<p class="back"><a href="#k">‹ Knowledge</a></p><p class="muted">There is no such page.</p>'; return; }
       PAGE = d.page; drawPage();
     }).catch(fail);
   }
@@ -342,6 +388,8 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
     var h = (location.hash || '').replace(/^#/, '');
     try { h = decodeURIComponent(h); } catch (e) {}
     window.scrollTo(0, 0);
+    $('find').hidden = !h;                                 // the search is Knowledge's; the front of Admin has none
+    if (!h) { showAdmin(); return; }
     if (h.indexOf('p/') === 0) { showPage(h.slice(2)); return; }
     if (h === 'new') { showNew(); return; }
     if (h.indexOf('r?') === 0) {
@@ -354,9 +402,12 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
   try { token = localStorage.getItem(TOKEN_KEY); } catch (e) {}
   if (!token) { gate('<a href="./">Open the dashboard</a> and sign in, then come back.'); return; }
   $('wrap').hidden = false;
-  $('find').addEventListener('submit', function (e) { e.preventDefault(); var q = $('q').value.trim(); $('q').blur(); location.hash = q ? href({ q: q }) : ''; });
+  $('find').addEventListener('submit', function (e) { e.preventDefault(); var q = $('q').value.trim(); $('q').blur(); location.hash = q ? href({ q: q }) : '#k'; });
   main.addEventListener('click', function (e) {
     var b = e.target.closest ? e.target.closest('button') : null; if (!b) return;
+    if (b.id === 'pw') { pw.open = true; pw.msg = ''; showAdmin(); $('pw-cur').focus(); return; }
+    if (b.id === 'pw-cancel') { pw.open = false; pw.msg = ''; showAdmin(); return; }
+    if (b.id === 'out') { b.disabled = true; signOut(); return; }
     var rule = b.closest('.rule'), part = b.closest('.part');
     if (b.hasAttribute('data-edit') && rule) { rule.innerHTML = form(RULES[rule.getAttribute('data-id')]); grow(rule.querySelector('textarea')); return; }
     if (b.hasAttribute('data-do') && rule) { b.disabled = true; act(rule.getAttribute('data-id'), b.getAttribute('data-do'), rule); return; }
@@ -367,7 +418,7 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
   main.addEventListener('submit', function (e) {
     e.preventDefault();
     var f = e.target;
-    if (f.hasAttribute('data-form')) saveRule(f); else if (f.hasAttribute('data-part-form')) savePart(f);
+    if (f.id === 'pwform') savePw(); else if (f.hasAttribute('data-form')) saveRule(f); else if (f.hasAttribute('data-part-form')) savePart(f);
   });
   main.addEventListener('change', function (e) {
     var t = e.target; if (t.name !== 'topic') return;
@@ -378,7 +429,7 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
   route();
   // a new build of the page takes over by itself, but never while he is writing
   setInterval(function () {
-    if (document.hidden || main.querySelector('form.edit')) return;
+    if (document.hidden || main.querySelector('form.edit, #pwform')) return;
     fetch('version.json?' + Date.now()).then(function (r) { return r.json(); }).then(function (v) { if (v && v.build && v.build !== window.BUILD) location.reload(); }).catch(function () {});
   }, 60000);
 })();

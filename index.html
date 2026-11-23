@@ -73,9 +73,6 @@ input:focus, textarea:focus { border-color: var(--ink); outline: none; }
 #login input { width: 100%; padding: 12px; font-size: 18px; letter-spacing: .08em; }
 /* the name a password manager files the password under: in the form, out of sight */
 .offscreen { position: absolute !important; left: -9999px; width: 1px !important; height: 1px; opacity: 0; }
-#pwform { display: grid; gap: 8px; margin-top: 10px; max-width: 340px; }
-#pwform input { width: 100%; padding: 10px 12px; font-size: 16px; }
-#pwform .marks { margin-top: 4px; }
 #login .err { color: var(--long); min-height: 1.4em; font-size: 14px; }
 
 /* list pane */
@@ -118,6 +115,9 @@ input:focus, textarea:focus { border-color: var(--ink); outline: none; }
 .nav { display: flex; gap: 26px; margin-top: 22px; border-bottom: 1px solid var(--rule); }
 .nav a { padding: 8px 0 11px; border-bottom: 1px solid transparent; margin-bottom: -1px; }
 .nav a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--ink); }
+/* Admin sits apart, at the right end of the tabs (Lance's drawing, 23 Nov 2026): it is a page of settings (app/admin.html:
+   Knowledge, password, sign out), not one of the lists. A new setting goes on that page, not here. */
+#nav-admin { margin-left: auto; }
 h2 { margin: 30px 0 0; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; color: var(--ink); }
 h2 .n { background: var(--ink); color: var(--on-ink); font-size: .64rem; letter-spacing: .08em; padding: 2px 7px 1px; font-variant-numeric: tabular-nums; }
 h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform: none; font-size: 13px; color: var(--muted); }
@@ -392,7 +392,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   #detail { grid-column: 3; grid-row: 2 / 6; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin-top: 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261123-075653";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261123-080132";</script>
 </head>
 <body>
 
@@ -411,7 +411,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     <div class="brand"><a href="#queue" aria-label="Plansman: back to the queue"><b>Plansman</b></a><span id="read"></span></div>
     <div id="notice" hidden></div>
     <div id="notify" hidden></div>
-    <nav class="nav" aria-label="Views"><a href="#chat" id="nav-chat">Chat<i id="chat-dot" hidden></i></a><a href="#queue" id="nav-queue">Queue</a><a href="#projects" id="nav-projects">All projects</a><a href="knowledge.html" id="nav-know">Knowledge</a></nav>
+    <nav class="nav" aria-label="Views"><a href="#chat" id="nav-chat">Chat<i id="chat-dot" hidden></i></a><a href="#queue" id="nav-queue">Queue</a><a href="#projects" id="nav-projects">All projects</a><a href="admin.html" id="nav-admin">Admin</a></nav>
     <div id="chatview" hidden>
       <div class="chat" id="chatlog"></div>
       <form id="ask" hidden>
@@ -1873,35 +1873,11 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     P.forEach(function (p) { BY[p.no] = p; });
     $('read').textContent = readLine;
     $('notice').hidden = !data.notice; $('notice').textContent = data.notice || '';
-    $('nav-know').hidden = !CFG;                       // the Knowledge page (app/knowledge.html, db/066) reads the live record, so it is on plansman.ai only
+    $('nav-admin').hidden = !CFG;                      // Admin (app/admin.html) works on the live record, so it is on plansman.ai only
+    // Changing the password and signing out moved to the Admin page (Lance, 23 Nov 2026: "an admin page. That has the
+    // log out, the password change, and this inside of it like a settings section"). The foot is one quiet line now.
     drawFoot = function () {
-      $('foot').innerHTML = CFG ? 'Jake changes the schedule only when you tell him to. Nothing goes out until you tap Send. <button class="text" id="pw" type="button">Change password</button> · <button class="text" id="out" type="button">Sign out</button>' +
-          // He changes his password himself: his current one, the new one twice. It is checked and kept (as a one-way hash)
-          // by the record; this page never keeps it. Changing it signs his other devices out and keeps this one.
-          (state.pwOpen ? '<form id="pwform" autocomplete="on"><input class="offscreen" type="text" name="username" autocomplete="username" value="plansman" tabindex="-1" aria-hidden="true" readonly>' +
-            '<input id="pw-cur" type="password" autocomplete="current-password" placeholder="Current password (your PIN, the first time)" aria-label="Current password">' +
-            '<input id="pw-new" type="password" autocomplete="new-password" placeholder="New password, at least 8 characters" aria-label="New password">' +
-            '<input id="pw-new2" type="password" autocomplete="new-password" placeholder="New password again" aria-label="New password again">' +
-            '<div class="marks"><button class="go" type="submit">Save</button> <button class="text quiet" type="button" id="pw-cancel">Cancel</button></div>' +
-            '<span class="note" id="pw-msg">' + esc(state.pwMsg || 'A few words strung together is strong and easy to remember.') + '</span></form>'
-           : state.pwMsg ? '<p class="note">' + esc(state.pwMsg) + '</p>' : '')
-                                : 'Read-only private preview. Tapping changes nothing.';
-      var foot = $('foot'), again = function () { load(); };
-      if ($('pw')) $('pw').addEventListener('click', function () { state.pwOpen = !state.pwOpen; state.pwMsg = ''; drawFoot(); if (state.pwOpen) $('pw-cur').focus(); });
-      if ($('pw-cancel')) $('pw-cancel').addEventListener('click', function () { state.pwOpen = false; state.pwMsg = ''; drawFoot(); });
-      if ($('pwform')) $('pwform').addEventListener('submit', function (e) {
-        e.preventDefault();
-        var cur = $('pw-cur').value.trim(), a = $('pw-new').value.trim(), b = $('pw-new2').value.trim(), say = function (m) { $('pw-msg').textContent = m; };
-        if (!cur || !a) return say('Fill in your current password and the new one.');
-        if (a !== b) return say('The two new ones are not the same.');
-        say('Saving…');
-        rpc('office_set_password', { p_token: token, p_current: cur, p_new: a }).then(function (d) {
-          if (d && d.ok && d.saved) { state.pwOpen = false; state.pwMsg = 'Password changed. Your other devices are signed out; this one stays signed in.'; drawFoot(); }
-          else say(d && d.ok ? 'Not changed: ' + (d.why || 'try again') + '.' : 'Signed out. Sign in again first.');
-        }).catch(function (err) { say('Not changed (' + err.message + ').'); });
-      });
-      var out = $('out');
-      if (out) out.addEventListener('click', function () { var t = token; token = null; try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} rpc('office_logout', { p_token: t }).catch(function () {}); showLogin(''); });
+      $('foot').textContent = CFG ? 'Jake changes the schedule only when you tell him to. Nothing goes out until you tap Send.' : 'Read-only private preview. Tapping changes nothing.';
     };
     drawFoot();
     $('login').hidden = true; $('shell').hidden = false;
