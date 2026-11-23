@@ -265,6 +265,25 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 @media (hover: hover) { .marks button.text:hover { background: var(--ink); color: var(--on-ink); } }
 .marks button.text.quiet, button.text.quiet { color: var(--muted); border-color: var(--rule); }
 .marks button.go { padding: 8px 16px 7px 17px; font-size: .64rem; }
+/* THE BOX STANDARD (Lance, 23 Nov 2026: "I'd like there to be consistency with these boxed formal questions and my
+   buttons to work through them"). Every box that waits on him is a label line (who, what it is, when), the body, then
+   ONE row of buttons in one order: the black one takes it (button.go), Reply is outlined (button.sec), the gray one
+   turns it down and so is Edit (button.dim). After he acts, one quiet line stays where the box was (.quiet). */
+button.sec, button.dim { font-family: var(--sans); text-transform: uppercase; letter-spacing: .18em; font-weight: 400; font-size: .7rem; background: transparent; padding: 12px 20px; margin: 0; cursor: pointer; }      /* margin: .sec is also the page's section class */
+button.sec { color: var(--ink); border: 1px solid var(--ink); }
+button.dim { color: var(--muted); border: 1px solid var(--rule); }
+@media (hover: hover) { button.sec:hover { background: var(--ink); color: var(--on-ink); } button.dim:hover { color: var(--ink); border-color: var(--ink); } }
+.btns { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.btns button.go, .btns button.sec, .btns button.dim, .btns a.go.drafting { min-height: 42px; }
+.btns a.go.drafting { display: inline-flex; align-items: center; }
+.btns button.go, .btns button.sec, .btns button.dim { padding-left: 16px; padding-right: 16px; }        /* as in Drew's and Cora's windows */
+@media (max-width: 719px) { .btns { gap: 8px; } .btns button.go, .btns button.sec, .btns button.dim { padding-left: 13px; padding-right: 13px; letter-spacing: .14em; } }   /* three across a phone */
+.item .head.top { align-items: center; margin-bottom: 6px; }
+.item .lab { font-family: var(--sans); font-size: .58rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); overflow-wrap: anywhere; }
+.quiet { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; color: var(--muted); font-size: 13.5px; overflow-wrap: anywhere; }
+.quiet button.text { color: var(--ink); padding: 6px 0; }
+.qwhat { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.msg .cleared { margin-top: 0; }
 .cleared { margin-top: 10px; }
 .score h3 { margin-top: 18px; }
 .score .item { padding: 8px 0; }
@@ -392,7 +411,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   #detail { grid-column: 3; grid-row: 2 / 6; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin-top: 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261123-112239";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261123-133252";</script>
 </head>
 <body>
 
@@ -451,7 +470,49 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     return { t: 'due in ' + days + (days === 1 ? ' day' : ' days'), late: false };
   }
   // When a thing in Needs you began: date and time when the record has the time, the date alone when it only has the day.
-  function whenLine(at) { var t = !at ? '' : /^\d{4}-\d\d-\d\d$/.test(at) ? day(at) : stamp(at); return t ? '<div class="when">' + esc(t) + '</div>' : ''; }
+  function whenText(at) { return !at ? '' : /^\d{4}-\d\d-\d\d$/.test(at) ? day(at) : stamp(at); }
+  // THE BOX STANDARD (Lance, 23 Nov 2026: "I'd like there to be consistency with these boxed formal questions and my
+  // buttons to work through them"). Every box that waits on him is built from these few pieces, so they all read alike:
+  //   labLine   the label line: who, what it is, when (the wait bubble at its right end on a job)
+  //   btnRow    ONE row of buttons, always in this order: the black one that takes it, Reply, the gray one that turns it
+  //             down, then Edit. Only these words: Yes / Send / Handled, Reply, No / Drop / Outdated / Not mine, Edit.
+  //   replyBox  what Reply opens INSIDE the item: a text box with Send and Cancel
+  //   quietLine the one line that stays where the box was after he acts, with Undo where the page can already undo it
+  function labLine(text, at, right) { var t = whenText(at); return '<div class="head top"><div class="lab">' + esc(text) + (t ? ' · ' + esc(t) : '') + '</div>' + (right || '') + '</div>'; }
+  function btn(cls, word, attrs) { return '<button class="' + cls + '" type="button" ' + attrs + '>' + word + '</button>'; }
+  function btnRow(list) { list = list.filter(Boolean); return list.length ? '<div class="btns">' + list.join('') + '</div>' : ''; }
+  function replyBtn(key) { return btn('sec', 'Reply', 'data-need-reply="' + esc(key) + '"'); }
+  function replyBox(key, ph, textAttrs, value, sendAttrs, cancelAttrs, under) {
+    return '<div class="answer"><textarea data-box="' + esc(key) + '" ' + textAttrs + ' placeholder="' + esc(ph) + '" aria-label="' + esc(ph) + '">' + esc(value || '') + '</textarea>' + (under || '') +
+      btnRow([btn('go', 'Send', sendAttrs), btn('dim', 'Cancel', cancelAttrs || 'data-need-reply=""')]) + '</div>';
+  }
+  function undoBtn(attrs) { return '<button class="text" type="button" ' + attrs + '>Undo</button>'; }
+  function quietLine(text, at, what, undo) {
+    var t = whenText(at), w = String(what || '');
+    return '<div class="quiet"><span>' + esc(text) + (t ? ' · ' + esc(t) : '') + '</span>' + (undo || '') + '</div>' +
+      (w ? '<div class="qwhat">' + esc(w.length > 160 ? w.slice(0, 160) + '…' : w) + '</div>' : '');      // which thing it was, so five "Handled" lines can be told apart
+  }
+  // QUIET: the quiet lines for what the record does not hand back to this page once it is settled (a question marked
+  // outdated, a rule or a schedule change he said yes or no to, a draft he dropped). Kept while the page is open.
+  // proj: the job whose thread it sits in (none: Chat). item: the email or text it sits inside, when the box was a draft on one.
+  var QUIET = [], OPENED = Date.now();
+  function quiet(proj, text, what, more) {
+    var q = { proj: proj && BY[proj] ? proj : null, at: new Date().toISOString(), text: text, what: what || '' }, k;
+    for (k in (more || {})) q[k] = more[k];
+    QUIET.push(q); return q;
+  }
+  function unquiet(q) { QUIET = QUIET.filter(function (x) { return x !== q; }); }
+  function quietHtml(q) {
+    var a = q.act ? ACTS.filter(function (x) { return x.id === q.act; })[0] : null;      // a schedule change that was written can be undone, as in the record below
+    return quietLine(q.text, q.at, q.what, CFG && a && a.state === 'done' && !a.undone_by ? undoBtn('data-act="undo" data-id="' + a.id + '"') : '');
+  }
+  function quietOn(key) { return QUIET.filter(function (q) { return q.item === key; }).map(function (q) { return '<div class="cleared">' + quietHtml(q) + '</div>'; }).join(''); }
+  // In Chat a draft sits under the answer of Jake's that it came with, so that is where its "Dropped" line stays.
+  function underSaid(q) { return q.inst != null && SAID.some(function (x) { return x.id === q.inst && x.proj_no === 'office'; }); }
+  function quietUnder(x) { return QUIET.filter(function (q) { return q.inst === x.id && !q.item; }).map(function (q) { return '<div class="cleared">' + quietHtml(q) + '</div>'; }).join(''); }
+  function ms(at) { var t = new Date(at).getTime(); return isNaN(t) ? 0 : t; }
+  // finished since this page was opened (and in the last 12 hours): its quiet line stays in view under Pending
+  function sinceOpen(t) { return t >= OPENED - 60000 && t > Date.now() - 12 * 3600000; }
   function ago(days) { return days === 0 ? 'today' : days === 1 ? 'yesterday' : days + ' days ago'; }
   var LANE = { Invoice: 'Invoice', Design: 'Design', Arch: 'Drafting', Engin: 'Engineering', T24: 'Title 24', Consult: 'Consult', Permit: 'Permit' };
   function isMine(t) { return t.who.toLowerCase() === 'lance'; }
@@ -505,7 +566,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   // The queue, by project (Lance, 19 Nov 2026: "i like it being structured by project and then it opens up").
   // "Needs you" is every project with something waiting on him to move it forward, longest wait first:
   // "when i say age i mean wait time for advancement". The things themselves (p.needs, built in app/export.py)
-  // are listed when the project opens. Handled / Not my move take one off (MARKS, table office_item_marks).
+  // are listed when the project opens. Handled / Not mine take one off (MARKS, table office_item_marks).
   var MARKS = {};
   // ASKS: what the team has put to Lance. questions = something only he can answer (it sits on the project as
   // a thing waiting on him until he answers); rules = standing rules proposed by the team, which count only
@@ -542,17 +603,17 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
         DRAFTS.filter(function (d) { return d.instruction_id === x.id && d.state !== 'dropped'; }).map(function (d) { return draftBlock(d); }).join('');
     }).join('');
   }
-  // What he has said to Jake about one item, Jake's answers, and the way to say more. A reply goes to Jake with the
-  // item named and NEVER closes it (22 Nov 2026: a follow-up question typed on "Jake asks" was saved as the answer
-  // and the question vanished). Only a button closes an item, or Jake when the reply plainly settles it.
+  // What he has said to Jake about one item, Jake's answers, and the row of buttons under them. On a to-do, a schedule
+  // change, a rule and a draft, Reply goes to Jake with the item named and does NOT close it: only a button closes
+  // one of those, or Jake when the reply plainly settles it. (On a question, Reply IS his answer and closes it: see
+  // decAsk.) The row is the standard's: black, Reply, gray, Edit.
   function aboutItem(key) { return SAID.filter(function (x) { return (x.body || '').indexOf('[need:' + key + ']') >= 0; }); }
-  function replyRow(key, proj, buttons) {
+  function replyRow(key, proj, black, gray, edit) {
     var h = itemThread(aboutItem(key));
     if (!CFG) return h;
-    if (state.needReply === key) return h + '<div class="answer"><textarea data-need-text="' + esc(key) + '" data-proj="' + esc(proj) + '" placeholder="Ask Jake about this, or tell him what to do" aria-label="Your reply to Jake">' +
-      esc(state.needText[key] || '') + '</textarea><div class="marks"><button class="go" type="button" data-need-send="' + esc(key) + '" data-proj="' + esc(proj) + '">Send to Jake</button> ' +
-      '<button class="text quiet" type="button" data-need-reply="">Cancel</button></div></div>';
-    return h + '<div class="marks">' + (buttons || '') + '<button class="text" type="button" data-need-reply="' + esc(key) + '">Reply</button></div>';
+    if (state.needReply === key) return h + replyBox(key, 'Tell Jake what to do', 'data-need-text="' + esc(key) + '" data-proj="' + esc(proj) + '"', state.needText[key],
+      'data-need-send="' + esc(key) + '" data-proj="' + esc(proj) + '"');
+    return h + btnRow([black, replyBtn(key), gray, edit]);
   }
   function chatItems() {
     var noProj = function (d) { return !d.proj_no || !BY[d.proj_no]; };
@@ -564,7 +625,8 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       .concat(NOTES.map(function (n) { return { at: n.created_at, note: n }; }))
       .concat(DEC.open.filter(noProj).map(function (d) { return { at: d.created_at, dec: d }; }))
       .concat(DEC.recent.filter(noProj).map(function (d) { return { at: d.decided_at, done: d }; }))
-      .concat(ASKS.rules.filter(noProj).map(function (r) { return { at: r.created_at, rule: r }; }));      // a rule waiting for his OK (one from a job is in that job's thread)
+      .concat(ASKS.rules.filter(noProj).map(function (r) { return { at: r.created_at, rule: r }; }))      // a rule waiting for his OK (one from a job is in that job's thread)
+      .concat(QUIET.filter(function (q) { return !q.proj && !q.item && !underSaid(q); }).map(function (q) { return { at: q.at, quiet: q }; }));      // the quiet line where a box of this thread was
     items.sort(function (a, b) { return new Date(a.at) - new Date(b.at); });
     return items;
   }
@@ -585,17 +647,20 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   }
   function chat() {
     var items = chatItems();
-    if (state.chatPending) items = items.filter(chatPending);
+    // Pending also keeps the quiet line of what he has just settled, so a box never vanishes under his thumb
+    if (state.chatPending) items = items.filter(function (it) { return chatPending(it) || it.quiet || (it.done && sinceOpen(ms(it.done.decided_at))) || (it.said && QUIET.some(function (q) { return q.inst === it.said.id; })); });
     var KEEP = 40, earlier = state.chatAll || state.chatPending ? 0 : Math.max(0, items.length - KEEP);
     if (!items.length) return '<p class="empty">' + (state.chatPending ? 'Nothing is pending.' : 'Nothing here yet. Write to Jake below; his news shows here too.') + '</p>';
     return (earlier ? '<button class="text more" id="more-chat" type="button">Show ' + earlier + ' earlier</button>' : '') + items.slice(earlier).map(function (it) {
       if (it.dec) {
         var d = it.dec;
-        return '<div class="msg jake pend"><div class="lbl">' + esc(askName(d)) + ' asks' + ' · ' + esc(stamp(d.created_at)) + '</div>' +
+        // the label line says who and what: "Drew asks", or "Jake did this" for something done and shown to be checked
+        return '<div class="msg jake pend"><div class="lbl">' + esc(askName(d)) + (d.state === 'asked' ? ' asks' : ' did this') + ' · ' + esc(stamp(d.created_at)) + '</div>' +
           (d.state === 'asked' ? '<div class="item"><div class="head"><b>' + esc(d.what) + '</b></div>' + decAsk(d) + '</div>' : decShown(d)) + '</div>';
       }
-      if (it.rule) return '<div class="msg jake pend"><div class="lbl">' + (it.rule.retire_only ? 'A rule to retire' : 'A rule for your OK') + ' · ' + esc(stamp(it.rule.created_at)) + '</div>' + ruleItem(it.rule) + '</div>';
-      if (it.done) return '<div class="msg jake"><div class="lbl">Jake · ' + esc(stamp(it.done.decided_at)) + '</div>' + decRecent(it.done) + '</div>';
+      if (it.rule) return '<div class="msg jake pend"><div class="lbl">' + esc(ruleLabel(it.rule)) + ' · ' + esc(stamp(it.rule.created_at)) + '</div>' + ruleItem(it.rule, true) + '</div>';
+      if (it.done) return '<div class="msg jake">' + decRecent(it.done) + '</div>';      // the quiet line says who and when
+      if (it.quiet) return '<div class="msg jake"><div class="cleared">' + quietHtml(it.quiet) + '</div></div>';
       if (it.note) {
         var n = it.note, p = n.proj_no && BY[n.proj_no];
         return '<div class="msg jake"><div class="lbl">' + esc(cap(n.who || 'jake')) + ' · ' + esc(stamp(n.created_at)) + '</div><div class="txt"><b>' + esc(n.title) + '</b><br>' + para(n.body) + '</div>' +
@@ -607,14 +672,14 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       var x = it.said, wait = chatPending(it);
       var h = '<div class="msg me"><div class="lbl">You · ' + esc(stamp(x.created_at)) + '</div><div class="txt">' + para(tidy(x.body)) + '</div></div>';
       if (x.reply) h += '<div class="msg jake' + (x.state === 'failed' ? ' wait' : '') + (wait ? ' pend' : '') + '"><div class="lbl">Jake' + (x.replied_at ? ' · ' + esc(stamp(x.replied_at)) : '') + '</div><div class="txt">' + para(x.reply) + '</div>' +
-        DRAFTS.filter(function (d) { return d.instruction_id === x.id && d.state !== 'dropped'; }).map(function (d) { return draftBlock(d); }).join('') + '</div>';
+        DRAFTS.filter(function (d) { return d.instruction_id === x.id && d.state !== 'dropped'; }).map(function (d) { return draftBlock(d); }).join('') + quietUnder(x) + '</div>';
       else h += '<div class="msg jake wait"><div class="lbl">Jake</div><div class="txt">' + (x.state === 'working' ? 'Working on it…' : 'Picking it up…') + '</div></div>';
       return h;
     }).join('') + (state.decMsg ? '<p class="note">' + esc(state.decMsg) + '</p>' : '') + (state.ruleMsg ? '<p class="note">' + esc(state.ruleMsg) + '</p>' : '');
   }
-  // ACTS: changes Jake has proposed to the schedule. One is written only after Lance taps Do it (db/012).
+  // ACTS: changes Jake has proposed to the schedule. One is written only after Lance taps Yes (db/012).
   var ACTS = [];
-  // DRAFTS: emails Jake has drafted (db/015). One goes out only after Lance taps Approve on it; he can edit
+  // DRAFTS: emails Jake has drafted (db/015). One goes out only after Lance taps Send on it; he can edit
   // the wording first, or drop it. A draft answering an email that waits on him is shown on that email.
   var DRAFTS = [], PUSHED = null, WAITING = null;      // WAITING: what Drew and Cora have waiting on him, read live with the drafts
   var BLANK = /\[[A-Z][^\]\[a-z]{1,200}\]/g;                  // [FEE]: a fact only he has, left for him to fill
@@ -633,14 +698,23 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   function draftOn(p, key) {
     return DRAFTS.filter(function (d) { return d.proj_no === p.no && d.item_key === key; }).slice(-1)[0] || null;
   }
-  function draftBlock(d, onItem) {
-    var to = (d.to_names || []).join(', '), cc = (d.cc_names || []).join(', ');
+  function draftTitle(d) { return d.channel === 'action' ? d.subject : (d.channel === 'sms' ? 'Draft text to ' : 'Draft email to ') + (d.to_names || []).join(', '); }
+  // The label line of a draft: "Jake drafted · email to Brian · written 23 Nov, 9:02 AM". One that went says what it
+  // was and when it was sent, as before.
+  function draftLabel(d) {
+    var to = (d.to_names || []).join(', '), cc = (d.cc_names || []).join(', '), sent = d.state === 'sent';
+    var what = d.channel === 'action' ? (d.subject || '') + (to ? ' · to ' + to : '')
+      : (d.channel === 'sms' ? (sent ? 'Text' : 'text') : (sent ? 'Email' : 'email')) + ' to ' + to + (cc ? ' · copy to ' + cc : '');
+    return (sent ? '' : cap(d.written_by || 'jake') + ' drafted · ') + what + (sent && d.sent_at ? ' · sent ' + stamp(d.sent_at) : d.created_at ? ' · written ' + stamp(d.created_at) : '');
+  }
+  // own: the draft is a box of its own in a job's thread, so its label line is the box's (with the wait beside it) and
+  // what he has said to Jake about it shows inside it.
+  function draftBlock(d, onItem, own) {
     var open = d.state === 'draft' || d.state === 'failed', editing = open && state.editDraft === d.id, blanks = blanksIn(d.body), files = d.attachments || [], file = d.channel !== 'action' && ATTACH.test(d.body || '') && !files.length;     // a prepared action attaches its own file when it runs: only a plain draft is held for this
+    var key = 'draft:' + d.id, proj = d.proj_no && BY[d.proj_no] ? d.proj_no : 'office';
     // Jake's one line on what he needs from Lance comes first; the subject is not repeated under the email it answers
     var h = (d.note && d.state !== 'sent' ? '<div class="body"><b>Jake: </b>' + esc(d.note) + '</div>' : '') +
-      '<div class="draft mail"><div class="lbl">' + (d.channel === 'action' ? esc(d.subject) + (to ? ' · to ' + esc(to) : '') :
-        (d.channel === 'sms' ? (d.state === 'sent' ? 'Text' : 'Draft text') : (d.state === 'sent' ? 'Email' : 'Draft email')) + ' to ' + esc(to) + (cc ? ' · copy to ' + esc(cc) : '')) +
-        (d.state === 'sent' && d.sent_at ? ' · sent ' + esc(stamp(d.sent_at)) : d.created_at ? ' · written ' + esc(stamp(d.created_at)) : '') + '</div>' +
+      '<div class="draft mail">' + (own ? '' : '<div class="lbl">' + esc(draftLabel(d)) + '</div>') +
       (onItem || d.channel !== 'email' ? '' : '<div class="subj">' + esc(d.subject) + '</div>');
     if (editing) h += '<textarea data-draft-text="' + d.id + '" aria-label="The email text">' + esc(state.draftText[d.id] != null ? state.draftText[d.id] : d.body) + '</textarea>';
     else h += '<div class="txt">' + para(d.body) + '</div>';
@@ -650,12 +724,18 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     else if (d.state === 'sent') h += '<div class="body ok">' + esc(d.result || 'Sent.') + '</div>';
     if (open && !editing && blanks.length) h += '<div class="body note">Fill in ' + esc(blanks.join(', ')) + ' before it can go: tap Edit.</div>';
     if (open && !editing && file) h += '<div class="body note">It says a file is attached, and nothing is. Tell Jake which file to attach, or tap Edit and take that out.</div>';
-    if (CFG && open) h += '<div class="marks">' +
-      (editing || (!blanks.length && !file) ? '<button class="go" type="button" data-draft="approve" data-id="' + d.id + '">Send</button> ' : '') +
-      (editing ? '<button class="text quiet" type="button" data-draft="cancel" data-id="' + d.id + '">Cancel</button>'
-               : (d.channel === 'action' ? '' : '<button class="text" type="button" data-draft="edit" data-id="' + d.id + '">Edit</button> ') + '<button class="text quiet" type="button" data-draft="drop" data-id="' + d.id + '">Drop</button>' +
-                 (d.channel === 'action' ? ' <span class="note">To change it, tell Jake.</span>' : '')) + '</div>';
-    if (CFG && d.state === 'stale') h += '<div class="marks"><button class="text quiet" type="button" data-draft="drop" data-id="' + d.id + '">Clear</button></div>';
+    if (own) h += itemThread(aboutItem(key));
+    // The standard's row: Send, Reply, Drop, Edit. Send keeps its guards (a blank to fill, a file it says is attached).
+    // Reply goes to Jake with the draft named, which is how he has Jake change it; a stale draft has Reply and Drop.
+    if (CFG && (open || d.state === 'stale')) {
+      var send = btn('go', 'Send', 'data-draft="approve" data-id="' + d.id + '"');
+      if (editing) h += btnRow([send, btn('dim', 'Cancel', 'data-draft="cancel" data-id="' + d.id + '"')]);
+      else if (state.needReply === key) h += replyBox(key, 'Tell Jake what to do', 'data-need-text="' + esc(key) + '" data-proj="' + esc(proj) + '"', state.needText[key],
+        'data-need-send="' + esc(key) + '" data-proj="' + esc(proj) + '"');
+      else h += (open && d.channel === 'action' ? '<div class="body note">To change it, tap Reply and tell Jake.</div>' : '') +
+        btnRow([open && !blanks.length && !file ? send : '', replyBtn(key), btn('dim', 'Drop', 'data-draft="drop" data-id="' + d.id + '"'),
+          open && d.channel !== 'action' ? btn('dim', 'Edit', 'data-draft="edit" data-id="' + d.id + '"') : '']);
+    }
     if (state.draftMsg && state.draftMsgId === d.id) h += '<p class="note">' + esc(state.draftMsg) + '</p>';
     return h + '</div>';
   }
@@ -668,7 +748,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var keys = {};
     (p.needs || []).forEach(function (n) { if (!MARKS[n.key]) keys[n.key] = 1; });
     return DRAFTS.filter(function (d) { return d.proj_no === p.no && d.state !== 'sent' && !keys[d.item_key] && !theirs(d); }).map(function (d) {
-      return { key: 'draft:' + d.id, kind: 'draft', draft: d, title: d.channel === 'action' ? d.subject : (d.channel === 'sms' ? 'Draft text to ' : 'Draft email to ') + (d.to_names || []).join(', '), days: daysSince(d.created_at), at: d.created_at };
+      return { key: 'draft:' + d.id, kind: 'draft', draft: d, title: draftTitle(d), days: daysSince(d.created_at), at: d.created_at };
     });
   }
   var CHANGE_LABEL = { phase: 'Phase', due: 'Due date', status: 'Status note' };
@@ -678,9 +758,13 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       return '<div class="body"><b>' + CHANGE_LABEL[k] + ':</b> ' + esc(v.from || '(blank)') + ' <span class="arrow">to</span> <b>' + esc(v.to || '(blank)') + '</b></div>';
     }).join('');
   }
+  // A schedule change waiting for him: Yes writes it, Reply goes to Jake with the change named, No leaves the schedule alone.
+  function actRow(a) {
+    return replyRow('action:' + a.id, a.proj_no, btn('go', 'Yes', 'data-act="approve" data-id="' + a.id + '"'), btn('dim', 'No', 'data-act="cancel" data-id="' + a.id + '"'));
+  }
   function actItem(a) {
     var h = '<div class="item act"><div class="head"><b>Change to the schedule</b><span>' + esc(stamp(a.proposed_at)) + '</span></div>' + actLines(a);
-    if (a.state === 'proposed') h += CFG ? '<div class="marks"><button class="go" type="button" data-act="approve" data-id="' + a.id + '">Do it</button> <button class="text quiet" type="button" data-act="cancel" data-id="' + a.id + '">Cancel</button></div>' : '';
+    if (a.state === 'proposed') h += actRow(a);
     else if (a.state === 'approved') h += '<div class="body note">' + esc(a.result || 'Writing it to the schedule…') + '</div>';
     else if (a.state === 'done') h += '<div class="body ok">' + esc(a.result || 'Changed on the schedule.') + (a.finished_at ? ' ' + esc(stamp(a.finished_at)) : '') +
       (a.undone_by ? ' Undone since.' : (CFG ? ' <button class="text quiet" type="button" data-act="undo" data-id="' + a.id + '">Undo</button>' : '')) + '</div>';
@@ -691,7 +775,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   function cap(w) { return w ? w.charAt(0).toUpperCase() + w.slice(1) : ''; }
   function questionNeeds(p) {
     return ASKS.questions.filter(function (q) { return q.proj_no === p.no && q.state === 'open'; }).map(function (q) {
-      return { key: 'question:' + q.id, kind: 'question', qid: q.id, title: cap(q.agent) + ' asks', detail: q.body, why: q.why, days: daysSince(q.asked_at), at: q.asked_at };
+      return { key: 'question:' + q.id, kind: 'question', qid: q.id, agent: q.agent, title: cap(q.agent) + ' asks', detail: q.body, why: q.why, days: daysSince(q.asked_at), at: q.asked_at };
     });
   }
   function actionNeeds(p) {
@@ -704,38 +788,39 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       return { key: 'decision:' + d.id, kind: 'decision', dec: d, title: 'Jake asks', detail: d.what, days: daysSince(d.created_at), at: d.created_at };
     });
   }
-  // What Jake asks before acting: why, his guess (Yes is one tap), and a box to say something else
+  // A question, whoever asks it (Jake on a job or in Chat, Drew or Cora in Chat): why, the guess, then the standard's
+  // row: Yes (only when there is a guess to say yes to), Reply, Outdated. Reply IS his answer: what he types goes to
+  // whoever asked and closes the box, for Drew and Cora as for Jake (until 23 Nov 2026 a reply on Jake's question went
+  // to Jake as a message and left the box open, and Drew's and Cora's had no Reply at all). The box does not vanish:
+  // "You answered Jake: ..." stays in its place.
   function decAsk(d) {
-    var h = '';
+    var h = '', key = 'decision:' + d.id;
     if (d.why) h += '<div class="body note">' + esc(d.why) + '</div>';
     if (d.guess) h += '<div class="body"><b>' + (d.agent === 'cora' ? 'Her' : 'His') + ' guess: </b>' + esc(d.guess) + '</div>';
-    var btns = (d.guess ? '<button class="go" type="button" data-dec="yes" data-id="' + d.id + '">Yes</button> ' : '') +
-      '<button class="text quiet" type="button" data-dec="outdated" data-id="' + d.id + '">Outdated</button> ';
-    // Drew's or Cora's question that names no job: his Yes goes back to whoever asked. A reply typed here would go to
-    // Jake, so there is no Reply on it.
-    if (theirsDec(d)) return h + (CFG ? '<div class="marks">' + btns + '</div>' : '');
-    h += replyRow('decision:' + d.id, d.proj_no && BY[d.proj_no] ? d.proj_no : 'office', btns);
-    return h;
+    if (!theirsDec(d)) h += itemThread(aboutItem(key));      // what he and Jake said about it before Reply became the answer
+    if (!CFG) return h;
+    if (state.needReply === key) return h + replyBox(key, 'Your answer to ' + askName(d), 'data-dec-text="' + d.id + '" data-dec-send="answer"', state.decText[d.id], 'data-dec="answer" data-id="' + d.id + '"');
+    return h + btnRow([d.guess ? btn('go', 'Yes', 'data-dec="yes" data-id="' + d.id + '"') : '', replyBtn(key), btn('dim', 'Outdated', 'data-dec="outdated" data-id="' + d.id + '"')]);
   }
-  // What Jake did and shows: Right is one tap; Wrong opens a box for what is right
+  // Something done and shown to be checked (the older kind, in Chat): Yes is one tap; Reply opens the box for what it
+  // should be instead; Outdated takes it off without counting for or against.
   function decShown(d) {
-    var h = '<div class="item"><div class="head"><b>' + esc(d.what) + '</b><span>' + esc(stamp(d.created_at)) + '</span></div>' +
+    var h = '<div class="item"><div class="head"><b>' + esc(d.what) + '</b></div>' +
       (d.why ? '<div class="body note">' + esc(d.why) + '</div>' : '');
     if (!CFG) return h + '</div>';
-    // Wrong opens the editor: what he types is the correction (Jake changes it to exactly that); left empty, Jake puts
-    // it back as it was.
-    if (state.decWrong === d.id) h += '<div class="answer"><textarea data-dec-text="' + d.id + '" data-dec-send="wrong-send" placeholder="What should it be? Leave it empty and Jake undoes it." aria-label="What should it be">' + esc(state.decText[d.id] || '') + '</textarea>' +
-      '<div class="marks"><button class="go" type="button" data-dec="wrong-send" data-id="' + d.id + '">Send</button> <button class="text quiet" type="button" data-dec="cancel" data-id="' + d.id + '">Cancel</button></div></div>';
-    else h += '<div class="marks"><button class="text" type="button" data-dec="right" data-id="' + d.id + '">Right</button> <button class="text" type="button" data-dec="wrong" data-id="' + d.id + '">Correct it</button>' +
-      ' <button class="text quiet" type="button" data-dec="outdated" data-id="' + d.id + '">Outdated</button></div>';
+    // What he types is the correction (it is changed to exactly that); left empty, it is put back as it was.
+    if (state.decWrong === d.id) h += replyBox('shown:' + d.id, 'Tell ' + askName(d) + ' what to do instead', 'data-dec-text="' + d.id + '" data-dec-send="wrong-send"', state.decText[d.id],
+      'data-dec="wrong-send" data-id="' + d.id + '"', 'data-dec="cancel" data-id="' + d.id + '"', '<div class="body note">Leave it empty and ' + esc(askName(d)) + ' undoes it.</div>');
+    else h += btnRow([btn('go', 'Yes', 'data-dec="right" data-id="' + d.id + '"'), btn('sec', 'Reply', 'data-dec="wrong" data-id="' + d.id + '"'), btn('dim', 'Outdated', 'data-dec="outdated" data-id="' + d.id + '"')]);
     return h + '</div>';
   }
-  // His last verdicts, quietly: what he said, whether Jake has dealt with it, and what Jake wrote down from it
+  // His last answers, each as the standard's one quiet line ("You said yes to Drew · 23 Nov, 12:21 PM", "You answered
+  // Jake: his words · stamp"); under it, as before: what was asked, whether it has been dealt with, what was written down from it.
   function decRecent(d) {
-    var said = d.state === 'wrong' ? (d.lance_said ? 'You said: ' + d.lance_said.replace(/^Correct it: /, '').replace(/^Undo it\.\s*/, 'Undo it. ') : '') : 'You answered: ' + (d.confirmed ? (d.lance_said || 'Yes') : (d.lance_said || ''));
-    return '<div class="item"><div class="head"><span>' + esc((d.state === 'wrong' ? (/^Correct it:/.test(d.lance_said || '') ? 'Corrected: ' : 'Wrong: ') : askName(d) + ' asked: ') + d.what) + '</span><span>' + esc(stamp(d.decided_at)) + '</span></div>' +
-      (said ? '<div class="body">' + esc(said) + '</div>' : '') +
-      '<div class="body note">' + esc(askName(d)) + (d.handled_at ? ' has dealt with it.' : ' is on it…') + '</div>' +
+    var name = askName(d), words = (d.lance_said || '').replace(/^Correct it: /, '');
+    var line = d.state !== 'wrong' && d.confirmed ? 'You said yes to ' + name : 'You answered ' + name + (words ? ': ' + words : '');
+    return '<div class="item">' + quietLine(line, d.decided_at, name + (d.state === 'wrong' ? ' did: ' : ' asked: ') + d.what) +
+      '<div class="body note">' + esc(name) + (d.handled_at ? ' has dealt with it.' : ' is on it…') + '</div>' +
       (d.learned ? '<div class="body"><b>Learned: </b>' + esc(d.learned) + '</div>' : '') + '</div>';
   }
   // The score: each kind of decision, where it stands today, and how his verdicts on it have gone
@@ -756,13 +841,24 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   }
   // What Drew or Cora is waiting on him for (a check-in to look at, his word to submit or pay, a login): on the list like
   // everything else, with the button that opens that one's window on the job.
+  // The label line of one of theirs, by what it is: "Drew asks", "Drew shows A2.1", "Cora is ready to submit",
+  // "Cora needs a login". (A draft of theirs: "Drew drafted · email to Brian".) It is answered in that one's window,
+  // so the box here has the label, what it is about, and the one button that opens the window.
+  function teamLabel(w) {
+    var name = cap(w.who), k = String(w.key || ''), m = /^(.*? is ready to .+?) and needs your word$/.exec(w.title || '');
+    if (k.indexOf('ask:') === 0) return name + ' asks';
+    if (k.indexOf('login:') === 0) return name + ' needs a login';
+    if (k.indexOf('sheet:') === 0) { var sh = k.split(':').slice(2).join(':'); return name + ' shows ' + (sh && sh !== 'other' ? sh : 'something'); }
+    return m ? m[1] : (w.title || name);
+  }
   function teamNeeds(p) {
     // live when it has been read (so a count goes the moment he has opened the sheet), else as the page's data had it
     return (WAITING ? WAITING.filter(function (w) { return w.proj_no === p.no; }) : ((p.team || {}).waiting || [])).map(function (w) {
-      return { key: 'team:' + w.key, kind: 'team', who: w.who, title: w.title, detail: w.detail || '', days: daysSince(w.since), at: w.since };
+      return { key: 'team:' + w.key, kind: 'team', who: w.who, title: w.title, label: teamLabel(w), detail: w.detail || (String(w.key || '').indexOf('login:') === 0 ? w.title : ''), days: daysSince(w.since), at: w.since };
     }).concat(DRAFTS.filter(function (d) { return d.proj_no === p.no && theirs(d) && d.state !== 'sent' && d.state !== 'approved' && d.state !== 'sending'; }).map(function (d) {
       var what = d.channel === 'action' ? d.subject : (d.channel === 'sms' ? 'a text to ' : 'an email to ') + (d.to_names || []).join(', ');
       return { key: 'team:draft:' + d.id, kind: 'team', who: d.written_by, title: cap(d.written_by) + ' has ' + what + ' for you to send', detail: d.channel === 'email' ? d.subject : '',
+               label: cap(d.written_by) + ' drafted · ' + (d.channel === 'action' ? d.subject : (d.channel === 'sms' ? 'text to ' : 'email to ') + (d.to_names || []).join(', ')),
                days: daysSince(d.created_at), at: d.created_at };
     }));
   }
@@ -811,23 +907,31 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var cleared = group('ours');
     // Texts and voicemails that are about no project (a new caller, a question Jake could not place): shown only
     // when one needs him or has a draft waiting, with the text in its own words and what Jake asks.
+    // The standard's box: the label line says who texted or left a voicemail and when; Handled is the black button;
+    // Reply opens the box that tells Jake what to do with it (it was always open before). Handled leaves its quiet
+    // line here, with Undo, while the page is open.
+    var looseOpen = 0;
     var loose = (DATA.loose_texts || []).map(function (t) {
-      var d = DRAFTS.filter(function (x) { return x.item_key === 'text:' + t.id && x.state !== 'sent'; }).slice(-1)[0];
-      if (!d && !t.needs_lance) return '';
-      if (MARKS['text:' + t.id]) return '';                       // he marked it Handled
+      var tk = 'text:' + t.id, rk = 'loose:' + t.id, mk = MARKS[tk], name = t.who + (t.channel === 'voicemail' ? ' left a voicemail' : ' texted');
+      var d = DRAFTS.filter(function (x) { return x.item_key === tk && x.state !== 'sent'; }).slice(-1)[0];
+      if (mk) return sinceOpen(ms(mk.marked_at)) ? '<div class="cleared">' + quietLine('Handled', mk.marked_at, name, CFG ? undoBtn('data-loose-open="' + esc(t.id) + '"') : '') + '</div>' + quietOn(tk) : '';      // he marked it Handled
+      var dropped = quietOn(tk);                                  // a draft on it that he dropped just now
+      if (!d && !t.needs_lance && !dropped) return '';
+      if (d || t.needs_lance) looseOpen++;
       var n = { kind: 'text', days: t.days };
       // what he told Jake about this text, and Jake's answer, on the text itself
       var talk = itemThread(SAID.filter(function (x) { return x.proj_no === 'office' && (x.body || '').indexOf('[text:' + t.id + ']') >= 0; }));
-      var act = CFG ? '<div class="answer"><textarea data-loose="' + esc(t.id) + '" placeholder="Tell Jake what to do with it: which job, text back, ignore" aria-label="Tell Jake">' + esc(state.loose[t.id] || '') + '</textarea>' +
-        '<div class="marks"><button class="go" type="button" data-loose-send="' + esc(t.id) + '">Send to Jake</button> <button class="text" type="button" data-loose-done="' + esc(t.id) + '">Handled</button></div></div>' : '';
-      return '<div class="item s' + sev(n) + '"><div class="head"><b>' + esc(t.who) + (t.channel === 'voicemail' ? ' left a voicemail' : ' texted') + '</b><span>' + bub(n, 'Reply ' + dtext(t.days)) + '</span></div>' + whenLine(t.when) +
-        (textWords('text:' + t.id) || (t.summary ? '<div class="body">' + esc(t.summary) + '</div>' : '')) +
+      var act = !CFG ? '' : state.needReply === rk
+        ? replyBox(rk, 'Tell Jake what to do', 'data-loose="' + esc(t.id) + '"', state.loose[t.id], 'data-loose-send="' + esc(t.id) + '"')
+        : btnRow([btn('go', 'Handled', 'data-loose-done="' + esc(t.id) + '"'), replyBtn(rk)]);
+      return '<div class="item s' + sev(n) + '">' + labLine(name, t.when, bub(n, 'Reply ' + dtext(t.days))) +
+        (textWords(tk) || (t.summary ? '<div class="body">' + esc(t.summary) + '</div>' : '')) +
         (t.phone ? '<div class="reach">' + phoneLinks(t.phone) + '</div>' : '') +
-        (t.jake && !(d && d.note) ? '<div class="body"><b>Jake: </b>' + esc(t.jake) + '</div>' : '') + (d ? draftBlock(d, true) : '') + talk + act + '</div>';
+        (t.jake && !(d && d.note) ? '<div class="body"><b>Jake: </b>' + esc(t.jake) + '</div>' : '') + (d ? draftBlock(d, true) : '') + dropped + talk + act + '</div>';
     }).filter(Boolean);
-    var looseSec = loose.length ? '<h2>Texts not on a project <span class="n">' + loose.length + '</span><small>Jake could not tie these to a job.</small></h2><div class="sec need loose">' + loose.join('') + '</div>' : '';
+    var looseSec = loose.length ? '<h2>Texts not on a project <span class="n">' + looseOpen + '</span><small>Jake could not tie these to a job.</small></h2><div class="sec need loose">' + loose.join('') + '</div>' : '';
     return looseSec + section('Needs you', '', needRows, dist) +
-      (cleared.length ? section('Nothing open for you', 'In our court. You marked everything handled or not your move.', cleared) : '') +
+      (cleared.length ? section('Nothing open for you', 'In our court. You marked everything handled or not yours.', cleared) : '') +
       section('Waiting on the client', '', group('client')) +
       section('At the city', '', group('city')) +
       section('Approved', '', group('approved')) +
@@ -941,37 +1045,52 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var open = openNeeds(p).filter(function (n) { return n.kind !== 'team'; }), done = (p.needs || []).filter(function (n) { return MARKS[n.key]; });
     var keyOf = function (x) { var m = /\[need:([^\]]+)\]/.exec(x.body || ''); return m ? m[1] : null; };
     var onItem = function (x) { var k = keyOf(x); return !!k && open.some(function (n) { return n.key === k; }); };
-    var ms = function (at) { var t = new Date(at).getTime(); return isNaN(t) ? 0 : t; };
+    // One box, the same for every kind (the box standard, Lance, 23 Nov 2026): the label line (who, what it is, when,
+    // and the wait at its right end), the body, then one row of buttons. A question's label is "Jake asks"; a to-do
+    // from the record is "To do" with its title under it; one of Drew's or Cora's says what it is and opens their window.
     function needHtml(n) {
       if (n.kind === 'rule') return ruleItem(n.rule);
-      var h3 = '<div class="item' + (n.days != null ? ' s' + sev(n) : '') + '"><div class="head"><b>' + esc(n.title) + '</b><span>' + (n.days != null ? bub(n, (isReply(n) ? 'Reply ' : 'Waiting ') + dtext(n.days)) : '') + '</span></div>' + whenLine(n.at || n.since);
+      var ask = n.kind === 'decision' || n.kind === 'question';
+      var todo = !ask && n.kind !== 'action' && n.kind !== 'draft' && n.kind !== 'team';
+      var label = n.kind === 'decision' ? askName(n.dec) + ' asks' : n.kind === 'question' ? cap(n.agent || 'jake') + ' asks' : n.kind === 'action' ? 'Jake wants to change the schedule' :
+        n.kind === 'draft' ? draftLabel(n.draft) : n.kind === 'team' ? n.label : 'To do';
+      var h3 = '<div class="item' + (n.days != null ? ' s' + sev(n) : '') + '">' +
+        labLine(label, n.kind === 'draft' ? '' : (n.at || n.since), n.days != null ? bub(n, (isReply(n) ? 'Reply ' : 'Waiting ') + dtext(n.days)) : '') +      // a draft's label has its own "written" time
+        (todo ? '<div class="head"><b>' + esc(n.title) + '</b></div>' : ask ? '<div class="head"><b>' + esc(n.detail) + '</b></div>' : '');
       var drHere = isMsg(n) ? draftOn(p, n.key) : null;
       var words = textWords(n.kind === 'draft' ? (n.draft || {}).item_key : n.key);
       h3 += words;
       if (n.jake && !(drHere && drHere.note)) h3 += '<div class="body"><b>Jake: </b>' + esc(n.jake) + '</div>';
       if (n.by) h3 += '<div class="body note">Needed by ' + esc(n.by) + '</div>';
       if (words && n.kind === 'text') { /* the text is there in its own words: no summary of it */ }
-      else if (n.detail && n.kind !== 'note' || n.kind === 'note') h3 += '<div class="body' + (n.jake ? ' note' : '') + '">' + esc(n.detail) + (n.snippet ? '<div class="note" style="margin-top:4px">' + esc(n.snippet) + '</div>' : '') + '</div>';
+      else if (!ask && (n.detail && n.kind !== 'note' || n.kind === 'note')) h3 += '<div class="body' + (n.jake ? ' note' : '') + '">' + esc(n.detail) + (n.snippet ? '<div class="note" style="margin-top:4px">' + esc(n.snippet) + '</div>' : '') + '</div>';
       var dr = n.kind === 'draft' ? n.draft : isMsg(n) ? draftOn(p, n.key) : null;
-      if (dr) h3 += draftBlock(dr, isMsg(n));
+      if (dr) h3 += draftBlock(dr, isMsg(n), n.kind === 'draft');      // the draft carries its own row: Send, Reply, Drop, Edit
+      if (isMsg(n)) h3 += quietOn(n.key);                   // a draft on this email or text that he dropped just now
       if (n.kind === 'draft') {
-        h3 += replyRow(n.key, p.no, '');                    // Send / Edit / Drop are on the draft; Reply is how he has Jake change it
+        /* nothing more: the row is on the draft */
       } else if (n.kind === 'action') {
-        h3 += actLines(n.act) + replyRow(n.key, p.no, '<button class="go" type="button" data-act="approve" data-id="' + n.act.id + '">Do it</button> <button class="text quiet" type="button" data-act="cancel" data-id="' + n.act.id + '">Cancel</button> ');
+        h3 += actLines(n.act) + actRow(n.act);
       } else if (n.kind === 'decision') {
         h3 += decAsk(n.dec);
       } else if (n.kind === 'team') {                       // Drew's or Cora's: the thing itself, and the talk about it, is in that one's window
-        h3 += '<div class="marks"><a class="go drafting" href="' + (n.who === 'cora' ? 'permitting' : 'drafting') + '.html#' + encodeURIComponent(p.no) + '" target="' + (n.who === 'cora' ? 'permitting-' : 'drafting-') + esc(p.no) + '">Open ' + (n.who === 'cora' ? 'Cora' : 'Drew') + '</a></div>';
+        h3 += btnRow(['<a class="go drafting" href="' + (n.who === 'cora' ? 'permitting' : 'drafting') + '.html#' + encodeURIComponent(p.no) + '" target="' + (n.who === 'cora' ? 'permitting-' : 'drafting-') + esc(p.no) + '">Open ' + (n.who === 'cora' ? 'Cora' : 'Drew') + '</a>']);
       } else if (n.kind === 'question') {
+        // An older question (table questions): no black button, so Reply comes first. Reply is his answer
+        // (office_answer); Outdated answers it "Outdated: no longer needed." so it stops waiting.
         if (n.why) h3 += '<div class="body note">Waiting on this: ' + esc(n.why) + '</div>';
-        h3 += replyRow(n.key, p.no, '');
+        h3 += itemThread(aboutItem(n.key));
+        if (CFG) h3 += state.needReply === n.key
+          ? replyBox(n.key, 'Your answer to ' + cap(n.agent || 'jake'), 'data-ans="' + n.qid + '"', state.ans[n.qid], 'data-answer="' + n.qid + '"')
+          : btnRow([replyBtn(n.key), btn('dim', 'Outdated', 'data-answer="' + n.qid + '" data-outdated="1"')]);
+        if (state.ansMsg && state.ansId === n.qid) h3 += '<p class="note">' + esc(state.ansMsg) + '</p>';
       } else if (state.pick === n.key && CFG) {
-        h3 += itemThread(aboutItem(n.key)) + '<div class="marks"><span class="note">Waiting on:</span> ' + ['client', 'city', 'team'].map(function (w) {
-          return '<button class="text" type="button" data-mark="not_mine" data-who="' + w + '" data-key="' + esc(n.key) + '">' + w.charAt(0).toUpperCase() + w.slice(1) + '</button>'; }).join(' ') +
-          ' <button class="text quiet" type="button" data-pick="">Cancel</button></div>';
+        // Not mine: whose move it is, the same three choices as before
+        h3 += itemThread(aboutItem(n.key)) + '<div class="btns"><span class="note">Waiting on:</span>' + ['client', 'city', 'team'].map(function (w) {
+          return btn('sec', w.charAt(0).toUpperCase() + w.slice(1), 'data-mark="not_mine" data-who="' + w + '" data-key="' + esc(n.key) + '"'); }).join('') +
+          btn('dim', 'Cancel', 'data-pick=""') + '</div>';
       } else {
-        h3 += replyRow(n.key, p.no, '<button class="text" type="button" data-mark="handled" data-key="' + esc(n.key) + '">Handled</button> ' +
-          '<button class="text" type="button" data-pick="' + esc(n.key) + '">Not my move</button> ');
+        h3 += replyRow(n.key, p.no, btn('go', 'Handled', 'data-mark="handled" data-key="' + esc(n.key) + '"'), btn('dim', 'Not mine', 'data-pick="' + esc(n.key) + '"'));
       }
       return h3 + '</div>';
     }
@@ -997,22 +1116,35 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       if (d.proj_no === p.no && d.state === 'sent' && !theirs(d) && !openKeys[d.item_key] && !SAID.some(function (x) { return x.id === d.instruction_id; })) items.push({ at: ms(d.sent_at), sent: d });
     });
     ASKS.questions.forEach(function (q) { if (q.proj_no === p.no && q.state === 'answered') items.push({ at: ms(q.answered_at), qa: q }); });
+    // the quiet line where a box of this thread was (one for a draft that sat on an email or text is inside that item while it is open)
+    QUIET.forEach(function (q) { if (q.proj === p.no && (!q.item || !open.some(function (n) { return n.key === q.item; }))) items.push({ at: ms(q.at), quiet: q }); });
     items.sort(function (a, b) { return a.at - b.at; });
     // Pending is what waits on him AND what he has just said: a message he sends, and Jake's answer to it, stay in
     // view (22 Nov 2026: he asked Jake to save photos, the message "went away", he asked again and that went too;
     // Jake had answered both, out of sight). Recent means not answered yet, or from the last 12 hours.
     var fresh = Date.now() - 12 * 3600000;
-    var inPending = function (it) { return it.need || (it.said && (!it.said.reply || it.at > fresh || ms(it.said.replied_at) > fresh)); };
+    // And what he has just settled: the box's one quiet line stays in view while the page is open, so nothing vanishes
+    // under his thumb (the box standard, 23 Nov 2026). A draft that went shows on Jake's answer it came from.
+    var inPending = function (it) {
+      if (it.need) return true;
+      if (it.said) return !it.said.reply || it.at > fresh || ms(it.said.replied_at) > fresh ||
+        DRAFTS.some(function (d) { return d.instruction_id === it.said.id && d.proj_no === p.no && d.state === 'sent' && sinceOpen(ms(d.sent_at)); });
+      return sinceOpen(it.at);
+    };
     var all = !!state.jobAll[p.no], shown = all ? items : items.filter(inPending);
     var KEEP = 20, earlier = !all || state.allSaid ? 0 : Math.max(0, shown.length - KEEP);
+    // The finished ones, each as the standard's quiet line: "Handled · stamp" (Undo puts it back), "Sent · stamp",
+    // "You answered Drew: his words · stamp", "Outdated · stamp", with the thing it was in gray under it.
     var thread = shown.slice(earlier).map(function (it) {
       if (it.need) return needHtml(it.need);
       if (it.said) return saidHtml(it.said);
+      if (it.quiet) return '<div class="cleared">' + quietHtml(it.quiet) + '</div>';
       if (it.done) { var m = MARKS[it.done.key];
-        return '<div class="cleared"><div class="item"><div class="head"><span>' + esc(it.done.title) + ': ' + (m.mark === 'handled' ? 'handled' : 'waiting on the ' + m.waiting_on) + (m.marked_at ? ', ' + esc(stamp(m.marked_at)) : '') + '</span>' +
-          (CFG ? '<button class="text" type="button" data-mark="open" data-key="' + esc(it.done.key) + '">Put back</button>' : '') + '</div></div></div>'; }
-      if (it.sent) return '<div class="cleared"><div class="item"><div class="head"><span>' + esc(it.sent.subject) + '</span><span>' + esc(stamp(it.sent.sent_at)) + '</span></div><div class="body ok">' + esc(it.sent.result || 'Sent.') + '</div></div></div>';
-      return '<div class="cleared"><div class="item"><div class="head"><span>' + esc(cap(it.qa.agent)) + ' asked: ' + esc(it.qa.body) + '</span><span>' + esc(stamp(it.qa.answered_at)) + '</span></div><div class="body">You answered: ' + para(it.qa.answer || '') + '</div></div></div>';
+        return '<div class="cleared">' + quietLine(m.mark === 'handled' ? 'Handled' : 'Not mine, waiting on the ' + m.waiting_on, m.marked_at, it.done.title,
+          CFG ? undoBtn('data-mark="open" data-key="' + esc(it.done.key) + '"') : '') + '</div>'; }
+      if (it.sent) return '<div class="cleared">' + quietLine('Sent', it.sent.sent_at, [it.sent.subject, it.sent.result && it.sent.result !== 'Sent.' ? it.sent.result : ''].filter(Boolean).join(' · ')) + '</div>';
+      var gone = /^Outdated:/.test(it.qa.answer || '');
+      return '<div class="cleared">' + quietLine(gone ? 'Outdated' : 'You answered ' + cap(it.qa.agent) + ': ' + (it.qa.answer || ''), it.qa.answered_at, cap(it.qa.agent) + ' asked: ' + it.qa.body) + '</div>';
     }).join('');
     var rest = items.length - items.filter(inPending).length;
     // With nothing waiting on him there is no Pending button: the thread shows what was said lately, and the rest of
@@ -1051,8 +1183,10 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     // The three of them, along the top of the job and always there (Lance, 22 Nov 2026: "buttons along the top that
     // toggle between them that always stay there when inside the project card"). Jake is this page; Drew and Cora are
     // their own windows on the job. Going between them REPLACES the page, so back from any of the three is the list.
+    // Jake has the same count on his name as Drew and Cora have on theirs: the boxes of his that are open in this
+    // thread (what the Pending button counts).
     var bdg = function (n) { return n ? '<i class="badge" aria-label="' + n + ' waiting on you">' + n + '</i>' : ''; };
-    h = h.replace('<!--BAR-->', '<nav class="teambar" aria-label="The team on this job"><span class="on">Jake</span>' +
+    h = h.replace('<!--BAR-->', '<nav class="teambar" aria-label="The team on this job"><span class="on">Jake' + bdg(pendingN) + '</span>' +
       (CFG ? '<a href="drafting.html#' + encodeURIComponent(p.no) + '" data-team="1">Drew' + bdg(theirN.drew) + '</a><a href="permitting.html#' + encodeURIComponent(p.no) + '" data-team="1">Cora' + bdg(theirN.cora) + '</a>'
            : '<span>Drew</span><span>Cora</span>') + '</nav>');
     h = h.replace('<!--TEAM-->', '<div class="sec lead tell">' + talk2 + box + '</div>');
@@ -1176,25 +1310,30 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     return h + '</div>';
   }
 
-  function ruleItem(r) {
+  // Who proposed a rule: the team member who noticed it (learned_from "drew_noticed"), else Jake.
+  function ruleName(r) { var m = /^([a-z]+)_noticed$/.exec(r.learned_from || ''); return m ? cap(m[1]) : 'Jake'; }
+  function ruleLabel(r) { return ruleName(r) + (r.retire_only ? ' proposes removing a rule' : ' proposes a rule'); }
+  // A proposed rule, as the standard's box: the label line ("Jake proposes a rule · stamp"; in Chat the message's own
+  // label is that line, so noLabel), who it is for, the rule, why, then Yes, Reply, No, Edit. While he edits the
+  // wording the row is Yes (which saves his words) and Cancel.
+  function ruleItem(r, noLabel) {
       var said = (r.lance_words || '').length > 260 ? r.lance_words.slice(0, 260) + '…' : (r.lance_words || '');
       var mine = r.learned_from === 'lance_said' || r.learned_from === 'answer';      // his own words, as against a team member's reason
-      var whom = (r.agent ? 'For ' + cap(r.agent) : 'For everyone') + (r.scope && r.scope !== 'general' ? ' · ' + esc(r.scope.replace(':', ': ')) : '');
-      return '<div class="item"><div class="head"><b>' + (r.retire_only ? 'Retire this rule? ' : r.replaces_rule ? 'Replace a rule · ' : '') + esc(whom) + '</b><span>' + esc(stamp(r.created_at)) + '</span></div>' +
+      var whom = (r.agent ? 'For ' + cap(r.agent) : 'For everyone') + (r.scope && r.scope !== 'general' ? ' · ' + r.scope.replace(':', ': ') : '');
+      var editing = state.editRule === r.id, rid = esc(r.id);
+      var yes = btn('go', 'Yes', 'data-rule="approve" data-id="' + rid + '"');
+      return '<div class="item">' + (noLabel ? '' : labLine(ruleLabel(r), r.created_at)) + '<div class="body note">' + esc(whom) + '</div>' +
         (state.editRule === r.id
           ? '<textarea class="ruletext" data-rule-text="' + esc(r.id) + '" aria-label="The rule">' + esc(state.ruleText[r.id] != null ? state.ruleText[r.id] : r.rule) + '</textarea>'
           : '<div class="body rule">' + esc(r.rule) + '</div>') +
         (r.applies_when ? '<div class="body note">When: ' + esc(r.applies_when) + '</div>' : '') +
         (r.replaces_rule && !r.retire_only ? '<div class="body note">It replaces: ' + esc(r.replaces_rule) + '</div>' : '') +
-        (said ? '<div class="body note">' + (mine ? 'From what you said: "' + esc(said) + '"' : (r.retire_only ? 'Why retire it: ' : 'Why: ') + esc(said)) + '</div>' : '') +
+        (said ? '<div class="body note">' + (mine ? 'From what you said: "' + esc(said) + '"' : (r.retire_only ? 'Why remove it: ' : 'Why: ') + esc(said)) + '</div>' : '') +
         // Reply is how he says something else about it (a different rule, a question): it goes to Jake with the rule
         // named and does not decide it (Lance, 22 Nov 2026: "There was no option to change it so I typed a message")
-        replyRow('rule:' + r.id, r.proj_no && BY[r.proj_no] ? r.proj_no : 'office',
-          '<button class="text" type="button" data-rule="approve" data-id="' + esc(r.id) + '">' + (r.retire_only ? 'Retire' : 'Approve') + '</button> ' +
-          (r.retire_only ? '' : state.editRule === r.id
-            ? '<button class="text quiet" type="button" data-rule="cancel" data-id="' + esc(r.id) + '">Cancel</button> '
-            : '<button class="text" type="button" data-rule="edit" data-id="' + esc(r.id) + '">Edit</button> ') +
-          (state.editRule === r.id ? '' : '<button class="text" type="button" data-rule="reject" data-id="' + esc(r.id) + '">' + (r.retire_only ? 'Keep' : 'No') + '</button> ')) + '</div>';
+        (editing ? itemThread(aboutItem('rule:' + r.id)) + (CFG ? btnRow([yes, btn('dim', 'Cancel', 'data-rule="cancel" data-id="' + rid + '"')]) : '')
+                 : replyRow('rule:' + r.id, r.proj_no && BY[r.proj_no] ? r.proj_no : 'office', yes, btn('dim', 'No', 'data-rule="reject" data-id="' + rid + '"'),
+                     r.retire_only ? '' : btn('dim', 'Edit', 'data-rule="edit" data-id="' + rid + '"'))) + '</div>';      // removing a rule has no wording of its own to edit
     }
   function render() {
     var q = state.q.trim().toLowerCase();
@@ -1265,13 +1404,19 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     Array.prototype.forEach.call(document.querySelectorAll('[data-loose-done]'), function (b) {
       b.addEventListener('click', function () { mark('office', 'text:' + b.getAttribute('data-loose-done'), 'handled'); });
     });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-loose-open]'), function (b) {      // Undo on a text he marked Handled
+      b.addEventListener('click', function () { mark('office', 'text:' + b.getAttribute('data-loose-open'), 'open'); });
+    });
     Array.prototype.forEach.call(document.querySelectorAll('[data-dec]'), function (b) {
       b.addEventListener('click', function () { decideDec(b.getAttribute('data-id'), b.getAttribute('data-dec')); });
     });
     Array.prototype.forEach.call(document.querySelectorAll('[data-need-reply]'), function (b) {
       b.addEventListener('click', function () {
         state.needReply = b.getAttribute('data-need-reply') || null; render();
-        var t = state.needReply && document.querySelector('[data-need-text="' + state.needReply + '"]'); if (t) t.focus();
+        // every Reply box carries its item's key (data-box), whichever call its Send makes
+        var t = null;
+        if (state.needReply) Array.prototype.forEach.call(document.querySelectorAll('[data-box]'), function (x) { if (!t && x.getAttribute('data-box') === state.needReply) t = x; });
+        if (t) t.focus();
       });
     });
     Array.prototype.forEach.call(document.querySelectorAll('[data-need-text]'), function (t) {
@@ -1294,7 +1439,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       });
     });
     Array.prototype.forEach.call($('detail').querySelectorAll('[data-answer]'), function (b) {
-      b.addEventListener('click', function () { answerQuestion(+b.getAttribute('data-answer')); });
+      b.addEventListener('click', function () { answerQuestion(+b.getAttribute('data-answer'), b.hasAttribute('data-outdated')); });
     });
     document.body.setAttribute('data-show', p ? 'detail' : 'list');
     if (showChat && state.chatStick && (wide3 || !p)) {      // the newest is at the bottom, by the box
@@ -1496,7 +1641,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       MARKS = {}; (m.marks || []).forEach(function (x) { MARKS[x.item_key] = x; }); if (!typing()) render();
     }).catch(function () {});
   }
-  // Approve (as written, or as he edited it), Edit, Drop. Shown at once; put right again if the save fails.
+  // Send (as written, or as he edited it), Edit, Drop. Shown at once; put right again if the save fails.
   var draftWatch = null;
   function decideDraft(id, what) {
     var d = DRAFTS.filter(function (x) { return x.id === id; })[0];
@@ -1511,12 +1656,20 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       if (left.length) { state.draftMsg = 'Fill in ' + left.join(', ') + ' first.'; render(); return; }
       if (ATTACH.test(editing ? text : d.body) && !(d.attachments || []).length) { state.draftMsg = 'It still says a file is attached, and nothing is.'; render(); return; }
     }
-    var was = { state: d.state, body: d.body, result: d.result };
+    var was = { state: d.state, body: d.body, result: d.result }, gone = null;
     if (what === 'approve') { d.state = 'approved'; d.result = null; if (text) d.body = text; }
-    else { DRAFTS = DRAFTS.filter(function (x) { return x.id !== id; }); }
+    else {
+      // Dropped: its quiet line stays where it was (inside the email or text it sat on, else in the thread)
+      var onLoose = !!d.item_key && (DATA.loose_texts || []).some(function (t) { return 'text:' + t.id === d.item_key; });
+      var onNeed = !!d.item_key && !!BY[d.proj_no] && (BY[d.proj_no].needs || []).some(function (n) { return n.key === d.item_key && isMsg(n) && !MARKS[n.key]; });
+      DRAFTS = DRAFTS.filter(function (x) { return x.id !== id; });
+      gone = quiet(d.proj_no, 'Dropped', draftTitle(d) + (d.channel === 'email' && d.subject ? ': ' + d.subject : ''), { item: onLoose || onNeed ? d.item_key : null, inst: d.instruction_id });
+      if (state.needReply === 'draft:' + id) state.needReply = null;
+    }
     state.editDraft = null; render();
     function back(msg) {
       d.state = was.state; d.body = was.body; d.result = was.result;
+      if (gone) unquiet(gone);
       if (what !== 'approve') DRAFTS.push(d);
       if (text != null) state.editDraft = id;
       state.draftMsg = msg; render();
@@ -1534,14 +1687,20 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       }
     }).catch(function (e) { back('Not saved (' + e.message + '). Your text is still here.'); });
   }
-  // Undo on a schedule change that was written (and Do it / Cancel, kept for a change Jake did not make
-  // on Lance's word). Then watch until the worker reports done or failed.
+  // Undo on a schedule change that was written (and Yes / No, kept for a change Jake did not make
+  // on Lance's word). Then watch until the worker reports done or failed. Yes and No leave their quiet line in the
+  // job's thread; the one for Yes gets Undo once the change is written.
   var actWatch = null;
   function decideAct(id, decision) {
     state.actMsg = '';
     rpc('office_act', { p_token: token, p_id: id, p_decision: decision }).then(function (d) {
       if (d && d.ok && d.saved) {
-        if (decision !== 'undo') ACTS.forEach(function (a) { if (a.id === id) { a.state = decision === 'approve' ? 'approved' : 'cancelled'; a.decided_at = new Date().toISOString(); } });
+        if (decision !== 'undo') ACTS.forEach(function (a) {
+          if (a.id !== id) return;
+          a.state = decision === 'approve' ? 'approved' : 'cancelled'; a.decided_at = new Date().toISOString();
+          quiet(a.proj_no, decision === 'approve' ? 'You said yes to Jake' : 'You said no', a.summary || 'Change to the schedule', decision === 'approve' ? { act: id } : null);
+          if (state.needReply === 'action:' + id) state.needReply = null;
+        });
         if (decision === 'undo') { ACTS.forEach(function (a) { if (a.id === id) a.undone_by = -1; }); loadActs(); }
         if (decision !== 'cancel' && !actWatch) {
           var until = Date.now() + 4 * 60 * 1000;
@@ -1648,8 +1807,11 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       if (JSON.stringify(DEC) !== before && !typing()) render();
     }).catch(function () {});
   }
-  // Right / Wrong on what Jake did, Yes / an answer on what he asked: shown at once, put back if the save fails.
-  // verb: right, wrong (opens the box), wrong-send, cancel, yes, answer, allright (id is then the project number)
+  // Yes / Reply / Outdated on a question (his reply is the answer: verdict 'answer' with his words), and on something
+  // done and shown (Yes is 'right', Reply is 'wrong' with his words): shown at once, put back if the save fails. The
+  // box becomes its quiet line: an answer joins the finished answers (DEC.recent), which Chat shows in the thread; on
+  // a job, and for Yes on a shown one and Outdated (which the record does not hand back), the line is kept in QUIET.
+  // verb: right, wrong (opens the box), wrong-send, cancel, yes, answer, outdated, allright (id is then the project number)
   function decideDec(id, verb) {
     if (verb === 'wrong' || verb === 'correct') {
       state.decWrong = +id; state.decMode = verb; state.decMsg = ''; render();
@@ -1665,27 +1827,33 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     if (verdict === 'answer' && !text) { state.decMsg = 'Type your answer first.'; render(); return; }
     if (verdict === 'wrong') text = text ? 'Correct it: ' + text : 'Undo it.';
     if (!ids.length) return;
-    var before = DEC.open.slice(), beforeRecent = DEC.recent.slice(), now = new Date().toISOString();
+    var before = DEC.open.slice(), beforeRecent = DEC.recent.slice(), now = new Date().toISOString(), lines = [], wasReply = state.needReply;
     DEC.open = before.filter(function (d) { return ids.indexOf(d.id) < 0; });
-    if (verdict !== 'right' && verdict !== 'outdated') before.forEach(function (d) {
-      if (ids.indexOf(d.id) >= 0) DEC.recent = [{ id: d.id, proj_no: d.proj_no, title: d.title, what: d.what, state: verdict === 'wrong' ? 'wrong' : 'answered',
+    before.forEach(function (d) {
+      if (ids.indexOf(d.id) < 0) return;
+      var name = askName(d), onJob = !!(d.proj_no && BY[d.proj_no]);
+      if (verdict !== 'right' && verdict !== 'outdated') DEC.recent = [{ id: d.id, proj_no: d.proj_no, title: d.title, what: d.what, agent: d.agent, state: verdict === 'wrong' ? 'wrong' : 'answered',
         confirmed: verdict === 'yes', lance_said: verdict === 'yes' ? '' : text, decided_at: now }].concat(DEC.recent);
+      if (verdict === 'right' || verdict === 'outdated' || onJob) lines.push(quiet(d.proj_no,
+        verdict === 'outdated' ? 'Outdated' : verdict === 'yes' || verdict === 'right' ? 'You said yes to ' + name : 'You answered ' + name + ': ' + text.replace(/^Correct it: /, ''),
+        name + (d.state === 'shown' ? ' did: ' : ' asked: ') + d.what));
     });
+    var back = function (msg) {
+      DEC.open = before; DEC.recent = beforeRecent; lines.forEach(unquiet); state.needReply = wasReply; if (verdict === 'wrong') state.decWrong = +id;
+      state.decMsg = msg; render();
+    };
+    if (state.needReply === 'decision:' + id) state.needReply = null;
     state.decWrong = null; state.decMsg = ''; render();
     Promise.all(ids.map(function (i) { return rpc('office_decide', { p_token: token, p_id: i, p_verdict: verdict, p_text: text || null }); })).then(function (rs) {
       var bad = rs.filter(function (d) { return !(d && d.ok && d.saved); })[0];
       if (!bad) { delete state.decText[id]; setTimeout(loadDecisions, 45000); return; }
-      DEC.open = before; DEC.recent = beforeRecent; if (verdict === 'wrong') state.decWrong = +id;
-      state.decMsg = bad && bad.ok ? 'Not saved: ' + (bad.why || 'try again') + '.' : 'Signed out. Reload and sign in.'; render();
+      back(bad && bad.ok ? 'Not saved: ' + (bad.why || 'try again') + '.' : 'Signed out. Reload and sign in.');
       if (ids.length > 1) loadDecisions();
-    }).catch(function (e) {
-      DEC.open = before; DEC.recent = beforeRecent; if (verdict === 'wrong') state.decWrong = +id;
-      state.decMsg = 'Not saved (' + e.message + ').'; render();
-    });
+    }).catch(function (e) { back('Not saved (' + e.message + ').'); });
   }
-  // Approve or refuse a proposed rule: shown at once, put back if the save fails
+  // Yes or No on a proposed rule: shown at once, put back if the save fails
   function decideRule(id, decision) {
-    // Edit: the rule's own words become typeable where they are; Approve then saves his wording
+    // Edit: the rule's own words become typeable where they are; Yes then saves his wording
     if (decision === 'edit') {
       var r0 = ASKS.rules.filter(function (r) { return r.id === id; })[0];
       state.editRule = id; if (r0 && state.ruleText[id] == null) state.ruleText[id] = r0.rule; render();
@@ -1696,30 +1864,44 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var mine = state.editRule === id && decision === 'approve' ? (state.ruleText[id] || '').trim() : null;
     if (state.editRule === id && decision === 'approve' && !mine) { state.ruleMsg = 'The rule is empty.'; render(); return; }
     state.editRule = null;
-    var before = ASKS.rules.slice();
+    var before = ASKS.rules.slice(), r1 = before.filter(function (r) { return r.id === id; })[0], wasReply = state.needReply;
     ASKS.rules = ASKS.rules.filter(function (r) { return r.id !== id; });
+    // the box becomes its quiet line, in the thread it was in: "You said yes to Jake · stamp" or "You said no · stamp"
+    var line = r1 ? quiet(r1.proj_no, decision === 'approve' ? 'You said yes to ' + ruleName(r1) : 'You said no', (r1.retire_only ? 'Remove the rule: ' : 'Rule: ') + (mine || r1.rule)) : null;
+    if (state.needReply === 'rule:' + id) state.needReply = null;
     state.ruleMsg = ''; render();
+    var back = function (msg) { ASKS.rules = before; if (line) unquiet(line); state.needReply = wasReply; state.ruleMsg = msg; render(); };
     rpc('office_rule', { p_token: token, p_id: id, p_decision: decision, p_text: mine }).then(function (d) {
-      if (d && d.ok && d.saved) { delete state.ruleText[id]; state.ruleMsg = decision === 'approve' ? (mine ? 'Approved in your words. The team follows it from the next job.' : 'Approved. The team follows it from the next job.') : 'Refused. It will not be used.'; render(); return; }
+      if (d && d.ok && d.saved) {
+        delete state.ruleText[id];
+        state.ruleMsg = decision !== 'approve' ? (r1 && r1.retire_only ? 'The rule stays as it is.' : 'It will not be used.') : r1 && r1.retire_only ? 'The team stops using it from the next job.' : (mine ? 'Saved in your words. ' : '') + 'The team follows it from the next job.';
+        render(); return;
+      }
       if (mine) { state.editRule = id; }
-      ASKS.rules = before; state.ruleMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and sign in.'; render();
-    }).catch(function (e) { ASKS.rules = before; state.ruleMsg = 'Not saved (' + e.message + ').'; render(); });
+      back(d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and sign in.');
+    }).catch(function (e) { back('Not saved (' + e.message + ').'); });
   }
-  function answerQuestion(qid) {
-    var text = (state.ans[qid] || '').trim();
+  // An older question (table questions): Reply sends his words as the answer; Outdated answers it "Outdated: no longer
+  // needed." so it stops waiting. Either way it becomes its quiet line in the job's thread (an answered question).
+  function answerQuestion(qid, outdated) {
+    var text = outdated ? 'Outdated: no longer needed.' : (state.ans[qid] || '').trim();
     if (!text) return;
+    state.ansId = qid; state.ansMsg = '';
     rpc('office_answer', { p_token: token, p_id: qid, p_text: text }).then(function (d) {
       if (d && d.ok && d.saved) {
         ASKS.questions.forEach(function (q) { if (q.id === qid) { q.state = 'answered'; q.answer = text; q.answered_at = new Date().toISOString(); } });
+        if (state.needReply === 'question:' + qid) state.needReply = null;
         delete state.ans[qid]; state.ansMsg = ''; setTimeout(loadAsks, 45000);
       } else { state.ansMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and sign in; your answer is still here.'; }
       render();
     }).catch(function (e) { state.ansMsg = 'Not saved (' + e.message + '). Your answer is still here.'; render(); });
   }
-  // Handled / Not my move / Put back: shown at once, saved to the record; put right again if the save fails
+  // Handled / Not mine / Undo (put it back): shown at once, saved to the record; put right again if the save fails.
+  // The box becomes its quiet line ("Handled · stamp", with Undo) in the job's thread, or on the Queue for a loose text.
   function mark(no, key, what, who) {
     var before = MARKS[key];
     if (what === 'open') delete MARKS[key]; else MARKS[key] = { mark: what, waiting_on: who || null, marked_at: new Date().toISOString() };
+    if (state.needReply === key || state.needReply === key.replace(/^text:/, 'loose:')) state.needReply = null;
     state.pick = null; state.markMsg = ''; render();
     rpc('office_mark', { p_token: token, p_proj: no, p_key: key, p_mark: what, p_who: who || null }).then(function (d) {
       if (d && d.ok && d.saved) return;
@@ -1828,6 +2010,12 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       var r = ASKS.rules.filter(function (x) { return 'rule:' + x.id === key; })[0];
       if (!r) return;
       about = 'About the rule waiting for my OK [need:' + key + '] (' + (r.retire_only ? 'you proposed retiring it' : 'you proposed it') + '): "' + r.rule + '".';
+    } else if (key.indexOf('draft:') === 0) {
+      // Reply on a draft, wherever the draft is shown (a job's thread, on an email or text, in Chat): named the same
+      // way a draft in a job's thread always was
+      var dr = DRAFTS.filter(function (x) { return 'draft:' + x.id === key; })[0];
+      if (!dr) return;
+      about = 'About "' + (draftTitle(dr) || '') + '" in Needs you [need:' + key + '].';
     } else {
       var n = BY[proj] ? openNeeds(BY[proj]).filter(function (x) { return x.key === key; })[0] : null;
       if (!n) return;
@@ -1847,7 +2035,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     var body = 'About the ' + (t.channel === 'voicemail' ? 'voicemail' : 'text') + ' from ' + t.who + ' that is not on a project [text:' + t.id + ']' +
       (t.summary ? ' (' + t.summary + ')' : '') + '.\n\nLance: ' + text;
     rpc('office_tell', { p_token: token, p_proj: 'office', p_text: body }).then(function (d) {
-      if (d && d.ok && d.saved) { SAID.unshift(d.instruction); delete state.loose[id]; watchReplies(); }
+      if (d && d.ok && d.saved) { SAID.unshift(d.instruction); delete state.loose[id]; if (state.needReply === 'loose:' + id) state.needReply = null; watchReplies(); }
       render();
     }).catch(function () { render(); });
   }
