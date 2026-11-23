@@ -200,7 +200,7 @@ button.go:disabled { opacity: .45; cursor: default; }
 .msg .ask .was { color: var(--muted); font-size: 13px; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
 </style>
-<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-185919";</script>
+<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261122-224236";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -280,7 +280,7 @@ button.go:disabled { opacity: .45; cursor: default; }
                     open: 'Drew has open: ', nothing: 'No drawing open', sheets: 'Sheets', empty: 'Tell Drew what you want done on this job.' },
             cora: { name: 'Cora', win: 'Permitting', screen: 'Cora\'s browser', none: 'Cora\'s browser is not open on the AI PC right now.', looking: 'Looking for Cora\'s browser…',
                     open: '', nothing: '', sheets: 'Check-ins', empty: 'Tell Cora what you want done on this job\'s permit.' } }[WHO];
-  var MSGS = [], LAST = 0, BUSY = false, timer = null, sending = false, GOS = {}, LOGIN = {};
+  var MSGS = [], LAST = 0, BUSY = false, timer = null, sending = false, GOS = {}, LOGIN = {}, ASKS = {};      // ASKS: this one's own questions still open (db/065)
   // date and time, always, the same as on the dashboard: "21 Nov, 10:50 PM" (Lance, 22 Nov 2026: "It's hard to tell what's current or outdated")
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   function stamp(iso) { var d = new Date(iso); return isNaN(d) ? '' : d.getDate() + ' ' + MONTHS[d.getMonth()] + ', ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); }
@@ -369,7 +369,13 @@ button.go:disabled { opacity: .45; cursor: default; }
             '<input type="password" data-login-p="' + m.id + '" value="' + esc(v.p) + '" placeholder="Password" autocomplete="off">' +
             '<button class="go" type="button" data-login-save="' + m.id + '">Save</button></div>';
       }
-      return '<div class="msg ' + cls + '">' + (m.kind === 'progress' ? '' : '<div class="lbl">' + who + ' · ' + esc(stamp(m.created_at)) + '</div>') +
+      if (m.kind === 'ask' && m.files && m.files.decision) {     // a question of this one's own: Yes to the pick, or he answers in the box below
+        extra = ASKS[m.files.decision]
+          ? '<div class="ask">' + (m.files.guess ? '<button class="go" type="button" data-ask="' + m.files.decision + '">Yes</button>' : '') +
+            '<span class="was">' + (m.files.guess ? 'Yes takes the pick. Anything else, say below.' : 'Answer below.') + '</span></div>'
+          : '<div class="ask"><span class="was">Answered</span></div>';
+      }
+      return '<div class="msg ' + cls + '">' + (m.kind === 'progress' ? '' : '<div class="lbl">' + who + (m.kind === 'ask' ? ' asks' : '') + ' · ' + esc(stamp(m.created_at)) + '</div>') +
         '<div class="txt">' + esc(m.body).replace(/\*\*([^*]+?)\*\*/g, '<b>$1</b>') + '</div>' + (m.files && m.files.checkin && m.who === WHO ? '<a class="open" data-sheet="' + m.files.checkin + '">Open check-in</a>' : '') + extra + '</div>';
     }).join('') : DR.length ? '' : '<p class="empty">Nothing said here yet. ' + T.empty + '</p>') + draftsHtml();
     if (atEnd || sending) box.scrollTop = box.scrollHeight;
@@ -394,6 +400,7 @@ button.go:disabled { opacity: .45; cursor: default; }
         document.title = d.project.proj_no + ' ' + T.name;
       }
       (d.gos || []).forEach(function (g) { GOS[g.id] = g; });
+      if (d.asks) { ASKS = {}; d.asks.forEach(function (i) { ASKS[i] = 1; }); }
       (d.messages || []).forEach(function (m) {
         var i = MSGS.findIndex(function (x) { return x.id === m.id; });
         if (i < 0) MSGS.push(m); else MSGS[i] = m;
@@ -467,6 +474,12 @@ button.go:disabled { opacity: .45; cursor: default; }
     var b = e.target.closest ? e.target.closest('button') : null; if (!b) return;
     var go = b.getAttribute('data-go'), sv = b.getAttribute('data-login-save'), dr = b.getAttribute('data-dr');
     if (dr) { decideDraft(+b.getAttribute('data-id'), dr); return; }
+    var ak = b.getAttribute('data-ask');
+    if (ak) {                                                  // Yes to this one's pick: it goes back to whoever asked, as his word
+      b.disabled = true;
+      rpc('office_decide', { p_token: token, p_id: +ak, p_verdict: 'yes' }).catch(function () {}).then(function () { delete ASKS[ak]; draw(true); loop(); });
+      return;
+    }
     if (go) {
       b.disabled = true;
       rpc('office_go', { p_token: token, p_id: +go, p_yes: !!b.getAttribute('data-yes') }).catch(function () {}).then(function () { if (document.activeElement) document.activeElement.blur(); loop(); });

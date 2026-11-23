@@ -392,7 +392,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   #detail { grid-column: 3; grid-row: 2 / 6; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin-top: 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261122-185919";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261122-224236";</script>
 </head>
 <body>
 
@@ -515,6 +515,10 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   // it counts as Needs you on its project); recent = Lance's last answers and what Jake learned from each; kinds
   // = the score. Nothing is shown just to be checked any more (21 Nov 2026).
   var DEC = { open: [], recent: [], kinds: [] };
+  // A question of Drew's or Cora's is theirs (db/065): it sits in that one's window on the job and counts on that one's
+  // button (WAITING), never in Jake's thread. One that names no job is in Chat, under the name of whoever asked.
+  function theirsDec(d) { return d.agent === 'drew' || d.agent === 'cora'; }
+  function askName(d) { var a = d.agent || 'jake'; return a.charAt(0).toUpperCase() + a.slice(1); }
   // NOTES: the news Jake sent him (db/034, notices). With what he writes to Jake outside any project and Jake's
   // answers, they are the Chat page: the general conversation (Lance, 20 Nov 2026: "I can use that as the telegram").
   var NOTES = [];
@@ -587,7 +591,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     return (earlier ? '<button class="text more" id="more-chat" type="button">Show ' + earlier + ' earlier</button>' : '') + items.slice(earlier).map(function (it) {
       if (it.dec) {
         var d = it.dec;
-        return '<div class="msg jake pend"><div class="lbl">' + 'Jake asks' + ' · ' + esc(stamp(d.created_at)) + '</div>' +
+        return '<div class="msg jake pend"><div class="lbl">' + esc(askName(d)) + ' asks' + ' · ' + esc(stamp(d.created_at)) + '</div>' +
           (d.state === 'asked' ? '<div class="item"><div class="head"><b>' + esc(d.what) + '</b></div>' + decAsk(d) + '</div>' : decShown(d)) + '</div>';
       }
       if (it.rule) return '<div class="msg jake pend"><div class="lbl">' + (it.rule.retire_only ? 'A rule to retire' : 'A rule for your OK') + ' · ' + esc(stamp(it.rule.created_at)) + '</div>' + ruleItem(it.rule) + '</div>';
@@ -696,7 +700,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
     });
   }
   function decisionNeeds(p) {
-    return DEC.open.filter(function (d) { return d.proj_no === p.no && d.state === 'asked'; }).map(function (d) {
+    return DEC.open.filter(function (d) { return d.proj_no === p.no && d.state === 'asked' && !theirsDec(d); }).map(function (d) {
       return { key: 'decision:' + d.id, kind: 'decision', dec: d, title: 'Jake asks', detail: d.what, days: daysSince(d.created_at), at: d.created_at };
     });
   }
@@ -704,10 +708,13 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   function decAsk(d) {
     var h = '';
     if (d.why) h += '<div class="body note">' + esc(d.why) + '</div>';
-    if (d.guess) h += '<div class="body"><b>His guess: </b>' + esc(d.guess) + '</div>';
-    h += replyRow('decision:' + d.id, d.proj_no && BY[d.proj_no] ? d.proj_no : 'office',
-      (d.guess ? '<button class="go" type="button" data-dec="yes" data-id="' + d.id + '">Yes</button> ' : '') +
-      '<button class="text quiet" type="button" data-dec="outdated" data-id="' + d.id + '">Outdated</button> ');
+    if (d.guess) h += '<div class="body"><b>' + (d.agent === 'cora' ? 'Her' : 'His') + ' guess: </b>' + esc(d.guess) + '</div>';
+    var btns = (d.guess ? '<button class="go" type="button" data-dec="yes" data-id="' + d.id + '">Yes</button> ' : '') +
+      '<button class="text quiet" type="button" data-dec="outdated" data-id="' + d.id + '">Outdated</button> ';
+    // Drew's or Cora's question that names no job: his Yes goes back to whoever asked. A reply typed here would go to
+    // Jake, so there is no Reply on it.
+    if (theirsDec(d)) return h + (CFG ? '<div class="marks">' + btns + '</div>' : '');
+    h += replyRow('decision:' + d.id, d.proj_no && BY[d.proj_no] ? d.proj_no : 'office', btns);
     return h;
   }
   // What Jake did and shows: Right is one tap; Wrong opens a box for what is right
@@ -726,9 +733,9 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   // His last verdicts, quietly: what he said, whether Jake has dealt with it, and what Jake wrote down from it
   function decRecent(d) {
     var said = d.state === 'wrong' ? (d.lance_said ? 'You said: ' + d.lance_said.replace(/^Correct it: /, '').replace(/^Undo it\.\s*/, 'Undo it. ') : '') : 'You answered: ' + (d.confirmed ? (d.lance_said || 'Yes') : (d.lance_said || ''));
-    return '<div class="item"><div class="head"><span>' + esc((d.state === 'wrong' ? (/^Correct it:/.test(d.lance_said || '') ? 'Corrected: ' : 'Wrong: ') : 'Jake asked: ') + d.what) + '</span><span>' + esc(stamp(d.decided_at)) + '</span></div>' +
+    return '<div class="item"><div class="head"><span>' + esc((d.state === 'wrong' ? (/^Correct it:/.test(d.lance_said || '') ? 'Corrected: ' : 'Wrong: ') : askName(d) + ' asked: ') + d.what) + '</span><span>' + esc(stamp(d.decided_at)) + '</span></div>' +
       (said ? '<div class="body">' + esc(said) + '</div>' : '') +
-      '<div class="body note">' + (d.handled_at ? 'Jake has dealt with it.' : 'Jake is on it…') + '</div>' +
+      '<div class="body note">' + esc(askName(d)) + (d.handled_at ? ' has dealt with it.' : ' is on it…') + '</div>' +
       (d.learned ? '<div class="body"><b>Learned: </b>' + esc(d.learned) + '</div>' : '') + '</div>';
   }
   // The score: each kind of decision, where it stands today, and how his verdicts on it have gone
@@ -1020,7 +1027,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
       (state.ruleMsg ? '<p class="note">' + esc(state.ruleMsg) + '</p>' : '');
     // What he answered Jake lately, and what Jake wrote down from it: reference, folded, only when there is any.
     // (There is no list of things Jake did for him to check any more: Lance, 21 Nov 2026, "1 less message area".)
-    h += sec('Your answers to Jake', DEC.recent.filter(function (d) { return d.proj_no === p.no; }).map(decRecent).join(''), 'lead');
+    h += sec('Your answers to Jake', DEC.recent.filter(function (d) { return d.proj_no === p.no && !theirsDec(d); }).map(decRecent).join(''), 'lead');
 
     // 1b. what Jake would do (shadow: nothing is sent)
     var live = (p.shadow || []).filter(function (x) { return x.mode === 'waiting'; });
