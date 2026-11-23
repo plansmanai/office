@@ -93,7 +93,7 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
 #pwform { display: grid; gap: 8px; margin-top: 4px; max-width: 360px; }
 #pwform .bar { margin-top: 6px; }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-093448";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-095601";</script>
 </head>
 <body>
 <div id="gate" hidden></div>
@@ -206,7 +206,19 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
   function pageRow(p) {
     var af = (p.always_for || []).map(function (w) { return WHO[w] || w; });
     return row('#p/' + encodeURIComponent(p.slug), p.title || p.slug, null,
-      (p.here ? '' : 'Lives in another folder and is shown here too. ') + (af.length ? 'Its working standard is always in front of ' + names(af) + '.' : 'Read when it is needed.'));
+      (p.here ? '' : 'Lives in another folder and is shown here too. ') + (af.length ? 'Its working standard is always in front of ' + names(af) + '.' : 'Loaded with this folder.'));
+  }
+  // who has a folder in front of them, in his words (db/068: kb_folders.always_for; the rest is loaded by the task)
+  function when(f) {
+    var af = (f.always_for || []).map(function (w) { return WHO[w] || w; }), p = f.path;
+    if (af.length === 3) return 'Always in front of Jake, Drew and Cora.';
+    if (af.length) return 'Always in front of ' + names(af) + '. The others look it up.';
+    if (/^cities\/.+/.test(p)) return 'Loaded on a job in this city.';
+    if (/^kinds\/.+/.test(p)) return 'Loaded on a job of this kind.';
+    if (/^jake\/people\/.+/.test(p)) return 'Loaded on a job this person is on.';
+    if (/^drew\/sheets\/.+/.test(p)) return 'Handed to Drew when he works on this sheet.';
+    if (!f.n && (KIDS[p] || []).length) return '';
+    return 'Looked up when the task touches it.';
   }
   function showFolder(path) {
     var mine = ++seq;
@@ -222,6 +234,7 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
       var own = d.rules.filter(function (r) { return !r.shown; }), shown = d.rules.filter(function (r) { return r.shown; });
       var h = '<p class="back"><a href="' + (f.parent ? fhref(f.parent) : '#k') + '">‹ ' + esc(f.parent ? short(F[f.parent].title) : 'Knowledge') + '</a></p><h1>' + esc(f.title) + '</h1>';
       if (f.about) h += '<p class="muted">' + esc(f.about) + '</p>';
+      if (f.parent && when(f)) h += '<p class="muted">' + esc(when(f)) + '</p>';
       h += '<div class="top"><p class="muted">' + (f.all === f.n ? (f.n === 1 ? '1 rule' : f.n + ' rules') : f.n ? f.n + ' here, ' + f.all + ' with the folders inside' : f.all + ' in the folders inside') +
         (f.shown ? ', and ' + f.shown + ' shown from another folder' : '') + '.</p><a class="go" href="#new/' + esc(path) + '">Add a rule here</a></div>';
       if (f.pages.length) h += '<h2>The write-up</h2><ul class="list">' + f.pages.map(pageRow).join('') + '</ul>';
