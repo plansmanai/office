@@ -15,6 +15,10 @@
    ("this" is the Knowledge page). So this one page is Admin: its front lists the settings (Knowledge, Password, Sign
    out), and Knowledge opens inside it. A new setting is a new section on the front, never a link on the dashboard.
 
+   Knowledge is THE TREE (db/067): folders, the way Lance pictures it ("like a folder or family tree"). Company, then Jake,
+   Drew and Cora, then Cities and Kinds of project; every rule and page lives in one folder and is shown in a second one
+   by a pointer. Only the live version is kept: an edit overwrites, Delete deletes (with an Undo beside it).
+
    Knowledge (db/066). Lance, 23 Nov 2026: "Is the team's knowledge base or learned rules or whatever available
    to me to view? I'd like to see it and be able to edit it myself. Could it be a page on P4 that I open and change there?"
    The whole base, opened the way it is filed (core/lessons.py structure): who it is for, subject, kind of drawing sheet,
@@ -81,13 +85,15 @@ form.edit label > * { margin-top: 5px; text-transform: none; letter-spacing: 0; 
 .part .acts { margin-top: 10px; }
 .cut { margin: 26px 0 0; padding: 10px 12px; background: var(--soft); color: var(--muted); font-size: 13.5px; }
 code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size: .9em; background: var(--soft); padding: 0 3px; }
+.lnk { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.rule .m.pts { line-height: 2; }
 .set { padding: 14px 0 4px; }
 .set p { margin: 0 0 10px; }
 .offscreen { position: absolute !important; left: -9999px; width: 1px !important; height: 1px; opacity: 0; }
 #pwform { display: grid; gap: 8px; margin-top: 4px; max-width: 360px; }
 #pwform .bar { margin-top: 6px; }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-080132";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-093448";</script>
 </head>
 <body>
 <div id="gate" hidden></div>
@@ -97,8 +103,7 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
     <form id="find" role="search" hidden><input id="q" type="search" placeholder="Search the rules and pages" aria-label="Search the rules and pages" autocomplete="off"></form>
   </header>
   <main id="main"></main>
-  <datalist id="scopes"></datalist>
-</div>
+  </div>
 <script>
 (function () {
   var CFG = window.OFFICE || null, TOKEN_KEY = 'plansman_office_token', token = null;
@@ -119,14 +124,14 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
       return d;
     });
   }
-  var main = $('main'), MAP = null, RULES = {}, PAGE = null, seq = 0;
+  var main = $('main'), MAP = null, F = {}, KIDS = {}, RULES = {}, PAGE = null, seq = 0;
   var WHO = { everyone: 'Everyone', jake: 'Jake', drew: 'Drew', cora: 'Cora' };
-  var KINDS = { city: 'Cities', person: 'People and companies', project_type: 'Kinds of project', portal: 'Portal software', sheet: 'The spreadsheets' };
   function names(a) { return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
-  function nice(t) { t = String(t || 'other').replace(/-/g, ' '); return t.charAt(0).toUpperCase() + t.slice(1); }
-  function sheetName(key) { var s = MAP && MAP.sheets.filter(function (x) { return x.key === key; })[0]; return s ? s.label + ' (' + s.series + ')' : key; }
-  function scopeName(sc) { var i = sc.indexOf(':'); if (i < 0) return sc; var k = sc.slice(0, i).toLowerCase(), v = sc.slice(i + 1).trim();
-    return ({ city: 'City: ', person: '', project_type: 'Project type: ', portal: 'Portal: ', sheet: 'Spreadsheet: ' }[k] || k + ': ') + v; }
+  // THE TREE (db/067). The base is folders: Company, then Jake, Drew and Cora, then Cities and Kinds of project. Every rule
+  // and page lives in one folder; what belongs in two is shown in the other by a pointer and is still one record.
+  function short(t) { return String(t || '').split(' · ')[0]; }
+  function chain(path) { var a = []; while (path && F[path]) { a.unshift(short(F[path].title)); path = F[path].parent; } return a.join(' › '); }
+  function fhref(path) { return '#f/' + String(path).split('/').map(encodeURIComponent).join('/'); }
   function source(r) {
     var lf = r.learned_from || '', d = day(r.said_on || r.decided_at || r.created_at);
     if (lf === 'old_bots') return 'Carried over from the old Jake, Cora and Drew';
@@ -134,22 +139,27 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
     if (lf === 'claude_suggestion') return '<b>Suggested in a build session, approved by you</b>' + (d ? ', ' + d : '');
     return '<b>Yours</b>' + (d ? ', ' + d : '');
   }
-  function href(f) { var p = new URLSearchParams(); Object.keys(f).forEach(function (k) { if (f[k]) p.set(k, f[k]); }); return '#r?' + p.toString(); }
   function needMap(fresh) {
     if (MAP && !fresh) return Promise.resolve(MAP);
-    return call('office_knowledge', {}).then(function (d) {
-      MAP = d;
-      $('scopes').innerHTML = '<option value="general">' + d.scopes.map(function (s) { return '<option value="' + esc(s.scope) + '">'; }).join('');
+    return call('office_tree', {}).then(function (d) {
+      MAP = d; F = {}; KIDS = {};
+      d.folders.forEach(function (f) { F[f.path] = f; });
+      d.folders.forEach(function (f) { (KIDS[f.parent || ''] = KIDS[f.parent || ''] || []).push(f); });
+      Object.keys(KIDS).forEach(function (k) { KIDS[k].sort(function (a, b) { return a.ord - b.ord || a.title.localeCompare(b.title); }); });
       return d;
     });
   }
+  function row(link, text, n, sub) {
+    return '<li><a href="' + esc(link) + '"' + (n === 0 ? ' class="none"' : '') + '><div>' + esc(text) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' + (n == null ? '' : '<span>' + n + '</span>') + '</a></li>';
+  }
+  function fail(err) { if (err && err.message === 'signed out') return; main.innerHTML = '<p class="back"><a href="#k">‹ Knowledge</a></p><p class="msg">Could not load (' + esc(err && err.message) + '). <button class="text" type="button" onclick="location.reload()">Try again</button></p>'; }
 
   // ---- the front of Admin: the settings, one section each ----
   var pw = { open: false, msg: '' };
   function showAdmin() {
     ++seq;
     var h = '<p class="back"><a href="./">‹ Dashboard</a></p><h1>Admin</h1>';
-    h += '<h2>Knowledge</h2><ul class="list">' + row('#k', 'The team\'s rules and pages', null, MAP ? MAP.active.toLocaleString('en-US') + ' rules in use and ' + MAP.pages.length + ' pages. Read them, search them, change them.' : 'Read them, search them, change them.') + '</ul>';
+    h += '<h2>Knowledge</h2><ul class="list">' + row('#k', 'What the team knows', null, MAP ? MAP.active.toLocaleString('en-US') + ' rules and ' + MAP.pages + ' pages, in folders. Read them, search them, change them.' : 'Read it, search it, change it.') + '</ul>';
     // He changes his password himself: his current one, the new one twice. It is checked and kept (as a one-way hash)
     // by the record; this page never keeps it. Changing it signs his other devices out and keeps this one.
     h += '<h2>Password</h2><div class="set">' + (pw.open
@@ -180,146 +190,147 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
     rpc('office_logout', { p_token: t }).catch(function () {}).then(function () { location.href = './'; });
   }
 
-  // ---- Knowledge, the map: what the base holds, the way it is filed ----
-  function row(link, text, n, sub) {
-    return '<li><a href="' + esc(link) + '"' + (n === 0 ? ' class="none"' : '') + '><div>' + esc(text) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' + (n == null ? '' : '<span>' + n + '</span>') + '</a></li>';
-  }
-  function showMap() {
+  // ---- Knowledge: the top of the tree ----
+  function showRoot() {
     var mine = ++seq;
     if (!MAP) main.innerHTML = '<p class="muted">Loading…</p>';
     needMap(true).then(function (m) {
       if (mine !== seq) return;
-      var who = {}; m.who.forEach(function (w) { who[w.who] = w.n; });
-      var h = '<p class="back"><a href="#">‹ Admin</a></p><h1>Knowledge</h1><div class="top"><p class="muted">' + m.active.toLocaleString('en-US') + ' rules in use and ' + m.pages.length + ' pages. What you change here counts at once, and nothing is deleted.</p>' +
-        '<a class="go" href="#new">Add a rule</a></div>';
-      h += '<h2>Yours</h2><ul class="list">' + row(href({ mine: '1' }), 'The rules you gave on P4', m.mine, 'Always in front of whoever they are for') + '</ul>';
-      h += '<h2>By team member</h2><ul class="list">' + ['everyone', 'jake', 'drew', 'cora'].map(function (w) { return row(href({ who: w }), WHO[w], who[w] || 0); }).join('') + '</ul>';
-      h += '<h2>By subject</h2><ul class="list cols">' + m.subjects.map(function (s) { return row(href({ topic: s.topic }), nice(s.topic), s.n); }).join('') + '</ul>';
-      h += '<h2>Drew\'s drawing rules, by sheet</h2><ul class="list cols">' + row(href({ sheet: 'SET' }), 'The whole set', m.set, 'Holds on every sheet') +
-        m.sheets.map(function (s) { return row(href({ sheet: s.key }), s.label, s.n, s.series); }).join('') + '</ul>';
-      var by = {}; m.scopes.forEach(function (s) { var k = s.scope.split(':')[0].toLowerCase(); (by[k] = by[k] || []).push(s); });
-      ['city', 'person', 'project_type', 'portal', 'sheet'].concat(Object.keys(by).filter(function (k) { return !KINDS[k]; })).forEach(function (k) {
-        if (!by[k]) return;
-        h += '<h2>' + esc(KINDS[k] || k) + '</h2><ul class="list cols">' + by[k].map(function (s) { return row(href({ scope: s.scope }), s.scope.slice(s.scope.indexOf(':') + 1).trim(), s.n); }).join('') + '</ul>';
-      });
-      h += '<h2>Pages</h2><ul class="list">' + m.pages.map(function (p) {
-        var af = (p.always_for || []).map(function (w) { return WHO[w] || w; });
-        return row('#p/' + encodeURIComponent(p.slug), p.title || p.slug, null, af.length ? 'Its working standard is always in front of ' + names(af) : 'Read when it is needed');
-      }).join('') + '</ul>';
-      h += '<h2>Not in use</h2><ul class="list">' + row(href({ status: 'conflict' }), 'Set aside as conflicting', m.conflict, 'Two carried-over rules disagreed, so neither is used') +
-        row(href({ status: 'superseded' }), 'Retired', m.retired, 'Kept, and can be put back in use') + '</ul>';
+      main.innerHTML = '<p class="back"><a href="#">‹ Admin</a></p><h1>Knowledge</h1>' +
+        '<p class="muted">' + m.active.toLocaleString('en-US') + ' rules and ' + m.pages + ' pages. Each one lives in one folder. What you change here counts at once.</p>' +
+        '<ul class="list">' + (KIDS[''] || []).map(function (f) { return row(fhref(f.path), f.title, f.all, f.about); }).join('') + '</ul>';
+    }).catch(fail);
+  }
+
+  // ---- one folder: its write-up, the folders inside it, the rules that live in it, and the rules shown in it ----
+  function pageRow(p) {
+    var af = (p.always_for || []).map(function (w) { return WHO[w] || w; });
+    return row('#p/' + encodeURIComponent(p.slug), p.title || p.slug, null,
+      (p.here ? '' : 'Lives in another folder and is shown here too. ') + (af.length ? 'Its working standard is always in front of ' + names(af) + '.' : 'Read when it is needed.'));
+  }
+  function showFolder(path) {
+    var mine = ++seq;
+    main.innerHTML = '<p class="muted">Loading…</p>';
+    needMap(true).then(function () {
+      var f = F[path];
+      if (!f) { main.innerHTML = '<p class="back"><a href="#k">‹ Knowledge</a></p><p class="muted">There is no such folder.</p>'; return null; }
+      return (f.n + f.shown) ? call('office_tree_rules', { p_folder: path }) : { rules: [], total: 0 };
+    }).then(function (d) {
+      if (!d || mine !== seq) return;
+      var f = F[path], kids = KIDS[path] || [];
+      RULES = {}; d.rules.forEach(function (r) { RULES[r.id] = r; });
+      var own = d.rules.filter(function (r) { return !r.shown; }), shown = d.rules.filter(function (r) { return r.shown; });
+      var h = '<p class="back"><a href="' + (f.parent ? fhref(f.parent) : '#k') + '">‹ ' + esc(f.parent ? short(F[f.parent].title) : 'Knowledge') + '</a></p><h1>' + esc(f.title) + '</h1>';
+      if (f.about) h += '<p class="muted">' + esc(f.about) + '</p>';
+      h += '<div class="top"><p class="muted">' + (f.all === f.n ? (f.n === 1 ? '1 rule' : f.n + ' rules') : f.n ? f.n + ' here, ' + f.all + ' with the folders inside' : f.all + ' in the folders inside') +
+        (f.shown ? ', and ' + f.shown + ' shown from another folder' : '') + '.</p><a class="go" href="#new/' + esc(path) + '">Add a rule here</a></div>';
+      if (f.pages.length) h += '<h2>The write-up</h2><ul class="list">' + f.pages.map(pageRow).join('') + '</ul>';
+      if (kids.length) h += '<h2>Inside</h2><ul class="list' + (kids.length > 12 ? ' cols' : '') + '">' + kids.map(function (k) { return row(fhref(k.path), k.title, k.all ? k.all : (k.pages.length || k.shown ? null : 0), !k.all && k.pages.length ? 'Its write-up' : ''); }).join('') + '</ul>';
+      if (own.length) h += '<h2>Rules · ' + own.length + '</h2>' + own.map(card).join('');
+      if (shown.length) h += '<h2>Shown here from another folder · ' + shown.length + '</h2>' + shown.map(card).join('');
+      if (!f.pages.length && !kids.length && !d.rules.length) h += '<p class="muted" style="margin-top:20px">Nothing is filed here yet.</p>';
       main.innerHTML = h;
     }).catch(fail);
   }
-  function fail(err) { if (err && err.message === 'signed out') return; main.innerHTML = '<p class="back"><a href="#k">‹ Knowledge</a></p><p class="msg">Could not load (' + esc(err && err.message) + '). <button class="text" type="button" onclick="location.reload()">Try again</button></p>'; }
-
-  // ---- a list of rules ----
-  function title(f) {
-    var a = [];
-    if (f.q) a.push('Search: “' + f.q + '”');
-    if (f.status === 'conflict') a.push('Set aside as conflicting');
-    if (f.status === 'superseded') a.push('Retired');
-    if (f.mine) a.push('The rules you gave on P4');
-    if (f.topic) a.push(nice(f.topic));
-    if (f.sheet) a.push(f.sheet === 'SET' ? 'Drew\'s rules for the whole set' : sheetName(f.sheet));
-    if (f.scope) a.push(scopeName(f.scope));
-    if (f.who) a.push('For ' + (f.who === 'everyone' ? 'everyone' : WHO[f.who] || f.who));
-    return a.join(' · ') || 'All rules';
+  function showSearch(q) {
+    var mine = ++seq;
+    main.innerHTML = '<p class="back"><a href="#k">‹ Knowledge</a></p><h1>Search: “' + esc(q) + '”</h1><p class="muted">Loading…</p>';
+    needMap().then(function () { return call('office_tree_rules', { p_q: q }); }).then(function (d) {
+      if (mine !== seq) return;
+      RULES = {}; d.rules.forEach(function (r) { r.found = true; RULES[r.id] = r; });
+      var h = '<p class="back"><a href="#k">‹ Knowledge</a></p><h1>Search: “' + esc(q) + '”</h1><p class="muted">' + (d.total === 1 ? '1 rule' : d.total + ' rules') +
+        (d.total > d.rules.length ? ', the first ' + d.rules.length + ' shown' : '') + (d.pages.length ? ' and ' + (d.pages.length === 1 ? '1 page' : d.pages.length + ' pages') : '') + '.</p>';
+      if (d.pages.length) h += '<h2>Pages that have these words</h2><ul class="list">' + d.pages.map(function (p) { return row('#p/' + encodeURIComponent(p.slug), p.title || p.slug, null); }).join('') + '</ul>';
+      var groups = {}, order = [];
+      d.rules.forEach(function (r) { var k = chain(r.folder) || 'Not filed'; if (!groups[k]) { groups[k] = []; order.push(k); } groups[k].push(r); });
+      order.sort().forEach(function (k) { h += '<h2>' + esc(k) + ' · ' + groups[k].length + '</h2>' + groups[k].map(card).join(''); });
+      main.innerHTML = h;
+    }).catch(fail);
   }
   function card(r) {
-    var off = r.status !== 'active', h = '<div class="rule' + (off ? ' off' : '') + '" data-id="' + esc(r.id) + '">';
-    h += '<p class="t">' + esc(r.rule) + '</p>';
+    var h = '<div class="rule' + (r.gone ? ' off' : '') + '" data-id="' + esc(r.id) + '"><p class="t">' + esc(r.rule) + '</p>';
+    if (r.gone) {
+      return h + '<p class="n">' + esc(r.said) + '</p><div class="acts">' + (r.gone === 'deleted' ? '<button class="text" type="button" data-do="undo">Undo</button>' : '<a class="lnk" href="' + fhref(r.folder) + '">Open that folder</a>') +
+        '<span class="msg" role="status"></span></div></div>';
+    }
     if (r.applies_when) h += '<p class="w">When: ' + esc(r.applies_when) + '</p>';
-    var m = ['For ' + (r.who === 'everyone' ? 'everyone' : esc(WHO[r.who] || r.who)), esc(nice(r.topic))];
-    if (r.sheet) m.push(esc(sheetName(r.sheet)));
-    if (r.scope && r.scope.toLowerCase() !== 'general') m.push(esc(scopeName(r.scope)));
+    var m = [source(r)];
     if (r.proj_no) m.push('Job ' + esc(r.proj_no));
-    m.push(source(r));
+    if (r.shown) m.unshift('Lives in <a class="lnk" href="' + fhref(r.folder) + '">' + esc(chain(r.folder)) + '</a>');
     h += '<p class="m">' + m.join(' · ') + '</p>';
+    var links = (r.links || []).filter(function (p) { return F[p]; });
+    if (links.length && !r.shown) h += '<p class="m">Also shown in ' + links.map(function (p) { return '<a class="lnk" href="' + fhref(p) + '">' + esc(chain(p)) + '</a>'; }).join(', ') + '</p>';
     if (r.said) h += '<p class="n">' + esc(r.said) + '</p>';
-    else if (off && r.note) h += '<p class="n">' + esc(r.note) + '</p>';
-    h += '<div class="acts">';
-    if (r.status === 'active') h += '<button class="text" type="button" data-edit>Edit</button><button class="text" type="button" data-do="retire">Retire</button>';
-    else if (r.status === 'conflict') h += '<button class="text" type="button" data-do="restore">Put in use</button><button class="text" type="button" data-edit>Edit</button><button class="text" type="button" data-do="retire">Retire</button>';
-    else h += '<button class="text" type="button" data-do="restore">' + (r.said ? 'Undo' : 'Put back in use') + '</button>';
-    return h + '<span class="msg" role="status"></span></div></div>';
+    return h + '<div class="acts"><button class="text" type="button" data-edit>Edit</button><button class="text" type="button" data-do="delete">Delete</button><span class="msg" role="status"></span></div></div>';
   }
-  function opts(list, cur) { return list.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === cur ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join(''); }
+  function folderOpts(cur) {
+    var out = [];
+    (function walk(parent, depth) {
+      (KIDS[parent] || []).forEach(function (f) {
+        out.push('<option value="' + esc(f.path) + '"' + (f.path === cur ? ' selected' : '') + '>' + new Array(depth + 1).join('   ') + esc(short(f.title)) + '</option>');
+        walk(f.path, depth + 1);
+      });
+    })('', 0);
+    return out.join('');
+  }
+  function ptsHtml(r) {
+    var links = (r.links || []).filter(function (p) { return F[p]; });
+    return links.map(function (p) { return esc(chain(p)) + ' <button class="text" type="button" data-unlink="' + esc(p) + '">Remove</button>'; }).join('<br>');
+  }
   function form(r) {
-    var subs = MAP.subjects.map(function (s) { return s.topic; }); if (r.topic && subs.indexOf(r.topic) < 0) subs.push(r.topic);
     return '<form class="edit" data-form="' + esc(r.id || 'new') + '">' +
       '<label>The rule<textarea name="rule" rows="4" maxlength="2000" required>' + esc(r.rule || '') + '</textarea></label>' +
       '<label>When it applies<input name="when" maxlength="400" value="' + esc(r.applies_when || '') + '" placeholder="Leave empty if it always applies"></label>' +
-      '<div class="row"><label>Who it is for<select name="who">' + opts([['everyone', 'Everyone'], ['jake', 'Jake'], ['drew', 'Drew'], ['cora', 'Cora']], r.who || 'everyone') + '</select></label>' +
-      '<label>Subject<select name="topic">' + (r.topic ? '' : '<option value="">Pick one</option>') + opts(subs.map(function (s) { return [s, nice(s)]; }), r.topic || '') + '<option value="__new">A new subject…</option></select></label></div>' +
-      '<label data-newsub hidden>The new subject, in a few words<input name="newtopic" maxlength="60"></label>' +
-      '<div class="row"><label>Drawing sheet<select name="sheet">' + opts([['', 'The whole set, or not about a sheet']].concat(MAP.sheets.map(function (s) { return [s.key, s.label + ' (' + s.series + ')']; })), r.sheet || '') + '</select></label>' +
-      '<label>Applies to<input name="scope" list="scopes" maxlength="120" value="' + esc(r.scope || 'general') + '" placeholder="general, or city:Tustin"></label></div>' +
+      '<label>The folder it lives in<select name="folder">' + folderOpts(r.folder) + '</select></label>' +
+      (r.id ? '<label>Also show it in<select name="link"><option value="">Pick a second folder…</option>' + folderOpts('') + '</select></label><p class="m pts">' + ptsHtml(r) + '</p>' : '') +
       '<div class="bar"><button class="go" type="submit">Save</button><button class="text" type="button" data-cancel>Cancel</button><span class="msg" role="status"></span></div></form>';
   }
   function grow(t) { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 4, Math.round(window.innerHeight * .7)) + 'px'; }
-  function showList(f) {
-    var mine = ++seq;
-    main.innerHTML = '<p class="back"><a href="#k">‹ Knowledge</a></p><h1>' + esc(title(f)) + '</h1><p class="muted">Loading…</p>';
-    needMap().then(function () {
-      return call('office_knowledge_rules', { p_who: f.who || null, p_topic: f.topic || null, p_sheet: f.sheet || null, p_scope: f.scope || null, p_mine: f.mine === '1',
-                                             p_status: f.status || 'active', p_q: f.q || null });
-    }).then(function (d) {
-      if (mine !== seq) return;
-      RULES = {}; d.rules.forEach(function (r) { RULES[r.id] = r; });
-      var h = '<p class="back"><a href="#k">‹ Knowledge</a></p><h1>' + esc(title(f)) + '</h1>';
-      h += '<p class="muted">' + (d.total === 1 ? '1 rule' : d.total.toLocaleString('en-US') + ' rules') +
-        (d.total > d.rules.length ? ', the first ' + d.rules.length + ' shown. Narrow it below or search.' : '') +
-        (f.status === 'conflict' ? '. When the old knowledge was carried over these disagreed with another rule, so neither is in use. Put the right one in use and retire the other.' : '') + '</p>';
-      var rest = function (k) { var g = {}; Object.keys(f).forEach(function (x) { if (x !== k) g[x] = f[x]; }); return g; };
-      h += '<div class="narrow"><select data-narrow="who" aria-label="Who it is for">' + opts([['', 'For anyone'], ['everyone', 'For everyone'], ['jake', 'For Jake'], ['drew', 'For Drew'], ['cora', 'For Cora']], f.who || '') + '</select>' +
-        '<select data-narrow="topic" aria-label="Subject">' + opts([['', 'Any subject']].concat(MAP.subjects.map(function (s) { return [s.topic, nice(s.topic)]; })), f.topic || '') + '</select></div>';
-      if (d.pages.length) h += '<h2>Pages that have these words</h2><ul class="list">' + d.pages.map(function (p) { return row('#p/' + encodeURIComponent(p.slug), p.title || p.slug, null); }).join('') + '</ul>';
-      if (!d.rules.length) h += '<p class="muted" style="margin-top:20px">No rules here.</p>';
-      var groups = {}, order = [];
-      d.rules.forEach(function (r) { if (!groups[r.topic]) { groups[r.topic] = []; order.push(r.topic); } groups[r.topic].push(r); });
-      order.sort();
-      order.forEach(function (t) { h += (f.topic && order.length === 1 ? '<h2>Rules</h2>' : '<h2>' + esc(nice(t)) + ' · ' + groups[t].length + '</h2>') + groups[t].map(card).join(''); });
-      main.innerHTML = h;
-      main.querySelectorAll('[data-narrow]').forEach(function (s) {
-        s.addEventListener('change', function () { var g = rest(s.getAttribute('data-narrow')); if (s.value) g[s.getAttribute('data-narrow')] = s.value; location.hash = href(g); });
-      });
-    }).catch(fail);
-  }
-  function showNew() {
+  function showNew(path) {
     ++seq;
     needMap().then(function () {
-      main.innerHTML = '<p class="back"><a href="#k">‹ Knowledge</a></p><h1>Add a rule</h1><p class="muted">It is your rule from the moment you save it: whoever it is for has it in front of them at their next run.</p>' + form({});
+      main.innerHTML = '<p class="back"><a href="' + (F[path] ? fhref(path) : '#k') + '">‹ ' + esc(F[path] ? short(F[path].title) : 'Knowledge') + '</a></p><h1>Add a rule</h1>' +
+        '<p class="muted">It is your rule from the moment you save it: whoever the folder belongs to has it in front of them at their next run.</p>' + form({ folder: path });
       var t = main.querySelector('textarea'); if (t) t.focus();
     }).catch(fail);
   }
   function redraw(id) { var el = main.querySelector('.rule[data-id="' + id + '"]'); if (el && RULES[id]) el.outerHTML = card(RULES[id]); }
   function say(el, text, ok) { var m = el && el.querySelector('.msg'); if (m) { m.textContent = text || ''; m.className = 'msg' + (ok ? ' ok' : ''); } }
   function saveRule(f) {
-    var id = f.getAttribute('data-form'), isNew = id === 'new', v = function (n) { return (f.elements[n].value || '').trim(); };
-    var topic = v('topic') === '__new' ? v('newtopic') : v('topic'), btn = f.querySelector('button.go');
-    if (!topic) { say(f, 'Pick the subject it is filed under.'); return; }
+    var id = f.getAttribute('data-form'), isNew = id === 'new', v = function (n) { return (f.elements[n].value || '').trim(); }, btn = f.querySelector('button.go'), folder = v('folder');
     btn.disabled = true; say(f, 'Saving…', true);
-    call('office_knowledge_rule', { p_id: isNew ? null : id, p_action: isNew ? 'add' : 'save', p_rule: v('rule'), p_when: v('when'), p_who: v('who'), p_topic: topic, p_sheet: v('sheet') || null, p_scope: v('scope') || 'general' })
-      .then(function (d) {
-        if (!d.saved) { btn.disabled = false; say(f, d.why || 'Not saved. Try again.'); return; }
-        if (isNew) { location.hash = href({ mine: '1' }); return; }
-        var r = RULES[id];
-        r.rule = v('rule'); r.applies_when = v('when'); r.who = v('who'); r.topic = topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); r.sheet = v('sheet') || null; r.scope = v('scope') || 'general';
-        r.said = 'Saved. The team has it at their next run.';
-        redraw(id);
-        needMap(true).catch(function () {});                 // a new subject is on the map, and in the next form, at once
-      }).catch(function (err) { btn.disabled = false; if (err.message !== 'signed out') say(f, 'Not saved (' + err.message + '). Your words are still here.'); });
+    call('office_tree_rule', { p_id: isNew ? null : id, p_action: isNew ? 'add' : 'save', p_rule: v('rule'), p_when: v('when'), p_folder: folder }).then(function (d) {
+      if (!d.saved) { btn.disabled = false; say(f, d.why || 'Not saved. Try again.'); return; }
+      if (isNew) { location.hash = fhref(folder); return; }
+      var r = RULES[id], moved = r.folder !== folder;
+      r.rule = v('rule'); r.applies_when = v('when'); r.folder = folder;
+      if (moved && !r.shown && !r.found) { r.gone = 'moved'; r.said = 'Moved to ' + chain(folder) + '.'; }
+      else r.said = moved ? 'Saved, and moved to ' + chain(folder) + '.' : 'Saved. The team has it at their next run.';
+      redraw(id);
+      needMap(true).catch(function () {});
+    }).catch(function (err) { btn.disabled = false; if (err.message !== 'signed out') say(f, 'Not saved (' + err.message + '). Your words are still here.'); });
   }
+  // Delete is at once, with an Undo beside it: only the live version is kept (Lance, 23 Nov 2026: "just update rules as
+  // needed so we just have the live version"), and the way back from a slip of the thumb is the Undo, not a question first.
   function act(id, what, el) {
-    say(el, what === 'retire' ? 'Retiring…' : 'Putting it in use…', true);
-    call('office_knowledge_rule', { p_id: id, p_action: what }).then(function (d) {
+    say(el, what === 'delete' ? 'Deleting…' : 'Bringing it back…', true);
+    call('office_tree_rule', { p_id: id, p_action: what }).then(function (d) {
       var r = RULES[id]; if (!r) return;
       if (!d.saved) { say(el, d.why || 'Not done. Try again.'); var b = el.querySelector('[data-do]'); if (b) b.disabled = false; return; }
-      if (what === 'retire') { r.status = 'superseded'; r.said = 'Retired. The team stops using it at their next run.'; }
-      else { r.status = 'active'; r.said = 'In use again.'; }
+      if (what === 'delete') { r.gone = 'deleted'; r.said = 'Deleted. The team stops using it at their next run.'; }
+      else { delete r.gone; r.said = 'Back in the base.'; }
       redraw(id);
     }).catch(function (err) { if (err.message !== 'signed out') say(el, 'Not done (' + err.message + ').'); });
+  }
+  function point(f, path, add) {
+    var id = f.getAttribute('data-form'), r = RULES[id];
+    call('office_tree_rule', { p_id: id, p_action: add ? 'link' : 'unlink', p_folder: path }).then(function (d) {
+      if (!d.saved) { say(f, d.why || 'Not done.'); return; }
+      r.links = (r.links || []).filter(function (p) { return p !== path; });
+      if (add && path !== r.folder) r.links.push(path);
+      f.querySelector('.pts').innerHTML = ptsHtml(r);
+      say(f, add ? 'It is shown in ' + chain(path) + ' as well.' : 'No longer shown in ' + chain(path) + '.', true);
+    }).catch(function (err) { if (err.message !== 'signed out') say(f, 'Not done (' + err.message + ').'); });
   }
 
   // ---- one page, a part at a time ----
@@ -347,9 +358,9 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
     return h + '<div class="acts"><button class="text" type="button" data-part-edit>Edit this part</button><span class="msg" role="status"></span></div></div>';
   }
   function drawPage(note) {
-    var p = PAGE, af = (p.always_for || []).map(function (w) { return WHO[w] || w; });
+    var p = PAGE, af = (p.always_for || []).map(function (w) { return WHO[w] || w; }), f = F[p.folder];
     p.parts = split(p.body);
-    main.innerHTML = '<p class="back"><a href="#k">‹ Knowledge</a></p>' +
+    main.innerHTML = '<p class="back"><a href="' + (f ? fhref(f.path) : '#k') + '">‹ ' + esc(f ? short(f.title) : 'Knowledge') + '</a></p>' +
       '<p class="muted">' + (af.length ? 'The working standard at the top of this page is printed in front of ' + names(af) + ' at every run.' : 'The team reads this page when it is needed.') +
       (p.updated_at ? ' Last changed ' + day(p.updated_at) + '.' : '') + '</p>' + (note ? '<p class="msg">' + esc(note) + '</p>' : '') +
       p.parts.map(partHtml).join('');
@@ -357,7 +368,7 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
   function showPage(slug) {
     var mine = ++seq;
     main.innerHTML = '<p class="back"><a href="#k">‹ Knowledge</a></p><p class="muted">Loading…</p>';
-    call('office_knowledge_page', { p_slug: slug }).then(function (d) {
+    needMap().then(function () { return call('office_knowledge_page', { p_slug: slug }); }).then(function (d) {
       if (mine !== seq) return;
       if (!d.page) { main.innerHTML = '<p class="back"><a href="#k">‹ Knowledge</a></p><p class="muted">There is no such page.</p>'; return; }
       PAGE = d.page; drawPage();
@@ -384,31 +395,32 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
   }
 
   // ---- what is on the page follows the address, so Back works ----
+  // "" the front of Admin · "k" the top of the tree · "f/<folder>" a folder · "q/<words>" a search · "p/<page>" a page · "new/<folder>" a new rule
   function route() {
     var h = (location.hash || '').replace(/^#/, '');
     try { h = decodeURIComponent(h); } catch (e) {}
     window.scrollTo(0, 0);
     $('find').hidden = !h;                                 // the search is Knowledge's; the front of Admin has none
     if (!h) { showAdmin(); return; }
+    if (h.indexOf('q/') === 0) { $('q').value = h.slice(2); showSearch(h.slice(2)); return; }
+    $('q').value = '';
     if (h.indexOf('p/') === 0) { showPage(h.slice(2)); return; }
-    if (h === 'new') { showNew(); return; }
-    if (h.indexOf('r?') === 0) {
-      var f = {}; new URLSearchParams((location.hash || '').replace(/^#r\?/, '')).forEach(function (v, k) { f[k] = v; });
-      $('q').value = f.q || ''; showList(f); return;
-    }
-    $('q').value = ''; showMap();
+    if (h.indexOf('new/') === 0) { showNew(h.slice(4)); return; }
+    if (h.indexOf('f/') === 0) { showFolder(h.slice(2)); return; }
+    showRoot();
   }
   if (!CFG) { gate('This page works on plansman.ai.'); return; }
   try { token = localStorage.getItem(TOKEN_KEY); } catch (e) {}
   if (!token) { gate('<a href="./">Open the dashboard</a> and sign in, then come back.'); return; }
   $('wrap').hidden = false;
-  $('find').addEventListener('submit', function (e) { e.preventDefault(); var q = $('q').value.trim(); $('q').blur(); location.hash = q ? href({ q: q }) : '#k'; });
+  $('find').addEventListener('submit', function (e) { e.preventDefault(); var q = $('q').value.trim(); $('q').blur(); location.hash = q ? '#q/' + encodeURIComponent(q) : '#k'; });
   main.addEventListener('click', function (e) {
     var b = e.target.closest ? e.target.closest('button') : null; if (!b) return;
     if (b.id === 'pw') { pw.open = true; pw.msg = ''; showAdmin(); $('pw-cur').focus(); return; }
     if (b.id === 'pw-cancel') { pw.open = false; pw.msg = ''; showAdmin(); return; }
     if (b.id === 'out') { b.disabled = true; signOut(); return; }
     var rule = b.closest('.rule'), part = b.closest('.part');
+    if (b.hasAttribute('data-unlink')) { point(b.closest('form'), b.getAttribute('data-unlink'), false); return; }
     if (b.hasAttribute('data-edit') && rule) { rule.innerHTML = form(RULES[rule.getAttribute('data-id')]); grow(rule.querySelector('textarea')); return; }
     if (b.hasAttribute('data-do') && rule) { b.disabled = true; act(rule.getAttribute('data-id'), b.getAttribute('data-do'), rule); return; }
     if (b.hasAttribute('data-cancel')) { if (rule) redraw(rule.getAttribute('data-id')); else history.back(); return; }
@@ -421,8 +433,8 @@ code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size:
     if (f.id === 'pwform') savePw(); else if (f.hasAttribute('data-form')) saveRule(f); else if (f.hasAttribute('data-part-form')) savePart(f);
   });
   main.addEventListener('change', function (e) {
-    var t = e.target; if (t.name !== 'topic') return;
-    var box = t.closest('form').querySelector('[data-newsub]'); box.hidden = t.value !== '__new'; if (!box.hidden) box.querySelector('input').focus();
+    var t = e.target; if (t.name !== 'link' || !t.value) return;
+    var path = t.value; t.value = ''; point(t.closest('form'), path, true);
   });
   main.addEventListener('input', function (e) { if (e.target.tagName === 'TEXTAREA') grow(e.target); });
   window.addEventListener('hashchange', route);
