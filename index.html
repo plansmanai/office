@@ -472,7 +472,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-120116";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-130910";</script>
 </head>
 <body>
 
@@ -1172,8 +1172,11 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   function projects(list) {
     var years = {};
     list.forEach(function (p) { var y = '20' + p.no.slice(0, 2); (years[y] = years[y] || []).push(p); });
+    // newest job first: the years newest first, and inside a year the highest number at the top (Lance, 24 Nov 2026:
+    // "Just in reverse numerical order. Newest job at the top")
+    var n = function (p) { return parseFloat(p.no.slice(3)) || 0; };
     return Object.keys(years).sort().reverse().map(function (y) {
-      return section(y, '', years[y].map(function (p) { var ns = openNeeds(p); return row(p, who(p), '', false, p.phase || 'No phase', bubsFor(ns), worstSev(ns)); }));
+      return section(y, '', years[y].slice().sort(function (a, b) { return n(b) - n(a); }).map(function (p) { var ns = openNeeds(p); return row(p, who(p), '', false, p.phase || 'No phase', bubsFor(ns), worstSev(ns)); }));
     }).join('') || '<div class="empty">No project matches.</div>';
   }
   function matches(p, q) {
