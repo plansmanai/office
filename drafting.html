@@ -201,7 +201,7 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
 .sgroup.dgroup > summary b { letter-spacing: .1em; }
 #doc-open { display: flex; flex-direction: column; height: 100%; } #doc-open[hidden] { display: none; }
 #doc-open .sbar b { font-weight: 500; flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 14.5px; }
-#d-scroll { flex: 1 1 0; min-height: 240px; overflow: auto; background: #d9d6cf; -webkit-overflow-scrolling: touch; }
+#d-scroll { flex: 1 1 0; min-height: 240px; overflow: auto; background: #d9d6cf; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; }
 #d-wrap { width: 100%; margin: 0 auto; }
 #d-wrap .pg { position: relative; display: block; width: 100%; background: #fff; margin: 0 0 8px; }
 #d-wrap .pg:last-child { margin-bottom: 0; }
@@ -271,7 +271,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-205234";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-220352";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -292,7 +292,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       <div id="sheet-open" hidden>
         <div class="sbar"><b id="s-title"></b>
           <span class="tools"><button type="button" id="s-draw" aria-pressed="true">Draw</button><button type="button" id="s-undo">Undo</button><button type="button" id="s-clear">Clear</button>
-          <button type="button" id="s-out">&minus;</button><button type="button" id="s-in">+</button></span></div>
+</span></div>
         <div id="s-scroll"><div id="s-wrap"><img id="s-img" alt=""><canvas id="s-canvas"></canvas></div></div>
         <div id="s-note"></div>
         <div class="sanswer"><textarea id="s-text" placeholder="What to change (optional if your marks say it)"></textarea>
@@ -301,8 +301,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
           <div class="bar"><button class="go" type="button" id="s-ok">Looks right</button><button class="sec" type="button" id="s-send">Send markup</button><span id="sheet-clip"></span><span id="s-msg"></span></div></div>
       </div>
       <div id="doc-open" hidden>
-        <div class="sbar"><button type="button" id="d-back">Documents</button><b id="d-title"></b>
-          <span class="tools"><button type="button" id="d-out" aria-label="Smaller">&minus;</button><button type="button" id="d-in" aria-label="Larger">+</button></span></div>
+        <div class="sbar"><button type="button" id="d-back">Documents</button><b id="d-title"></b></div>
         <div id="d-scroll"><div id="d-wrap"></div></div>
         <div class="sanswer"><textarea id="d-text" placeholder="A correction for this document: the item number and what it should say"></textarea>
           <div class="attrow" data-att-row="doc"></div>
@@ -968,6 +967,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       b.setAttribute('aria-current', 'true'); $('main').setAttribute('data-show', b.getAttribute('data-show'));
       var s = b.getAttribute('data-show'); if (s !== 'drew') { $('stage-live').hidden = s !== 'live'; $('stage-sheets').hidden = s !== 'sheets'; }
       if (s === 'sheets' && was && SH.open && !SH.staying) closeSheet();      // already on a sheet: back to the list of sheets
+      if (s === 'sheets' && was && DOC.open && !SH.staying) closeDoc();       // already in a document: back to the documents, where he was
     });
   });
   Array.prototype.forEach.call(document.querySelectorAll('.switch button'), function (b) {
@@ -977,6 +977,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       b.setAttribute('aria-current', 'true'); var s = b.getAttribute('data-stage');
       $('stage-live').hidden = s !== 'live'; $('stage-sheets').hidden = s !== 'sheets';
       if (s === 'sheets' && was && SH.open && !SH.staying) closeSheet();
+      if (s === 'sheets' && was && DOC.open && !SH.staying) closeDoc();
     });
   });
   // The bar between the view and the chat (Lance: "a slider left and right so I can maximize and minimize the
@@ -1064,7 +1065,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   document.addEventListener('toggle', function (e) {            // which folders he has opened or shut is kept through a refresh
     var t = e.target; if (t && t.getAttribute && t.getAttribute('data-dfolder') != null) DOC.openFolders[t.getAttribute('data-dfolder')] = t.open;
   }, true);
-  function docZoom(z) { DOC.zoom = Math.max(1, Math.min(5, z)); $('d-wrap').style.width = Math.round(DOC.zoom * 100) + '%'; }
+  function docZoom(z) { DOC.zoom = Math.max(1, Math.min(6, z)); $('d-wrap').style.width = Math.round(DOC.zoom * 100) + '%'; }
   function docPages(d) {
     var sizes = d.sizes || [], wrap = $('d-wrap');
     wrap.innerHTML = sizes.map(function (wh, i) {
@@ -1094,6 +1095,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     // folder. Drew reads them and responds. They just display on Cora's page. Cora then uploads those when she resubmits").
     // Any other permit document (an application, a form, a receipt) is Cora's.
     var to = roundOf(x.folder) != null ? 'drew' : WHO, toName = to === 'drew' ? 'Drew' : T.name;
+    DOC.at = $('stage-sheets').scrollTop;                       // where he was in the list, to come back to
     DOC.open = { id: id, path: x.path, name: x.name, to: to, toName: toName }; clearTimeout(DOC.poll);
     $('d-text').placeholder = to === 'drew' ? 'A correction for Drew: the item number and what the response should say' : 'A note for ' + toName + ' about this document';
     $('d-text').setAttribute('aria-label', $('d-text').placeholder);
@@ -1115,7 +1117,11 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   }
   function closeDoc() {
     clearTimeout(DOC.poll); if (DOC.seen) { DOC.seen.disconnect(); DOC.seen = null; }
-    DOC.open = null; $('doc-open').hidden = true; $('d-wrap').innerHTML = ''; $('sheet-list').hidden = false; loadDocs();
+    DOC.open = null; $('doc-open').hidden = true; $('d-wrap').innerHTML = ''; $('sheet-list').hidden = false;
+    // back where he was before he opened it: the same folders open, the list at the same place (also after the list is read again)
+    var back = function () { $('stage-sheets').scrollTop = DOC.at || 0; };
+    back(); setTimeout(back, 0);
+    var p = loadDocs(); if (p && p.then) p.then(back);
   }
   // What he writes under a document goes to whoever's window this is, with the document named, and shows in the
   // conversation. He stays in the document: there may be several corrections to give.
@@ -1137,8 +1143,34 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   }
   $('d-back').addEventListener('click', closeDoc);
   $('d-send').addEventListener('click', sendDoc);
-  $('d-in').addEventListener('click', function () { docZoom(DOC.zoom * 1.4); });
-  $('d-out').addEventListener('click', function () { docZoom(DOC.zoom / 1.4); });
+  // Two fingers on a document pinch it larger or smaller and move it, the way a phone does everywhere else; one finger
+  // scrolls through the pages (Lance, 23 Nov 2026: "make the pdf double finger pinch and zoom and pan. the + - are [not]
+  // as helpful"). The point under his fingers stays under them. On a PC: Ctrl and the wheel, or a trackpad's pinch.
+  (function () {
+    var box = $('d-scroll'), g = null;
+    var mid = function (t) { var r = box.getBoundingClientRect(); return { x: (t[0].clientX + t[1].clientX) / 2 - r.left, y: (t[0].clientY + t[1].clientY) / 2 - r.top, d: Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY) || 1 }; };
+    var at = function (z, fx, fy, x, y) { docZoom(z); box.scrollLeft = fx * box.scrollWidth - x; box.scrollTop = fy * box.scrollHeight - y; };
+    box.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 2) return;
+      var m = mid(e.touches);
+      g = { d: m.d, z: DOC.zoom, fx: (box.scrollLeft + m.x) / box.scrollWidth, fy: (box.scrollTop + m.y) / box.scrollHeight };
+      e.preventDefault();
+    }, { passive: false });
+    box.addEventListener('touchmove', function (e) {
+      if (!g || e.touches.length !== 2) return;
+      e.preventDefault();
+      var m = mid(e.touches); at(g.z * m.d / g.d, g.fx, g.fy, m.x, m.y);
+    }, { passive: false });
+    var end = function (e) { if (e.touches.length < 2) g = null; };
+    box.addEventListener('touchend', end); box.addEventListener('touchcancel', end);
+    box.addEventListener('gesturestart', function (e) { e.preventDefault(); });          // the phone's own page zoom stays out of it
+    box.addEventListener('wheel', function (e) {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      var r = box.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+      at(DOC.zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15), (box.scrollLeft + x) / box.scrollWidth, (box.scrollTop + y) / box.scrollHeight, x, y);
+    }, { passive: false });
+  })();
   function loadSheets() {
     if (WHO === 'cora') return loadDocs();                      // her middle tab is Documents; Drew's is his sheets
     Promise.all([rpc('office_drew_checkins', { p_token: token, p_proj: NO, p_who: WHO }),
@@ -1297,8 +1329,8 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   $('s-draw').addEventListener('click', function () { SH.draw = !SH.draw; this.setAttribute('aria-pressed', SH.draw ? 'true' : 'false'); this.textContent = SH.draw ? 'Draw' : 'Move'; cvs.classList.toggle('draw', SH.draw); });
   $('s-undo').addEventListener('click', function () { SH.strokes.pop(); paint(); });
   $('s-clear').addEventListener('click', function () { SH.strokes = []; paint(); });
-  $('s-in').addEventListener('click', function () { setZoom(SH.zoom * 1.5); });
-  $('s-out').addEventListener('click', function () { setZoom(SH.zoom / 1.5); });
+  // on a PC: Ctrl and the wheel (or two fingers on a trackpad) make the sheet larger or smaller, as a phone's two fingers do
+  sc.addEventListener('wheel', function (e) { if (!e.ctrlKey || !SH.open) return; e.preventDefault(); setZoom(SH.zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15)); }, { passive: false });
   window.addEventListener('resize', function () { if (SH.open) fit(); else paint(); });      // turned, or the window changed: fitted again
   function sendMark(ok) {
     if (!SH.open) return;
