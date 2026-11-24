@@ -78,6 +78,10 @@ body.off .view.live > .status { display: flex; }
 header h1 { margin: 0; font-weight: 300; font-size: 17px; letter-spacing: .12em; text-transform: uppercase; }
 header h1 .no { margin-right: 12px; }
 header .phase { font-size: .62rem; letter-spacing: .18em; text-transform: uppercase; border: 1px solid var(--rule); padding: 2px 7px 1px; color: var(--muted); }
+/* the same colors as the dashboard's phase bubble: red in our court, green out of it, yellow a lead (Lance, 24 Nov 2026) */
+header .phase.c-ours { background: #9A3B2E; border-color: #9A3B2E; color: #fff; }
+header .phase.c-out { background: #4F6B66; border-color: #4F6B66; color: #fff; }
+header .phase.c-lead { background: #E2B43C; border-color: #E2B43C; color: #1B1B19; }
 header .status { margin-left: auto; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
 header .dot { width: 8px; height: 8px; background: var(--rule); display: inline-block; }
 header .dot.on { background: var(--sage); } header .dot.busy { background: var(--oak); }
@@ -271,7 +275,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261124-142112";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261124-144444";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -809,7 +813,12 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       if (!d || !d.ok) { gate('Signed out. <a href="./">Open the dashboard</a> and sign in, then come back.'); return; }
       if (d.project) {
         $('no').textContent = d.project.proj_no; $('addr').textContent = d.project.address || '';
-        if (d.project.phase) { $('phase').textContent = d.project.phase; $('phase').hidden = false; }
+        if (d.project.phase) {
+          var ph = d.project.phase;                       // whose move, by phase: the dashboard's table (app/export.py, COURT)
+          $('phase').textContent = ph; $('phase').hidden = false;
+          $('phase').className = 'phase ' + (/^(In Design|Const\. Docs|Backcheck|Revision)$/.test(ph) ? 'c-ours' :
+            /^(Rough Quote|Follow Up|Proposal Out|Legacy Follow Up)$/.test(ph) ? 'c-lead' : /^(Complete|Abandoned)$/.test(ph) ? '' : 'c-out');
+        }
         document.title = d.project.proj_no + ' ' + T.name;
       }
       (d.gos || []).forEach(function (g) { GOS[g.id] = g; });
