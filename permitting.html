@@ -214,7 +214,7 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
 .msg .ask .was { color: var(--muted); font-size: 13px; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
 </style>
-<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-170422";</script>
+<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-172739";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -742,7 +742,19 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
       });
       // a sheet is on the list from the moment it is plotted, whether or not anything has been said about it yet
       Object.keys(plotted).forEach(function (g) { if (!groups[g]) { groups[g] = { sheet: g, kind: plotted[g].sheet_kind, items: [] }; order.push(g); } });
-      order.sort(function (a, b) { var x = groups[a], y = groups[b]; return ((ord[x.kind] || 999) - (ord[y.kind] || 999)) || (a < b ? -1 : 1); });
+      // The order of the set (station/plots.py, _order): T, A, S, D, then any sheet a job adds, by its letter (F, P, R,
+      // or one never seen before). The model comes first; the calcs and anything without a sheet number come last.
+      var setOrder = function (g) {
+        var m = /^([A-Z]{1,2})-(\d+)\.(\d+)$/.exec(String(g.sheet || '').toUpperCase()), k = ord[g.kind] || 999;
+        if (!m) return [k < 10 ? 0 : 3, k, '', 0, 0];
+        var f = m[1].length === 1 ? 'TASD'.indexOf(m[1]) : -1;
+        return [f >= 0 ? 1 : 2, f >= 0 ? f : 0, f >= 0 ? '' : m[1], +m[2], +m[3]];
+      };
+      order.sort(function (a, b) {
+        var x = setOrder(groups[a]), y = setOrder(groups[b]);
+        for (var i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] < y[i] ? -1 : 1;
+        return a < b ? -1 : a > b ? 1 : 0;
+      });
       var mine = function (c) { return c.note === 'The whole sheet as last plotted.'; };      // a markup of his, kept as history
       var row = function (c) {
         return '<button class="srow hist" type="button" data-sheet="' + c.id + '"><i>' + (mine(c) ? 'You' : T.name) + '</i><b>' +
