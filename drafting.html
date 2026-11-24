@@ -192,6 +192,22 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
 .sgroup > summary em.q { border-color: var(--ink); color: var(--ink); }
 .srow.cur b { font-weight: 400; }
 .srow .said { display: block; margin-top: 4px; color: var(--ink); font-size: 14px; }
+/* DOCUMENTS (Cora's window; db/077; Lance, 23 Nov 2026: "It doesn't need a markup area. It should be a .pdf viewer that
+   can handle multiple pages by scrolling"). The list is the job's PERMITTING folder as a tree: each round's folder,
+   in the order of the rounds, opens to its files. A document open is its pages one under the other, the whole width,
+   with - and + to zoom and his box for a correction under it. No drawing tools. */
+.dfile b { font-weight: 400; overflow-wrap: anywhere; }
+.dfile span { display: block; margin-top: 2px; }
+.sgroup.dgroup > summary b { letter-spacing: .1em; }
+#doc-open { display: flex; flex-direction: column; height: 100%; } #doc-open[hidden] { display: none; }
+#doc-open .sbar b { font-weight: 500; flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 14.5px; }
+#d-scroll { flex: 1 1 0; min-height: 240px; overflow: auto; background: #d9d6cf; -webkit-overflow-scrolling: touch; }
+#d-wrap { width: 100%; margin: 0 auto; }
+#d-wrap .pg { position: relative; display: block; width: 100%; background: #fff; margin: 0 0 8px; }
+#d-wrap .pg:last-child { margin-bottom: 0; }
+#d-wrap .pg img { display: block; width: 100%; height: 100%; }
+#d-wrap .pg i { position: absolute; right: 8px; bottom: 6px; font-style: normal; font-size: 11px; line-height: 1.5; color: var(--muted); background: rgba(252, 251, 249, .88); padding: 0 6px; }
+#d-wrap .st { margin: 0; padding: 28px 18px; color: var(--muted); background: var(--bg); }
 .sscore { padding: 12px 18px 16px; border-bottom: 1px solid var(--rule); color: var(--muted); font-size: 13.5px; }
 .sscore summary { cursor: pointer; font-family: var(--sans); letter-spacing: .14em; text-transform: uppercase; font-size: .62rem; color: var(--ink); }
 .sscore table { border-collapse: collapse; margin-top: 10px; width: 100%; max-width: 560px; } .sscore td, .sscore th { text-align: left; padding: 4px 14px 4px 0; font-weight: 400; }
@@ -255,7 +271,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-200724";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-204011";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -283,6 +299,14 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
           <div class="attrow" data-att-row="sheet"></div>
           <!-- the box standard: the black button takes it (Looks right, when he was asked to look) and comes first; his markup is the reply -->
           <div class="bar"><button class="go" type="button" id="s-ok">Looks right</button><button class="sec" type="button" id="s-send">Send markup</button><span id="sheet-clip"></span><span id="s-msg"></span></div></div>
+      </div>
+      <div id="doc-open" hidden>
+        <div class="sbar"><button type="button" id="d-back">Documents</button><b id="d-title"></b>
+          <span class="tools"><button type="button" id="d-out" aria-label="Smaller">&minus;</button><button type="button" id="d-in" aria-label="Larger">+</button></span></div>
+        <div id="d-scroll"><div id="d-wrap"></div></div>
+        <div class="sanswer"><textarea id="d-text" placeholder="A correction for this document: the item number and what it should say"></textarea>
+          <div class="attrow" data-att-row="doc"></div>
+          <div class="bar"><button class="go" type="button" id="d-send">Send</button><span id="doc-clip"></span><span id="d-msg"></span></div></div>
       </div>
     </div>
   </section>
@@ -337,7 +361,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   var T = { drew: { name: 'Drew', win: 'Drafting', screen: 'Drew\'s AutoCAD', none: 'AutoCAD is not open on the AI PC right now.', looking: 'Looking for Drew\'s AutoCAD…',
                     open: 'Drew has open: ', nothing: 'No drawing open', sheets: 'Sheets', empty: 'Tell Drew what you want done on this job.' },
             cora: { name: 'Cora', win: 'Permitting', screen: 'Cora\'s browser', none: 'Cora\'s browser is not open on the AI PC right now.', looking: 'Looking for Cora\'s browser…',
-                    open: '', nothing: '', sheets: 'Check-ins', empty: 'Tell Cora what you want done on this job\'s permit.' } }[WHO];
+                    open: '', nothing: '', sheets: 'Documents', empty: 'Tell Cora what you want done on this job\'s permit.' } }[WHO];
   var MSGS = [], LAST = 0, BUSY = false, timer = null, sending = false, GOS = {}, LOGIN = {}, ASKS = {};      // ASKS: this one's own questions still open (db/065)
   // date and time, always, the same as on the dashboard: "21 Nov, 10:50 PM" (Lance, 22 Nov 2026: "It's hard to tell what's current or outdated")
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -853,9 +877,9 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   document.querySelector('.tabs [data-show="sheets"]').textContent = T.sheets;
   document.querySelector('.switch [data-stage="sheets"]').textContent = T.sheets;
   $('text').placeholder = 'Talk to ' + T.name; $('text').setAttribute('aria-label', 'Talk to ' + T.name);
-  $('say-clip').outerHTML = ATT.clip('say', NO); $('sheet-clip').outerHTML = ATT.clip('sheet', NO);      // the paperclips of the two boxes that are in the page itself
+  $('say-clip').outerHTML = ATT.clip('say', NO); $('sheet-clip').outerHTML = ATT.clip('sheet', NO); $('doc-clip').outerHTML = ATT.clip('doc', NO);      // the paperclips of the two boxes that are in the page itself
   $('live').alt = T.screen; $('live-note').textContent = T.looking;
-  document.querySelector('#sheet-list .none').textContent = 'No check-ins on this job yet. ' + T.name + ' posts one when ' + (WHO === 'cora' ? 'she wants' : 'he wants') + ' you to look at something.';
+  document.querySelector('#sheet-list .none').textContent = WHO === 'cora' ? 'Reading the job’s PERMITTING folder…' : 'No check-ins on this job yet. ' + T.name + ' posts one when he wants you to look at something.';
   // her two questions in the conversation: go ahead or not, and a login
   $('said').addEventListener('input', function (e) {
     var t = e.target, u = t.getAttribute && t.getAttribute('data-login-u'), p = t.getAttribute && t.getAttribute('data-login-p');
@@ -992,7 +1016,119 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     SH.staying = false;
   }
   function sheetsShowing() { return !document.hidden && !$('stage-sheets').hidden && (window.innerWidth > 860 || $('main').getAttribute('data-show') === 'sheets'); }
+  // ---- DOCUMENTS (Cora's window only; db/077, station/docs.py). The middle tab of her window is the job's PERMITTING
+  // folder: her working folder, where each round of the city's comments, the responses to them and everything else
+  // kept for the permit is saved. The office PC reads the folder when this asks (a second or two), and makes a
+  // document into pages the first time it is opened. Nothing here changes a file.
+  var DOC = { list: [], sig: '', scanned: null, open: null, zoom: 1, openFolders: {}, poll: null, seen: null };
+  function roundOf(f) { var m = /\bBC\s*(\d+)\b/i.exec(f || ''); return m ? +m[1] : null; }
+  function kb(n) { return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round((n || 0) / 1024)) + ' KB'; }
+  function loadDocs() {
+    return rpc('office_docs', { p_token: token, p_proj: NO }).then(function (d) {
+      if (!d || !d.ok) return;
+      var sig = JSON.stringify([d.scanned_at ? 1 : 0, d.folder, (d.docs || []).map(function (x) { return [x.id, x.size, x.modified]; })]);
+      DOC.list = d.docs || []; DOC.scanned = d.scanned_at; DOC.folder = d.folder;
+      if (sig !== DOC.sig) { DOC.sig = sig; drawDocs(); }
+      if (!d.scanned_at) setTimeout(function () { if (sheetsShowing() && !DOC.open) loadDocs(); }, 1500);      // the PC has not read this job's folder yet
+    }).catch(function () {});
+  }
+  function drawDocs() {
+    var by = {}, names = [];
+    DOC.list.forEach(function (x) { var f = x.folder || ''; if (!by[f]) { by[f] = []; names.push(f); } by[f].push(x); });
+    // the rounds in their order (BC1, BC2 ...; an intake round with the round of its number), then any other folder
+    // by name, then what sits at the top of PERMITTING
+    names.sort(function (a, b) {
+      var ra = roundOf(a), rb = roundOf(b), ka = a === '' ? 2 : ra == null ? 1 : 0, kb2 = b === '' ? 2 : rb == null ? 1 : 0;
+      if (ka !== kb2) return ka - kb2;
+      if (ka === 0 && ra !== rb) return ra - rb;
+      var ia = /\bINT\b/i.test(a) ? 0 : 1, ib = /\bINT\b/i.test(b) ? 0 : 1;      // in one round, the intake or pre-screen comes before the plan check
+      if (ka === 0 && ia !== ib) return ia - ib;
+      return a.toLowerCase() < b.toLowerCase() ? -1 : a.toLowerCase() > b.toLowerCase() ? 1 : 0;
+    });
+    var rounds = names.filter(function (n) { return roundOf(n) != null; }), latest = rounds.length ? rounds[rounds.length - 1] : (names.length ? names[0] : null);
+    var html = names.map(function (f) {
+      var files = by[f].slice().sort(function (a, b) { return a.path.toLowerCase() < b.path.toLowerCase() ? -1 : 1; });
+      var newest = files.reduce(function (m, x) { return x.modified && (!m || x.modified > m) ? x.modified : m; }, null);
+      var open = DOC.openFolders[f] != null ? DOC.openFolders[f] : f === latest;
+      return '<details class="sgroup dgroup" data-dfolder="' + esc(f) + '"' + (open ? ' open' : '') + '><summary><b>' + esc(f || 'Other documents') + '</b><span>' +
+        files.length + (files.length === 1 ? ' file' : ' files') + (newest ? ' · last saved ' + esc(stamp(newest)) : '') + '</span></summary>' +
+        files.map(function (x) {
+          var sub = x.path.split('/').slice(1, -1).join(' / ');      // a folder inside the round's folder
+          return '<button class="srow dfile" type="button" data-doc="' + x.id + '"><b>' + (sub ? esc(sub) + ' / ' : '') + esc(x.name) + '</b><span>' + kb(x.size) +
+            (x.modified ? ' · saved ' + esc(stamp(x.modified)) : '') + '</span></button>';
+        }).join('') + '</details>';
+    }).join('');
+    $('sheet-list').innerHTML = html || '<p class="none">' + (DOC.scanned ? 'Nothing is in this job\u2019s PERMITTING folder yet. What ' + T.name + ' saves for the permit, and each round of the city\u2019s comments, shows here.'
+                                                                        : 'Reading the job\u2019s PERMITTING folder\u2026') + '</p>';
+  }
+  document.addEventListener('toggle', function (e) {            // which folders he has opened or shut is kept through a refresh
+    var t = e.target; if (t && t.getAttribute && t.getAttribute('data-dfolder') != null) DOC.openFolders[t.getAttribute('data-dfolder')] = t.open;
+  }, true);
+  function docZoom(z) { DOC.zoom = Math.max(1, Math.min(5, z)); $('d-wrap').style.width = Math.round(DOC.zoom * 100) + '%'; }
+  function docPages(d) {
+    var sizes = d.sizes || [], wrap = $('d-wrap');
+    wrap.innerHTML = sizes.map(function (wh, i) {
+      return '<div class="pg" data-pg="' + (i + 1) + '" style="aspect-ratio: ' + (wh[0] || 17) + ' / ' + (wh[1] || 22) + '"><img alt="Page ' + (i + 1) + '"><i>' + (i + 1) + ' of ' + sizes.length + '</i></div>';
+    }).join('') + (d.note ? '<p class="st">' + esc(d.note) + '</p>' : '');
+    var load = function (el) {
+      if (el.getAttribute('data-got')) return;
+      el.setAttribute('data-got', '1');
+      rpc('office_doc_page', { p_token: token, p_id: d.id, p_n: +el.getAttribute('data-pg') }).then(function (p) {
+        if (p && p.ok && p.image && DOC.open && DOC.open.id === d.id) el.querySelector('img').src = 'data:image/jpeg;base64,' + p.image;
+        else el.removeAttribute('data-got');
+      }).catch(function () { el.removeAttribute('data-got'); });
+    };
+    var pages = [].slice.call(wrap.querySelectorAll('.pg'));
+    if (DOC.seen) { DOC.seen.disconnect(); DOC.seen = null; }
+    if (window.IntersectionObserver) {                          // a page is fetched as it comes near the screen, so a long set opens at once
+      DOC.seen = new IntersectionObserver(function (es) { es.forEach(function (x) { if (x.isIntersecting) load(x.target); }); }, { root: $('d-scroll'), rootMargin: '900px 0px' });
+      pages.forEach(function (el) { DOC.seen.observe(el); });
+    } else pages.forEach(load);
+    pages.slice(0, 2).forEach(load);
+  }
+  function openDoc(id) {
+    var x = DOC.list.filter(function (y) { return y.id === id; })[0];
+    if (!x) return;
+    DOC.open = { id: id, path: x.path, name: x.name }; clearTimeout(DOC.poll);
+    showSheets(); $('sheet-list').hidden = true; $('sheet-open').hidden = true; $('doc-open').hidden = false;
+    $('d-title').textContent = x.name; $('d-msg').textContent = ''; $('d-scroll').scrollTop = 0; docZoom(1);
+    $('d-wrap').innerHTML = '<p class="st">Opening\u2026</p>';
+    var tries = 0, ask = function () {
+      rpc('office_doc', { p_token: token, p_id: id }).then(function (d) {
+        if (!DOC.open || DOC.open.id !== id) return;
+        if (!d || !d.ok) { $('d-wrap').innerHTML = '<p class="st">Signed out. Open the dashboard and sign in.</p>'; return; }
+        if (!d.found) { $('d-wrap').innerHTML = '<p class="st">It is no longer in the folder.</p>'; return; }
+        if (d.state === 'ready') return docPages(d);
+        if (d.state === 'failed') { $('d-wrap').innerHTML = '<p class="st">' + esc(d.note || 'It could not be opened.') + '</p>'; return; }
+        $('d-wrap').innerHTML = '<p class="st">' + (tries > 20 ? 'Still getting it ready. A long set takes a little while the first time; the office PC has to be on.' : 'Getting it ready\u2026') + '</p>';
+        if (++tries < 120) DOC.poll = setTimeout(ask, 1500);
+      }).catch(function () { if (DOC.open && DOC.open.id === id && ++tries < 120) DOC.poll = setTimeout(ask, 3000); });
+    };
+    ask();
+  }
+  function closeDoc() {
+    clearTimeout(DOC.poll); if (DOC.seen) { DOC.seen.disconnect(); DOC.seen = null; }
+    DOC.open = null; $('doc-open').hidden = true; $('d-wrap').innerHTML = ''; $('sheet-list').hidden = false; loadDocs();
+  }
+  // What he writes under a document goes to whoever's window this is, with the document named, and shows in the
+  // conversation. He stays in the document: there may be several corrections to give.
+  function sendDoc() {
+    if (!DOC.open) return;
+    var text = ATT.join('doc', $('d-text').value);
+    if (text === null) { $('d-msg').textContent = ATT.WAIT; return; }
+    if (!text) { $('d-msg').textContent = 'Write the correction first.'; return; }
+    $('d-msg').textContent = 'Sending\u2026'; $('d-send').disabled = true;
+    rpc('office_drew_say', { p_token: token, p_proj: NO, p_who: WHO, p_body: 'About the document "' + DOC.open.path + '" in this job\u2019s PERMITTING folder:\n' + text }).then(function (d) {
+      if (d && d.ok && d.saved) { $('d-text').value = ''; ATT.clear('doc'); $('d-msg').textContent = 'Sent to ' + T.name + '. The answer is under the ' + T.name + ' tab.'; loop(); }
+      else $('d-msg').textContent = d && d.ok ? 'Not sent. Try again.' : 'Signed out. Open the dashboard and sign in.';
+    }).catch(function (e) { $('d-msg').textContent = 'Not sent (' + e.message + '). Your words are still here.'; }).then(function () { $('d-send').disabled = false; });
+  }
+  $('d-back').addEventListener('click', closeDoc);
+  $('d-send').addEventListener('click', sendDoc);
+  $('d-in').addEventListener('click', function () { docZoom(DOC.zoom * 1.4); });
+  $('d-out').addEventListener('click', function () { docZoom(DOC.zoom / 1.4); });
   function loadSheets() {
+    if (WHO === 'cora') return loadDocs();                      // her middle tab is Documents; Drew's is his sheets
     Promise.all([rpc('office_drew_checkins', { p_token: token, p_proj: NO, p_who: WHO }),
                  WHO === 'drew' ? rpc('office_job_sheets', { p_token: token, p_proj: NO }).catch(function () { return null; }) : null]).then(function (both) {
       var d = both[0], plotted = {};
@@ -1169,10 +1305,11 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   $('s-send').addEventListener('click', function () { sendMark(false); });
   $('s-ok').addEventListener('click', function () { sendMark(true); });
   document.addEventListener('click', function (e) {
+    var dd = e.target.closest && e.target.closest('[data-doc]'); if (dd) { e.preventDefault(); openDoc(+dd.getAttribute('data-doc')); return; }
     var c = e.target.closest && e.target.closest('[data-cur]'); if (c) { e.preventDefault(); openCurrent(c.getAttribute('data-cur')); return; }
     var a = e.target.closest && e.target.closest('[data-sheet]'); if (a) openSheet(a.getAttribute('data-sheet'));
   });
-  setInterval(function () { if (sheetsShowing() && !SH.open) loadSheets(); }, 10000);
+  setInterval(function () { if (sheetsShowing() && !SH.open && !DOC.open) loadSheets(); }, 10000);
   loadSheets();
   loop();
   live();
