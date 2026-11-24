@@ -451,7 +451,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261123-190612";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261123-194649";</script>
 </head>
 <body>
 
@@ -762,7 +762,11 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       (onItem || d.channel !== 'email' ? '' : '<div class="subj">' + esc(d.subject) + '</div>');
     if (editing) h += '<textarea data-draft-text="' + d.id + '" aria-label="The email text">' + esc(state.draftText[d.id] != null ? state.draftText[d.id] : d.body) + '</textarea>';
     else h += '<div class="txt">' + para(d.body) + '</div>';
-    if (files.length && d.state !== 'sent') h += '<div class="body"><b>Attached: </b>' + files.map(function (a) { return esc(a.name) + ' <span class="note">(' + esc(a.size || '') + (a.modified ? ', last changed ' + esc(day(a.modified)) : '') + ')</span>'; }).join('; ') + '</div>';
+    var fileLine = function (label, list) {
+      return list.length ? '<div class="body"><b>' + label + ' </b>' + list.map(function (a) { return esc(a.name) + ' <span class="note">(' + esc(a.size_text || a.size || '') + (a.modified ? ', last changed ' + esc(day(a.modified)) : '') + ')</span>'; }).join('; ') + '</div>' : '';
+    };
+    // a file too large to email goes as a link to it on Google Drive, made when he taps Send (anyone with the link can look)
+    if (files.length && d.state !== 'sent') h += fileLine('Attached:', files.filter(function (a) { return !a.link; })) + fileLine('Too large to attach, sent as a Google Drive link:', files.filter(function (a) { return a.link; }));
     if (d.state === 'failed' || d.state === 'stale') h += '<div class="body late">' + esc(d.result || 'Not sent.') + '</div>';
     else if (d.state === 'approved' || d.state === 'sending') h += '<div class="body note">' + esc(d.result || (d.channel === 'action' ? 'Doing it…' : 'Sending…')) + '</div>';
     else if (d.state === 'sent') h += '<div class="body ok">' + esc(d.result || 'Sent.') + '</div>';

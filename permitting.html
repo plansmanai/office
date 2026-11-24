@@ -254,7 +254,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-190612";</script>
+<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-194649";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -649,7 +649,9 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       var h = '<div class="dr"><div class="lbl">' + T.name + ' drafted · ' + what + ' · written ' + esc(stamp(d.created_at)) + '</div>' +
         (d.channel === 'email' && d.subject ? '<div class="subj">' + esc(d.subject) + '</div>' : '');
       h += editing ? '<textarea data-dr-text="' + d.id + '" aria-label="The text">' + esc(drText[d.id] != null ? drText[d.id] : d.body) + '</textarea>' : '<div class="txt">' + esc(d.body) + '</div>';
-      if (files.length) h += '<div class="note"><b>Attached: </b>' + files.map(function (a) { return esc(a.name) + ' (' + esc(a.size || '') + ')'; }).join('; ') + '</div>';
+      var fileLine = function (label, list) { return list.length ? '<div class="note"><b>' + label + ' </b>' + list.map(function (a) { return esc(a.name) + ' (' + esc(a.size_text || a.size || '') + ')'; }).join('; ') + '</div>' : ''; };
+      // a file too large to email goes as a link to it on Google Drive, made when he taps Send (anyone with the link can look)
+      if (files.length) h += fileLine('Attached:', files.filter(function (a) { return !a.link; })) + fileLine('Too large to attach, sent as a Google Drive link:', files.filter(function (a) { return a.link; }));
       if (d.state === 'failed' || d.state === 'stale') h += '<div class="note bad">' + esc(d.result || 'Not sent.') + '</div>';
       else if (d.state === 'approved' || d.state === 'sending') h += '<div class="note">' + esc(d.result || (d.channel === 'action' ? 'Doing it…' : 'Sending…')) + '</div>';
       var id = ' data-id="' + d.id + '"', drop = boxBtn('dim', 'data-dr="drop"' + id, 'Drop', key);
