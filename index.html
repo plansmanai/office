@@ -418,24 +418,40 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   .foot { grid-column: 2; grid-row: 5; margin: 8px 0 10px; }
   #detail { grid-column: 3; grid-row: 2 / 6; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin-top: 14px; }
 }
-/* Pictures in a chat box (db/073; the code is PIX, below): the Picture button, the small ones waiting under the box,
-   and a picture in the conversation (a tap opens it whole). The same rules are in dashboard.html and drafting.html. */
-label.pick { display: inline-flex; align-items: center; justify-content: center; flex: none; min-height: 42px; padding: 0 16px; border: 1px solid var(--ink); color: var(--ink); background: transparent;
-  font-family: var(--sans); text-transform: uppercase; letter-spacing: .18em; font-weight: 400; font-size: .66rem; cursor: pointer; }
-label.pick input { display: none; }
-@media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
-.pixrow { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; } .pixrow:empty { display: none; }
-.pixrow .px { position: relative; width: 68px; height: 68px; border: 1px solid var(--rule); background: var(--soft) center / cover no-repeat; display: flex; align-items: flex-end; }
-.pixrow .px i { font-style: normal; font-size: 10px; line-height: 1.2; padding: 2px 4px; background: var(--bg); color: var(--muted); }
-.pixrow .px.bad { border-color: var(--long); } .pixrow .px.bad i { color: var(--long); }
-.pixrow .px.busy { opacity: .6; }
-.pixrow .px button { position: absolute; top: -9px; right: -9px; width: 24px; height: 24px; min-height: 0; padding: 0; margin: 0; border: 1px solid var(--ink); background: var(--bg); color: var(--ink);
+/* Attachments in a box where he writes to the team (db/074; the code is ATT, below): the paperclip, what is waiting
+   under the box, and a picture or a file in a conversation (a tap opens it). THE SAME RULES ARE IN dashboard.html AND
+   drafting.html. The paperclip is the last control in a box's row of buttons, the same size as the buttons. */
+label.clip { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 42px; height: 42px; min-height: 0; padding: 0; margin: 0; border: 1px solid var(--rule); color: var(--ink);
+  background: transparent; cursor: pointer; }
+label.clip input { display: none; }
+@media (hover: hover) { label.clip:hover { border-color: var(--ink); } }
+.attrow { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; } .attrow:empty { display: none; }
+.attrow .px { position: relative; width: 68px; height: 68px; border: 1px solid var(--rule); background: var(--soft) center / cover no-repeat; display: flex; align-items: flex-end; }
+.attrow .px.doc { width: 132px; flex-direction: column; align-items: flex-start; justify-content: center; padding: 6px 8px; gap: 2px; }
+.attrow .px.doc b { font-family: var(--sans); font-weight: 500; font-size: 11px; letter-spacing: .12em; }
+.attrow .px.doc u { text-decoration: none; font-size: 11px; line-height: 1.25; color: var(--muted); max-width: 100%; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.attrow .px i { font-style: normal; font-size: 10px; line-height: 1.2; padding: 2px 4px; background: var(--bg); color: var(--muted); }
+.attrow .px.doc i { position: absolute; left: 0; bottom: 0; }
+.attrow .px.bad { border-color: var(--long); } .attrow .px.bad i { color: var(--long); }
+.attrow .px.busy { opacity: .65; }
+.attrow .px button { position: absolute; top: -9px; right: -9px; width: 24px; height: 24px; min-height: 0; padding: 0; margin: 0; border: 1px solid var(--ink); background: var(--bg); color: var(--ink);
   font-size: 14px; line-height: 1; letter-spacing: 0; cursor: pointer; }
 img.pic { display: block; max-width: min(100%, 280px); max-height: 220px; min-width: 60px; min-height: 40px; margin: 8px 0 4px; border: 1px solid var(--rule); background: var(--soft); cursor: zoom-in; }
-#pixview { position: fixed; inset: 0; z-index: 300; background: rgba(27, 27, 25, .93); display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
-#pixview img { max-width: 96vw; max-height: 92vh; background: #fff; }
+a.filechip { display: flex; align-items: center; gap: 10px; max-width: min(100%, 320px); margin: 8px 0 4px; padding: 9px 12px; border: 1px solid var(--rule); background: var(--bg) left center / 0 no-repeat; color: var(--ink);
+  text-decoration: none; text-transform: none; letter-spacing: 0; font-size: 14px; line-height: 1.3; cursor: pointer; }
+a.filechip b { flex: none; font-family: var(--sans); font-weight: 500; font-size: 11px; letter-spacing: .12em; padding: 4px 6px; border: 1px solid var(--ink); }
+a.filechip span { min-width: 0; overflow-wrap: anywhere; }
+#attview { position: fixed; inset: 0; z-index: 300; background: rgba(27, 27, 25, .93); display: flex; align-items: center; justify-content: center; padding: 14px; }
+#attview .card { background: var(--bg); max-width: min(96vw, 1100px); max-height: 94vh; overflow: auto; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+#attview .nm { margin: 0; font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+#attview .body img, #attview .body video { display: block; max-width: 100%; max-height: 74vh; margin: 0 auto; background: #fff; }
+#attview .body audio { width: min(100%, 420px); }
+#attview .st { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+#attview a.go { display: inline-block; padding: 12px 18px; background: var(--ink); color: var(--on-ink); text-decoration: none; font-family: var(--sans); text-transform: uppercase; letter-spacing: .18em; font-size: .66rem; }
+#attview button.sec { align-self: flex-start; }
+@media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261123-184505";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261123-190612";</script>
 </head>
 <body>
 
@@ -459,8 +475,8 @@ img.pic { display: block; max-width: min(100%, 280px); max-height: 220px; min-wi
       <div class="chat" id="chatlog"></div>
       <form id="ask" hidden>
         <textarea id="ask-text" placeholder="Message Jake" aria-label="Message Jake"></textarea>
-        <div class="pixrow" data-pix-row="chat"></div>
-        <div class="bar"><button class="go" id="ask-btn" type="submit">Send</button><label class="pick">Picture<input type="file" accept="image/*" multiple data-pix="chat" data-proj="office"></label><span id="ask-note">Enter sends. Shift+Enter starts a new line.</span><button type="button" id="pend-btn" hidden>Pending</button></div>
+        <div class="attrow" data-att-row="chat"></div>
+        <div class="bar"><button class="go" id="ask-btn" type="submit">Send</button><span id="chat-clip"></span><span id="ask-note">Enter sends. Shift+Enter starts a new line.</span><button type="button" id="pend-btn" hidden>Pending</button></div>
       </form>
     </div>
     <div id="listview">
@@ -507,14 +523,15 @@ img.pic { display: block; max-width: min(100%, 280px); max-height: 220px; min-wi
   function btn(cls, word, attrs) { return '<button class="' + cls + '" type="button" ' + attrs + '>' + word + '</button>'; }
   function btnRow(list) { list = list.filter(Boolean); return list.length ? '<div class="btns">' + list.join('') + '</div>' : ''; }
   function replyBtn(key) { return btn('sec', 'Reply', 'data-need-reply="' + esc(key) + '"'); }
-  function replyBox(key, ph, textAttrs, value, sendAttrs, cancelAttrs, under) {
+  function replyBox(key, ph, textAttrs, value, sendAttrs, cancelAttrs, under, proj) {
+    var pm = /data-proj="([^"]*)"/.exec(textAttrs + ' ' + sendAttrs), job = proj || (pm && pm[1]) || state.no || 'office';      // the job its attachments are saved on
     return '<div class="answer"><textarea data-box="' + esc(key) + '" ' + textAttrs + ' placeholder="' + esc(ph) + '" aria-label="' + esc(ph) + '">' + esc(value || '') + '</textarea>' + (under || '') +
-      btnRow([btn('go', 'Send', sendAttrs), btn('dim', 'Cancel', cancelAttrs || 'data-need-reply=""')]) + '</div>';
+      ATT.row('r:' + key) + btnRow([btn('go', 'Send', sendAttrs), btn('dim', 'Cancel', cancelAttrs || 'data-need-reply=""'), ATT.clip('r:' + key, BY[job] ? job : 'office')]) + '</div>';
   }
   function undoBtn(attrs) { return '<button class="text" type="button" ' + attrs + '>Undo</button>'; }
   function quietLine(text, at, what, undo) {
     var t = whenText(at), w = String(what || '');
-    return '<div class="quiet"><span>' + esc(text) + (t ? ' · ' + esc(t) : '') + '</span>' + (undo || '') + '</div>' +
+    return '<div class="quiet"><span>' + esc(ATT.quiet(text)) + (t ? ' · ' + esc(t) : '') + '</span>' + (undo || '') + '</div>' +
       (w ? '<div class="qwhat">' + esc(w.length > 160 ? w.slice(0, 160) + '…' : w) + '</div>' : '');      // which thing it was, so five "Handled" lines can be told apart
   }
   // QUIET: the quiet lines for what the record does not hand back to this page once it is settled (a question marked
@@ -826,7 +843,7 @@ img.pic { display: block; max-width: min(100%, 280px); max-height: 220px; min-wi
     if (d.guess) h += '<div class="body"><b>' + (d.agent === 'cora' ? 'Her' : 'His') + ' guess: </b>' + esc(d.guess) + '</div>';
     if (!theirsDec(d)) h += itemThread(aboutItem(key));      // what he and Jake said about it before Reply became the answer
     if (!CFG) return h;
-    if (state.needReply === key) return h + replyBox(key, 'Your answer to ' + askName(d), 'data-dec-text="' + d.id + '" data-dec-send="answer"', state.decText[d.id], 'data-dec="answer" data-id="' + d.id + '"');
+    if (state.needReply === key) return h + replyBox(key, 'Your answer to ' + askName(d), 'data-dec-text="' + d.id + '" data-dec-send="answer"', state.decText[d.id], 'data-dec="answer" data-id="' + d.id + '"', null, null, d.proj_no);
     return h + btnRow([d.guess ? btn('go', 'Yes', 'data-dec="yes" data-id="' + d.id + '"') : '', replyBtn(key), btn('dim', 'Outdated', 'data-dec="outdated" data-id="' + d.id + '"')]);
   }
   // Something done and shown to be checked (the older kind, in Chat): Yes is one tap; Reply opens the box for what it
@@ -837,7 +854,7 @@ img.pic { display: block; max-width: min(100%, 280px); max-height: 220px; min-wi
     if (!CFG) return h + '</div>';
     // What he types is the correction (it is changed to exactly that); left empty, it is put back as it was.
     if (state.decWrong === d.id) h += replyBox('shown:' + d.id, 'Tell ' + askName(d) + ' what to do instead', 'data-dec-text="' + d.id + '" data-dec-send="wrong-send"', state.decText[d.id],
-      'data-dec="wrong-send" data-id="' + d.id + '"', 'data-dec="cancel" data-id="' + d.id + '"', '<div class="body note">Leave it empty and ' + esc(askName(d)) + ' undoes it.</div>');
+      'data-dec="wrong-send" data-id="' + d.id + '"', 'data-dec="cancel" data-id="' + d.id + '"', '<div class="body note">Leave it empty and ' + esc(askName(d)) + ' undoes it.</div>', d.proj_no);
     else h += btnRow([btn('go', 'Yes', 'data-dec="right" data-id="' + d.id + '"'), btn('sec', 'Reply', 'data-dec="wrong" data-id="' + d.id + '"'), btn('dim', 'Outdated', 'data-dec="outdated" data-id="' + d.id + '"')]);
     return h + '</div>';
   }
@@ -1037,7 +1054,7 @@ img.pic { display: block; max-width: min(100%, 280px); max-height: 220px; min-wi
     return '<div class="item"><div class="head"><b>' + esc((LANE[t.lane] || t.lane) + (showWho ? ': ' + t.who : '')) + '</b><span' + (td.late ? ' class="late"' : '') + '>' +
       esc([t.date, td.t].filter(Boolean).join(' · ')) + '</span></div>' + (t.note ? '<div class="body">' + esc(t.note) + '</div>' : '') + '</div>';
   }
-  function para(t) { return PIX.show(esc(t).replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>')); }      // a picture he sent shows as the picture
+  function para(t) { return ATT.show(esc(t).replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>')); }      // a picture he sent shows as the picture
   function shadowItem(x) {
     var h = '<div class="item"><div class="head"><b>' + esc(x.from || 'Message') + ': ' + esc(x.subject || '') + '</b><span>' + esc(day(x.received)) + '</span></div>';
     h += '<div class="body">' + esc(x.what_happened) + '</div>';
@@ -1214,9 +1231,9 @@ img.pic { display: block; max-width: min(100%, 280px); max-height: 220px; min-wi
     if (state.actMsg) tell += '<p class="note">' + esc(state.actMsg) + '</p>';
     if (CFG) {
       tell += '<form id="tell"><textarea id="tell-text" placeholder="What&#39;s next" aria-label="Instruction to the team">' + esc(state.draft[p.no] || '') + '</textarea>' +
-        '<div class="pixrow" data-pix-row="job:' + esc(p.no) + '">' + PIX.html('job:' + p.no) + '</div>' +
+        ATT.row('job:' + p.no) +
         '<div class="bar"><button class="go" id="tell-btn" type="submit"' + (state.sending ? ' disabled' : '') + '>' + (state.sending ? 'Sending…' : 'Send') + '</button>' +
-        '<label class="pick">Picture<input type="file" accept="image/*" multiple data-pix="job:' + esc(p.no) + '" data-proj="' + esc(p.no) + '"></label>' +
+        ATT.clip('job:' + p.no, p.no) +
         '<span id="tell-msg">' + esc(state.tellMsg || 'Enter sends. Shift+Enter starts a new line.') + '</span>' +
         (pendingN ? '<button type="button" id="job-pend" aria-pressed="' + (all ? 'false' : 'true') + '">' + (all ? 'Pending ' + pendingN : 'Show all') + '</button>' : '') + '</div></form>';
     } else {
@@ -1602,113 +1619,204 @@ img.pic { display: block; max-width: min(100%, 280px); max-height: 220px; min-wi
     return fetch(CFG.url + '/rest/v1/rpc/' + name, { method: 'POST', headers: { apikey: CFG.key, Authorization: 'Bearer ' + CFG.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
   }
-  // PICTURES IN A CHAT BOX (db/073; Lance, 23 Nov 2026: "Can the chat be made to accept pasting images and uploading
-  // images?"). The same code is in dashboard.html (Jake's boxes) and drafting.html (Drew's and Cora's): change both.
-  // A chat box takes pictures three ways: the Picture button (the phone offers the camera and the photo library),
-  // pasting into the box, and dropping a file on it. Each picture is made smaller here (longest side 2,200 px, a
-  // JPEG), saved at once, and shown small under the box with an x to take it off. When he sends, his words carry a
-  // marker for each, "[picture:<id>]"; in a conversation the marker is shown as the picture, and a tap opens it whole.
-  // A form joins in with two things: <input type="file" data-pix="KEY" data-proj="26-59"> and <div data-pix-row="KEY">.
-  //   PIX.marks(key)  the markers to put after his words      PIX.busy(key)  a picture is still being saved
-  //   PIX.clear(key)  after a send                            PIX.show(html) markers in escaped text become pictures
-  var PIX = (function () {
-    var boxes = {}, cache = {}, asked = {};
-    var BLANK = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+  // ATTACHMENTS IN EVERY BOX WHERE HE WRITES TO THE TEAM (db/073, db/074; Lance, 23 Nov 2026: "just add a paperclip to
+  // upload an attachment ... the way that other messengers do it. I'd like to be able to attach .pdfs videos all normal
+  // messaging apps would accept" and "make things like this consistent across the platform"). The same code is in
+  // dashboard.html (Jake's boxes) and drafting.html (Drew's and Cora's): CHANGE BOTH.
+  // A box takes files three ways: the paperclip (a phone offers its camera, its photo library and its files), pasting
+  // into the box, and dropping a file on it. Any kind of file up to 300 MB, except a program. Each is sent in pieces as
+  // soon as it is added and shows under the box with an x to take it off. When he sends, his words carry a marker for
+  // each, "[file:<id>]"; in a conversation the marker shows as the picture or as the file's name, and a tap opens it.
+  // A NEW BOX JOINS IN WITH THREE THINGS: ATT.row(key) under its text, ATT.clip(key, proj) in its row of buttons, and
+  // its send says  text = ATT.join(key, text)  (null while a file is still going up) and ATT.clear(key) once sent.
+  var ATT = (function () {
+    var boxes = {}, meta = {}, asked = {};
+    var PIECE = 1500000, MAX = 314572800, WEB = { 'image/jpeg': 1, 'image/png': 1, 'image/webp': 1, 'image/gif': 1 };
+    var CLIP = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M20.5 11.5l-8.6 8.6a5.2 5.2 0 0 1-7.4-7.4l9-9a3.5 3.5 0 0 1 5 5l-9 9a1.8 1.8 0 0 1-2.6-2.6l8.3-8.3"/></svg>';
     function list(key) { return boxes[key] || (boxes[key] = []); }
-    function esc2(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-    function shrink(file) {
-      return new Promise(function (ok, bad) {
-        var url = URL.createObjectURL(file), im = new Image();
-        im.onload = function () {
-          var draw = function (max, q) {
-            var s = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight)), c = document.createElement('canvas');
-            c.width = Math.max(1, Math.round(im.naturalWidth * s)); c.height = Math.max(1, Math.round(im.naturalHeight * s));
-            var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height);
-            return c.toDataURL('image/jpeg', q);
-          };
-          try { var full = draw(2200, .86), thumb = draw(360, .72); URL.revokeObjectURL(url); ok({ data: full.slice(full.indexOf(',') + 1), thumb: thumb }); }
-          catch (e) { URL.revokeObjectURL(url); bad(e); }
-        };
-        im.onerror = function () { URL.revokeObjectURL(url); bad(new Error('this is not a picture the browser can read')); };
-        im.src = url;
-      });
+    function e2(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+    function size(n) { return n >= 1048576 ? (n / 1048576).toFixed(n >= 10485760 ? 0 : 1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+    function tag(name, mime) {
+      var x = (/\.([A-Za-z0-9]{1,5})$/.exec(name || '') || [])[1];
+      return (x || (mime || '').split('/')[1] || 'file').toUpperCase().slice(0, 5);
     }
+    function isPic(m) { return /^image\//.test(m.mime || '') && !!m.thumb; }
     function paint(key) {
-      [].forEach.call(document.querySelectorAll('[data-pix-row]'), function (el) { if (el.getAttribute('data-pix-row') === key) el.innerHTML = html(key); });
+      [].forEach.call(document.querySelectorAll('[data-att-row]'), function (el) { if (el.getAttribute('data-att-row') === key) el.innerHTML = inner(key); });
     }
-    function html(key) {
+    function inner(key) {
       return list(key).map(function (it, i) {
-        return '<span class="px' + (it.busy ? ' busy' : '') + (it.err ? ' bad' : '') + '"' + (it.thumb ? ' style="background-image:url(' + it.thumb + ')"' : '') +
-          ' title="' + esc2(it.err ? 'Not added: ' + it.err : it.name) + '">' + (it.err ? '<i>Not added</i>' : it.busy ? '<i>Adding…</i>' : '') +
-          '<button type="button" data-pix-x="' + esc2(key) + '" data-i="' + i + '" aria-label="Take this picture off">×</button></span>';
+        var st = it.err ? 'Not added' : it.busy ? (it.pct != null ? it.pct + '%' : 'Adding…') : '';
+        return '<span class="px' + (it.busy ? ' busy' : '') + (it.err ? ' bad' : '') + (it.thumb ? '' : ' doc') + '"' + (it.thumb ? ' style="background-image:url(' + it.thumb + ')"' : '') +
+          ' title="' + e2(it.err ? 'Not added: ' + it.err : it.name + ', ' + size(it.bytes)) + '">' + (it.thumb ? '' : '<b>' + e2(tag(it.name, it.mime)) + '</b><u>' + e2(it.name) + '</u>') +
+          (st ? '<i>' + st + '</i>' : '') + '<button type="button" data-att-x="' + e2(key) + '" data-i="' + i + '" aria-label="Take this attachment off">×</button></span>';
       }).join('');
     }
+    // a small picture of it for the box and the conversation: a picture itself, or the first frame of a video
+    function small(file) {
+      return new Promise(function (ok) {
+        var url = URL.createObjectURL(file), done = false, end = function (v) { if (!done) { done = true; URL.revokeObjectURL(url); ok(v || null); } };
+        var draw = function (src, w, h, max, q) {
+          var s = Math.min(1, max / Math.max(w, h)), c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(w * s)); c.height = Math.max(1, Math.round(h * s));
+          var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(src, 0, 0, c.width, c.height);
+          return c;
+        };
+        setTimeout(function () { end(null); }, 6000);
+        if (/^image\//.test(file.type || '') || /\.(heic|heif)$/i.test(file.name || '')) {
+          var im = new Image();
+          im.onload = function () {
+            try {
+              var out = { thumb: draw(im, im.naturalWidth, im.naturalHeight, 360, .72).toDataURL('image/jpeg', .72) };
+              if (WEB[file.type]) return end(out);
+              // a picture the team's tools cannot open as it is (an iPhone's HEIC): sent as a JPEG of the same picture
+              draw(im, im.naturalWidth, im.naturalHeight, 4000, .9).toBlob(function (b) { if (b) { out.blob = b; out.name = String(file.name || 'picture').replace(/\.[A-Za-z0-9]+$/, '') + '.jpg'; } end(out); }, 'image/jpeg', .9);
+            } catch (e) { end(null); }
+          };
+          im.onerror = function () { end(null); };
+          im.src = url;
+        } else if (/^video\//.test(file.type || '')) {
+          var v = document.createElement('video');
+          v.muted = true; v.playsInline = true; v.preload = 'metadata';
+          v.onloadeddata = function () { try { v.currentTime = Math.min(.2, (v.duration || 1) / 2); } catch (e) { end(null); } };
+          v.onseeked = function () { try { end({ thumb: draw(v, v.videoWidth, v.videoHeight, 360, .72).toDataURL('image/jpeg', .72) }); } catch (e) { end(null); } };
+          v.onerror = function () { end(null); };
+          v.src = url;
+        } else end(null);
+      });
+    }
+    function b64(buf) {
+      var u = new Uint8Array(buf), s = '', i = 0;
+      for (; i < u.length; i += 32768) s += String.fromCharCode.apply(null, u.subarray(i, i + 32768));
+      return btoa(s);
+    }
+    function piece(blob) {
+      return new Promise(function (ok, bad) { var r = new FileReader(); r.onload = function () { ok(b64(r.result)); }; r.onerror = function () { bad(new Error('the file could not be read')); }; r.readAsArrayBuffer(blob); });
+    }
+    function sendAll(it, proj, blob, key) {
+      return rpc('office_upload_start', { p_token: token, p_proj: proj, p_name: it.name, p_mime: it.mime, p_bytes: blob.size, p_thumb: it.thumb || null }).then(function (d) {
+        if (!d || !d.ok) throw new Error('signed out');
+        if (!d.saved) throw new Error(d.why || 'not saved');
+        var id = d.id, n = Math.max(1, Math.ceil(blob.size / PIECE)), i = 0;
+        var next = function () {
+          if (it.gone) throw new Error('taken off');
+          return piece(blob.slice(i * PIECE, (i + 1) * PIECE)).then(function (data) {
+            return rpc('office_upload_part', { p_token: token, p_id: id, p_n: i, p_data: data, p_last: i === n - 1 });
+          }).then(function (r) {
+            if (!r || !r.ok || !r.saved) throw new Error((r && r.why) || 'a piece was not saved');
+            i++; it.pct = Math.round(100 * i / n); paint(key);
+            return i < n ? next() : id;
+          });
+        };
+        return next();
+      });
+    }
     function add(key, proj, files) {
-      [].slice.call(files || []).filter(function (f) { return /^image\//.test(f.type || ''); }).slice(0, 8).forEach(function (f) {
-        var it = { busy: true, name: f.name || 'pasted picture' };
+      [].slice.call(files || []).slice(0, 10).forEach(function (f) {
+        var it = { busy: true, name: f.name || 'pasted picture', mime: f.type || 'application/octet-stream', bytes: f.size };
         list(key).push(it); paint(key);
-        shrink(f).then(function (p) {
-          it.thumb = p.thumb; paint(key);
-          return rpc('office_upload', { p_token: token, p_proj: proj, p_mime: 'image/jpeg', p_data: p.data, p_thumb: p.thumb, p_name: it.name });
-        }).then(function (d) {
-          it.busy = false;
-          if (d && d.ok && d.saved) { it.id = d.id; cache[d.id] = it.thumb; } else it.err = d && d.ok ? (d.why || 'not saved') : 'signed out';
+        if (f.size > MAX) { it.busy = false; it.err = 'larger than 300 MB'; paint(key); return; }
+        if (!f.size) { it.busy = false; it.err = 'the file is empty'; paint(key); return; }
+        small(f).then(function (s) {
+          var blob = f;
+          if (s) { it.thumb = s.thumb; if (s.blob) { blob = s.blob; it.name = s.name; it.mime = 'image/jpeg'; it.bytes = blob.size; } }
           paint(key);
+          return sendAll(it, proj || 'office', blob, key);
+        }).then(function (id) {
+          it.busy = false; it.id = id; meta[id] = { id: id, name: it.name, mime: it.mime, bytes: it.bytes, thumb: it.thumb, kept: it.bytes <= 20971520 }; paint(key);
         }).catch(function (e) { it.busy = false; it.err = e.message; paint(key); });
       });
     }
-    function input(el) { var f = el && el.closest && el.closest('form'); return f ? f.querySelector('input[type="file"][data-pix]') : null; }
+    function inputNear(el) {        // the box this text belongs to: the nearest thing around it that holds a paperclip
+      for (var i = 0; el && el !== document.body && i < 4; i++, el = el.parentNode) {
+        var inp = el.querySelector ? el.querySelector('input[type="file"][data-att]') : null;
+        if (inp) return inp;
+      }
+      return null;
+    }
     document.addEventListener('change', function (e) {
       var t = e.target;
-      if (t && t.matches && t.matches('input[type="file"][data-pix]')) { add(t.getAttribute('data-pix'), t.getAttribute('data-proj'), t.files); t.value = ''; }
+      if (t && t.matches && t.matches('input[type="file"][data-att]')) { add(t.getAttribute('data-att'), t.getAttribute('data-proj'), t.files); t.value = ''; }
     });
     document.addEventListener('paste', function (e) {
-      var inp = input(e.target), cd = e.clipboardData, files = cd && cd.files ? [].slice.call(cd.files).filter(function (f) { return /^image\//.test(f.type || ''); }) : [];
-      if (!inp || !files.length) return;
-      if (!(cd.getData && cd.getData('text/plain'))) e.preventDefault();       // a picture alone: nothing to type in
-      add(inp.getAttribute('data-pix'), inp.getAttribute('data-proj'), files);
+      var t = e.target, cd = e.clipboardData, files = cd && cd.files ? [].slice.call(cd.files) : [];
+      if (!files.length || !t || !/^(TEXTAREA|INPUT)$/.test(t.tagName || '')) return;
+      var inp = inputNear(t);
+      if (!inp) return;
+      if (!(cd.getData && cd.getData('text/plain'))) e.preventDefault();       // a file alone: nothing to type in
+      add(inp.getAttribute('data-att'), inp.getAttribute('data-proj'), files);
     });
-    document.addEventListener('dragover', function (e) { if (input(e.target) && e.dataTransfer && [].indexOf.call(e.dataTransfer.types || [], 'Files') >= 0) e.preventDefault(); });
+    document.addEventListener('dragover', function (e) { if (e.dataTransfer && [].indexOf.call(e.dataTransfer.types || [], 'Files') >= 0 && inputNear(e.target)) e.preventDefault(); });
     document.addEventListener('drop', function (e) {
-      var inp = input(e.target);
-      if (!inp || !e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files.length) return;
-      e.preventDefault(); add(inp.getAttribute('data-pix'), inp.getAttribute('data-proj'), e.dataTransfer.files);
+      var inp = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length ? inputNear(e.target) : null;
+      if (!inp) return;
+      e.preventDefault(); add(inp.getAttribute('data-att'), inp.getAttribute('data-proj'), e.dataTransfer.files);
     });
     document.addEventListener('click', function (e) {
-      var t = e.target;
-      if (t && t.getAttribute && t.getAttribute('data-pix-x') != null) { var k = t.getAttribute('data-pix-x'); list(k).splice(+t.getAttribute('data-i'), 1); paint(k); return; }
-      if (t && t.id === 'pixview' || (t && t.parentNode && t.parentNode.id === 'pixview')) { var v = document.getElementById('pixview'); if (v) v.parentNode.removeChild(v); return; }
-      if (t && t.tagName === 'IMG' && t.getAttribute('data-pic')) open(t.getAttribute('data-pic'), t.src);
+      var t = e.target, x = t && t.getAttribute ? t.getAttribute('data-att-x') : null;
+      if (x != null) { var l = list(x), it = l[+t.getAttribute('data-i')]; if (it) it.gone = true; l.splice(+t.getAttribute('data-i'), 1); paint(x); return; }
+      var v = document.getElementById('attview');
+      if (v && (t === v || (t.getAttribute && t.getAttribute('data-att-close') != null))) { v.parentNode.removeChild(v); return; }
+      var o = t && t.closest ? t.closest('[data-att-open]') : null;
+      if (o) { e.preventDefault(); open(o.getAttribute('data-att-open')); }
     });
-    function open(id, small) {
-      var v = document.createElement('div'); v.id = 'pixview'; v.innerHTML = '<img alt="The picture" src="' + small + '">';
+    // Opening one: a picture, a video or a sound plays here; anything else gets a link he taps (a phone will not open a
+    // file a page hands it without a tap). One too large to keep in the record is in the job's folder, and it says so.
+    function open(id) {
+      var m = meta[id] || {}, v = document.createElement('div');
+      v.id = 'attview';
+      v.innerHTML = '<div class="card"><p class="nm">' + e2(m.name || 'Attachment') + (m.bytes ? ' · ' + size(m.bytes) : '') + '</p><div class="body">' +
+        (isPic(m) ? '<img alt="" src="' + m.thumb + '">' : '') + '<p class="st">Opening…</p></div><button type="button" class="sec" data-att-close="1">Close</button></div>';
       document.body.appendChild(v);
+      var body = v.querySelector('.body');
       rpc('office_upload_get', { p_token: token, p_id: +id, p_full: true }).then(function (d) {
-        var im = v.querySelector('img'); if (im && d && d.ok && d.found && d.data) im.src = 'data:' + d.mime + ';base64,' + d.data;
-      }).catch(function () {});
+        if (!d || !d.ok || !d.found) { body.innerHTML = '<p class="st">It is not in the record any more.</p>'; return; }
+        if (!d.data) { body.innerHTML = (isPic(d) ? '<img alt="" src="' + d.thumb + '">' : '') + '<p class="st">' + e2(d.note || (d.state === 'ready' ? 'It is saved on the office PC.' : 'It did not finish arriving.')) +
+          (d.kept ? '' : ' It is too large to open from here.') + '</p>'; return; }
+        var bin = atob(d.data), u = new Uint8Array(bin.length), i = 0;
+        for (; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+        var url = URL.createObjectURL(new Blob([u], { type: d.mime })), link = '<p class="st"><a class="go" href="' + url + '" target="_blank" rel="noopener" download="' + e2(d.name || 'attachment') + '">Open or save ' + e2(tag(d.name, d.mime)) + '</a></p>' +
+          (d.note ? '<p class="st">' + e2(d.note) + '</p>' : '');
+        body.innerHTML = /^image\//.test(d.mime) ? '<img alt="" src="' + url + '">' + (d.note ? '<p class="st">' + e2(d.note) + '</p>' : '')
+          : /^video\//.test(d.mime) ? '<video controls playsinline src="' + url + '"></video>' + link
+          : /^audio\//.test(d.mime) ? '<audio controls src="' + url + '"></audio>' + link : link;
+      }).catch(function () { body.innerHTML = '<p class="st">Could not reach the dashboard.</p>'; });
     }
     function want(id) {
       if (asked[id]) return;
       asked[id] = 1;
       rpc('office_upload_get', { p_token: token, p_id: +id }).then(function (d) {
-        if (!d || !d.ok || !d.found || !d.thumb) return;
-        cache[id] = d.thumb;
-        [].forEach.call(document.querySelectorAll('img[data-pic="' + id + '"]'), function (im) { im.src = d.thumb; });
+        meta[id] = d && d.ok && d.found ? d : { id: id, name: 'Attachment (not in the record)', mime: '', bytes: 0 };
+        [].forEach.call(document.querySelectorAll('[data-att-open="' + id + '"]'), function (el) { el.outerHTML = one(id); });
       }).catch(function () { delete asked[id]; });
     }
+    function one(id) {
+      var m = meta[id];
+      if (!m) return '<a class="filechip" href="#" data-att-open="' + id + '"><b>…</b><span>Attachment</span></a>';
+      if (isPic(m)) return '<img class="pic" data-att-open="' + id + '" alt="' + e2(m.name || 'A picture you sent') + '" src="' + m.thumb + '">';
+      return '<a class="filechip" href="#" data-att-open="' + id + '"' + (m.thumb ? ' style="background-image:url(' + m.thumb + ')"' : '') + '><b>' + e2(tag(m.name, m.mime)) + '</b><span>' + e2(m.name || 'Attachment') +
+        (m.bytes ? ' · ' + size(m.bytes) : '') + '</span></a>';
+    }
+    var MARK = /\s*\[(?:file|picture):(\d+)\]/g;
     return {
-      html: html,
-      marks: function (key) { return list(key).filter(function (it) { return it.id; }).map(function (it) { return '[picture:' + it.id + ']'; }).join(' '); },
-      busy: function (key) { return list(key).some(function (it) { return it.busy; }); },
+      row: function (key) { return '<div class="attrow" data-att-row="' + e2(key) + '">' + inner(key) + '</div>'; },
+      clip: function (key, proj) {
+        return '<label class="clip" title="Attach a file" aria-label="Attach a file">' + CLIP + '<input type="file" multiple data-att="' + e2(key) + '" data-proj="' + e2(proj || 'office') + '"></label>';
+      },
+      // his words with a marker for each file in the box; null while one is still going up (the box says so and waits)
+      join: function (key, text) {
+        var l = list(key);
+        if (l.some(function (it) { return it.busy; })) return null;
+        return (String(text || '').trim() + ' ' + l.filter(function (it) { return it.id; }).map(function (it) { return '[file:' + it.id + ']'; }).join(' ')).trim();
+      },
+      WAIT: 'A file is still going up. Send again in a moment.',
       clear: function (key) { boxes[key] = []; paint(key); },
-      show: function (h) {
-        return String(h).replace(/\s*\[picture:(\d+)\]/g, function (_m, id) {
-          if (!cache[id]) want(id);
-          return '<img class="pic" data-pic="' + id + '" alt="A picture you sent" src="' + (cache[id] || BLANK) + '">';
-        });
-      }
+      show: function (h) { return String(h).replace(MARK, function (_m, id) { if (!meta[id]) want(id); return one(id); }); },      // in escaped text: markers become the pictures and files
+      quiet: function (t) { return String(t == null ? '' : t).replace(MARK, ' (attachment)'); }                                   // in one plain line
     };
   })();
+  (function () { var c = document.getElementById('chat-clip'); if (c) c.outerHTML = ATT.clip('chat', 'office'); })();      // the paperclip of the one box that is in the page itself
   var drawFoot = function () {};
   function showLogin(msg) {
     $('shell').hidden = true; $('login').hidden = false; $('login-err').textContent = msg || '';
@@ -1974,7 +2082,9 @@ img.pic { display: block; max-width: min(100%, 280px); max-height: 220px; min-wi
       ? DEC.open.filter(function (d) { return d.state === 'shown' && (id ? d.proj_no === id : (!d.proj_no || !BY[d.proj_no])); }).map(function (d) { return d.id; })
       : [+id];
     var verdict = verb === 'allright' ? 'right' : verb === 'wrong-send' ? 'wrong' : verb;
-    var text = (verdict === 'wrong' || verdict === 'answer') ? (state.decText[id] || '').trim() : '';
+    var akey = 'r:' + (verdict === 'answer' ? 'decision:' : 'shown:') + id;
+    var text = (verdict === 'wrong' || verdict === 'answer') ? ATT.join(akey, state.decText[id]) : '';
+    if (text === null) { state.decMsg = ATT.WAIT; render(); return; }
     if (verdict === 'answer' && !text) { state.decMsg = 'Type your answer first.'; render(); return; }
     if (verdict === 'wrong') text = text ? 'Correct it: ' + text : 'Undo it.';
     if (!ids.length) return;
@@ -1997,7 +2107,7 @@ img.pic { display: block; max-width: min(100%, 280px); max-height: 220px; min-wi
     state.decWrong = null; state.decMsg = ''; render();
     Promise.all(ids.map(function (i) { return rpc('office_decide', { p_token: token, p_id: i, p_verdict: verdict, p_text: text || null }); })).then(function (rs) {
       var bad = rs.filter(function (d) { return !(d && d.ok && d.saved); })[0];
-      if (!bad) { delete state.decText[id]; setTimeout(loadDecisions, 45000); return; }
+      if (!bad) { delete state.decText[id]; ATT.clear(akey); setTimeout(loadDecisions, 45000); return; }
       back(bad && bad.ok ? 'Not saved: ' + (bad.why || 'try again') + '.' : 'Signed out. Reload and sign in.');
       if (ids.length > 1) loadDecisions();
     }).catch(function (e) { back('Not saved (' + e.message + ').'); });
@@ -2035,14 +2145,14 @@ img.pic { display: block; max-width: min(100%, 280px); max-height: 220px; min-wi
   // An older question (table questions): Reply sends his words as the answer; Outdated answers it "Outdated: no longer
   // needed." so it stops waiting. Either way it becomes its quiet line in the job's thread (an answered question).
   function answerQuestion(qid, outdated) {
-    var text = outdated ? 'Outdated: no longer needed.' : (state.ans[qid] || '').trim();
-    if (!text) return;
+    var text = outdated ? 'Outdated: no longer needed.' : ATT.join('r:question:' + qid, state.ans[qid]);
+    if (!text) return;                                       // nothing typed or attached, or a file is still going up (the box shows it)
     state.ansId = qid; state.ansMsg = '';
     rpc('office_answer', { p_token: token, p_id: qid, p_text: text }).then(function (d) {
       if (d && d.ok && d.saved) {
         ASKS.questions.forEach(function (q) { if (q.id === qid) { q.state = 'answered'; q.answer = text; q.answered_at = new Date().toISOString(); } });
         if (state.needReply === 'question:' + qid) state.needReply = null;
-        delete state.ans[qid]; state.ansMsg = ''; setTimeout(loadAsks, 45000);
+        delete state.ans[qid]; ATT.clear('r:question:' + qid); state.ansMsg = ''; setTimeout(loadAsks, 45000);
       } else { state.ansMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and sign in; your answer is still here.'; }
       render();
     }).catch(function (e) { state.ansMsg = 'Not saved (' + e.message + '). Your answer is still here.'; render(); });
@@ -2065,15 +2175,15 @@ img.pic { display: block; max-width: min(100%, 280px); max-height: 220px; min-wi
   }
   function tell(no) {
     var text = (state.draft[no] || '').trim();
-    if (PIX.busy('job:' + no)) { state.tellMsg = 'A picture is still being added. Send again in a moment.'; render(); return; }
-    text = (text + ' ' + PIX.marks('job:' + no)).trim();     // his pictures go with his words; a picture alone is a message too
+    text = ATT.join('job:' + no, text);                      // what he attached goes with his words; an attachment alone is a message too
+    if (text === null) { state.tellMsg = ATT.WAIT; render(); return; }
     if (!text || state.sending) return;
     state.sending = true; render();
     rpc('office_tell', { p_token: token, p_proj: no, p_text: text }).then(function (d) {
       state.sending = false;
       if (!d || !d.ok) { state.tellMsg = 'Signed out. Reload and sign in; your text is still here.'; }
       else if (!d.saved) { state.tellMsg = 'Not saved: ' + (d.why || 'unknown reason') + '.'; }
-      else { SAID.unshift(d.instruction); state.draft[no] = ''; PIX.clear('job:' + no); state.tellMsg = 'Sent to Jake. The answer appears here, usually within a minute.'; watchReplies(); }
+      else { SAID.unshift(d.instruction); state.draft[no] = ''; ATT.clear('job:' + no); state.tellMsg = 'Sent to Jake. The answer appears here, usually within a minute.'; watchReplies(); }
       render();
     }).catch(function (e) { state.sending = false; state.tellMsg = 'Not saved (' + e.message + '). Your text is still here.'; render(); });
   }
@@ -2153,7 +2263,8 @@ img.pic { display: block; max-width: min(100%, 280px); max-height: 220px; min-wi
   }
   // His reply to something in Needs you goes to Jake on that project with the item named; the answer shows on the item
   function needTell(proj, key) {
-    var text = (state.needText[key] || '').trim(), about = '';
+    var text = ATT.join('r:' + key, state.needText[key]), about = '';
+    if (text === null) { state.markMsg = ATT.WAIT; render(); return; }
     if (!text) return;
     if (key.indexOf('decision:') === 0) {
       var d = DEC.open.filter(function (x) { return 'decision:' + x.id === key; })[0];
@@ -2175,20 +2286,20 @@ img.pic { display: block; max-width: min(100%, 280px); max-height: 220px; min-wi
       about = 'About "' + (n.title || '') + '" in Needs you [need:' + key + ']' + (n.detail ? ' (' + n.detail + ')' : '') + '.';
     }
     rpc('office_tell', { p_token: token, p_proj: proj, p_text: about + '\n\nLance: ' + text }).then(function (d) {
-      if (d && d.ok && d.saved) { SAID.unshift(d.instruction); delete state.needText[key]; state.needReply = null; watchReplies(); }
+      if (d && d.ok && d.saved) { SAID.unshift(d.instruction); delete state.needText[key]; ATT.clear('r:' + key); state.needReply = null; watchReplies(); }
       else state.markMsg = d && d.ok ? 'Not sent: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and sign in; your reply is still here.';
       render();
     }).catch(function (e) { state.markMsg = 'Not sent (' + e.message + '). Your reply is still here.'; render(); });
   }
   // A text not on a project: what he tells Jake about it goes to Jake with the text named, and the answer shows on it
   function looseTell(id) {
-    var text = (state.loose[id] || '').trim();
+    var text = ATT.join('r:loose:' + id, state.loose[id]);
     var t = (DATA.loose_texts || []).filter(function (x) { return String(x.id) === String(id); })[0];
     if (!text || !t) return;
     var body = 'About the ' + (t.channel === 'voicemail' ? 'voicemail' : 'text') + ' from ' + t.who + ' that is not on a project [text:' + t.id + ']' +
       (t.summary ? ' (' + t.summary + ')' : '') + '.\n\nLance: ' + text;
     rpc('office_tell', { p_token: token, p_proj: 'office', p_text: body }).then(function (d) {
-      if (d && d.ok && d.saved) { SAID.unshift(d.instruction); delete state.loose[id]; if (state.needReply === 'loose:' + id) state.needReply = null; watchReplies(); }
+      if (d && d.ok && d.saved) { SAID.unshift(d.instruction); delete state.loose[id]; ATT.clear('r:loose:' + id); if (state.needReply === 'loose:' + id) state.needReply = null; watchReplies(); }
       render();
     }).catch(function () { render(); });
   }
@@ -2233,13 +2344,13 @@ img.pic { display: block; max-width: min(100%, 280px); max-height: 220px; min-wi
   $('ask').addEventListener('submit', function (e) {
     e.preventDefault();
     var text = $('ask-text').value.trim(), b = $('ask-btn');
-    if (PIX.busy('chat')) { $('ask-note').textContent = 'A picture is still being added. Send again in a moment.'; return; }
-    text = (text + ' ' + PIX.marks('chat')).trim();          // his pictures go with his words; a picture alone is a message too
+    text = ATT.join('chat', text);                           // what he attached goes with his words; an attachment alone is a message too
+    if (text === null) { $('ask-note').textContent = ATT.WAIT; return; }
     if (!text || b.disabled) return;
     b.disabled = true;
     rpc('office_tell', { p_token: token, p_proj: 'office', p_text: text }).then(function (d) {
       b.disabled = false;
-      if (d && d.ok && d.saved) { SAID.unshift(d.instruction); $('ask-text').value = ''; PIX.clear('chat'); $('ask-note').textContent = 'Enter sends. Shift+Enter starts a new line.'; watchReplies(); render(); }
+      if (d && d.ok && d.saved) { SAID.unshift(d.instruction); $('ask-text').value = ''; ATT.clear('chat'); $('ask-note').textContent = 'Enter sends. Shift+Enter starts a new line.'; watchReplies(); render(); }
       else { $('ask-note').textContent = d && d.ok ? 'Not sent: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and sign in.'; }
     }).catch(function () { b.disabled = false; $('ask-note').textContent = 'Could not reach the dashboard. Your words are still here.'; });
   });
