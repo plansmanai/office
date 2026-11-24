@@ -242,6 +242,13 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .kv .v { text-align: right; overflow-wrap: anywhere; }
 .kv .total { font-weight: 500; border-top: 1px solid var(--rule); padding-top: 7px; }
 .below { font-size: .84rem; font-weight: 700; letter-spacing: .2em; }
+h2.yr { scroll-margin-top: 14px; }
+.yearjump { display: inline-flex; gap: 16px; margin-left: 18px; vertical-align: baseline; }
+.yearjump button { font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--ink); background: none; border: 0; padding: 6px 0; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+#totop { position: fixed; right: max(14px, env(safe-area-inset-right, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); z-index: 60; width: 46px; height: 46px; padding: 0;
+  border: 1px solid var(--ink); border-radius: 0; background: var(--bg); color: var(--ink); cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 8px rgba(27, 27, 25, .14); }
+#totop[hidden] { display: none; }
+#totop svg { width: 18px; height: 18px; }
 .sec h3.tooled { position: relative; }
 .sec h3 .sectool { position: absolute; right: 34px; top: 50%; transform: translateY(-50%); margin: 0; gap: 6px; flex-wrap: nowrap; }
 .sec h3 .sectool button.go { font-size: .64rem; padding: 6px 12px 5px 13px; min-height: 0; }
@@ -472,7 +479,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-130910";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-132415";</script>
 </head>
 <body>
 
@@ -510,6 +517,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   </div>
   <div id="teamslot"></div>
   <div class="pane" id="detail"></div>
+  <button type="button" id="totop" aria-label="Back to the very top" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" aria-hidden="true"><path d="M12 20V5M5 12l7-7 7 7"/></svg></button>
 </div>
 
 <script type="application/json" id="data">null</script>
@@ -1175,8 +1183,13 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     // newest job first: the years newest first, and inside a year the highest number at the top (Lance, 24 Nov 2026:
     // "Just in reverse numerical order. Newest job at the top")
     var n = function (p) { return parseFloat(p.no.slice(3)) || 0; };
-    return Object.keys(years).sort().reverse().map(function (y) {
-      return section(y, '', years[y].slice().sort(function (a, b) { return n(b) - n(a); }).map(function (p) { var ns = openNeeds(p); return row(p, who(p), '', false, p.phase || 'No phase', bubsFor(ns), worstSev(ns)); }));
+    // each year's heading carries the other years: a tap jumps to that year (Lance, 24 Nov 2026: "Add 24 and 25 to jump down")
+    var ys = Object.keys(years).sort().reverse();
+    return ys.map(function (y) {
+      var jump = ys.length > 1 ? '<span class="yearjump">' + ys.filter(function (o) { return o !== y; }).map(function (o) {
+        return '<button type="button" data-year="' + o + '" aria-label="Jump to ' + o + '">' + o + '</button>'; }).join('') + '</span>' : '';
+      return section(y, '', years[y].slice().sort(function (a, b) { return n(b) - n(a); }).map(function (p) { var ns = openNeeds(p); return row(p, who(p), '', false, p.phase || 'No phase', bubsFor(ns), worstSev(ns)); }))
+        .replace('<h2>', '<h2 class="yr" id="y-' + y + '">').replace('</h2>', jump + '</h2>');
     }).join('') || '<div class="empty">No project matches.</div>';
   }
   function matches(p, q) {
@@ -2725,6 +2738,26 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 
   var embedded = null;
   try { embedded = JSON.parse($('data').textContent); } catch (e) {}
+  // A year on a heading of All projects: jump to that year's heading.
+  $('listbody').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-year]') : null, h = b && document.getElementById('y-' + b.getAttribute('data-year'));
+    if (h) h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  // The arrow at the bottom right: back to the very top, from anywhere (Lance, 24 Nov 2026). It shows once there is
+  // somewhere to go back from, and not in Chat, where the box to write in is at the bottom. On a wide screen the list
+  // and the job scroll on their own, so it looks at those too and takes each back to its top.
+  (function () {
+    var b = $('totop'), panes = function () { return ['list', 'listview', 'detail'].map($).filter(Boolean); };
+    var show = function () {
+      b.hidden = state.view === 'chat' || !((window.pageYOffset || 0) > 500 || panes().some(function (el) { return el.scrollTop > 500; }));
+    };
+    document.addEventListener('scroll', show, true);
+    window.addEventListener('hashchange', function () { setTimeout(show, 60); });
+    b.addEventListener('click', function () {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      panes().forEach(function (el) { if (el.scrollTop) el.scrollTo({ top: 0, behavior: 'smooth' }); });
+    });
+  })();
   if (embedded && embedded.projects) { CFG = null; start(embedded, 'Sheets read ' + embedded.read_at); }
   else if (CFG) { try { token = localStorage.getItem(TOKEN_KEY); } catch (e) {} if (token) load(); else showLogin(''); }
 })();
