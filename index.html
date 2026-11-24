@@ -249,6 +249,8 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .kv input.amt { width: 6.4em; text-align: right; font: inherit; font-size: 16px; padding: 5px 7px; border: 1px solid var(--ink); border-radius: 0; background: transparent; color: var(--ink); font-variant-numeric: tabular-nums; }
 .kv input.desc { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 5px 7px; border: 1px solid var(--rule); border-radius: 0; background: transparent; color: var(--ink); }
 .kv .rate { font-size: 14.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.kv button.incl { font: inherit; font-size: 12.5px; padding: 4px 9px; border: 1px solid var(--rule); border-radius: 0; background: transparent; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.kv button.incl[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); }
 .treetog { background: none; border: 0; padding: 4px 0; font: inherit; color: var(--muted); cursor: pointer; text-align: left; }
 .treetog i { font-style: normal; padding-left: 6px; }
 .kv .sub { color: var(--muted); font-size: 14.5px; padding-left: 14px; }
@@ -469,7 +471,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-114739";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-115647";</script>
 </head>
 <body>
 
@@ -850,20 +852,16 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     if (m && !m.items) m.items = [];
     var since = DATA && DATA.read_iso ? Date.parse(DATA.read_iso) : Infinity;
     var bump = function (d) { if (m) { if (m.value != null) m.value += d; if (m.due != null) m.due += d; } };
+    // in the job's total, or only quoted beside it (on the sheet: no x in the fee's "NO" column, or an x)
+    var inc = { consult: p.consult !== 'none', permitting: p.permitting !== 'not bought' }, touched = false;
     editActs(p).filter(function (a) { return (a.state === 'approved' || a.state === 'done') && Date.parse(a.finished_at || a.decided_at) > since; })
       .sort(function (x, y) { return x.id - y.id; }).forEach(function (a) {
         Object.keys(a.change || {}).forEach(function (k) {
           var to = a.change[k].to;
           if (k === 'scope') { scope = to || ''; return; }
+          if (k.indexOf('flag.') === 0) { inc[k.slice(5)] = String(to || '').trim().toLowerCase() !== 'x'; touched = true; return; }
           if (k.indexOf('fee.') === 0) {
-            if (!f) return;
-            var key = k.slice(4) === 'rate' ? 'hourly' : k.slice(4), old = f[key] || 0, nv = num(to) || 0;
-            f[key] = nv;
-            // the sheet's own rule: a consult that is not charged, and permitting that was not bought, are not in the total
-            if (key !== 'hourly' && !(key === 'consult' && p.consult === 'none') && !(key === 'permitting' && p.permitting === 'not bought')) {
-              if (f.total != null) f.total += nv - old;
-              if (p.signed) bump(nv - old);
-            }
+            if (f) { f[k.slice(4) === 'rate' ? 'hourly' : k.slice(4)] = num(to) || 0; touched = true; }
             return;
           }
           if (!m) return;
@@ -873,14 +871,21 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
           else if (w !== 'proj') it[w] = to || '';
         });
       });
+    if (touched && f && p.fees.total != null) {
+      // the sheet's own sum: the five fees, less a consult or permitting that is only quoted
+      var nt = (inc.consult ? f.consult || 0 : 0) + (f.design || 0) + (f.architectural || 0) + (f.engineering || 0) + (inc.permitting ? f.permitting || 0 : 0);
+      if (p.signed) bump(nt - p.fees.total);
+      f.total = nt;
+    }
     if (m) m.items = m.items.filter(function (i) { return i.amount || i.desc; });
-    return { fees: f, money: m, scope: scope };
+    return { fees: f, money: m, scope: scope, inc: inc };
   }
   function openMoney(p, focus) {
     if (savingEdit(p)) { state.moneyMsg = 'Still saving your last edit. Try again in a few seconds.'; render(); return; }
     var E = edited(p), f = E.fees || {};
     state.editMoney = p.no; state.moneyMsg = '';
     state.moneyForm = { fee: { consult: plain(f.consult), design: plain(f.design), architectural: plain(f.architectural), engineering: plain(f.engineering), permitting: plain(f.permitting), rate: plain(f.hourly) },
+      flag: { consult: E.inc.consult, permitting: E.inc.permitting },
       items: ((E.money && E.money.items) || []).map(function (it) { return { row: it.row, desc: it.desc || '', amount: plain(it.amount), orig: it }; }) };
     render();
     var el = focus && document.querySelector('#detail [data-fee="' + focus + '"]');
@@ -892,6 +897,9 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       var old = (E.fees || {})[k === 'rate' ? 'hourly' : k] || 0, nv = num(F.fee[k]);
       if (nv === null) { bad = true; return; }
       if (nv !== old) ch['fee.' + k] = { from: String(old), to: String(nv) };
+    });
+    ['consult', 'permitting'].forEach(function (k) {          // the sheet's cell: x = left out of the total
+      if (F.flag[k] !== E.inc[k]) ch['flag.' + k] = { from: E.inc[k] ? '' : 'x', to: F.flag[k] ? '' : 'x' };
     });
     F.items.forEach(function (it) {
       var nv = num(it.amount), d = (it.desc || '').trim();
@@ -937,6 +945,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     Object.keys(ch).forEach(function (k) {
       var v = ch[k];
       if (k === 'scope') out.push(line('Scope', v.from, v.to));
+      else if (k.indexOf('flag.') === 0) out.push(line(k === 'flag.consult' ? 'Consult' : 'Permitting', v.from ? 'quoted only' : 'in the total', v.to ? 'quoted only' : 'in the total'));
       else if (k.indexOf('fee.') === 0) out.push(line(FEE_LABEL[k.slice(4)] || k, usd2(num(v.from) || 0), usd2(num(v.to) || 0)));
       else { var z = k.split('.'); (items[z[1]] = items[z[1]] || {})[z[2]] = v; }
     });
@@ -1432,8 +1441,18 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     var fin = '';
     if (f) {
       var open = !!edm || !!state.itemsOpen[p.no], its = (m && m.items) || [];
+      // Consult and Permitting say by POSITION whether they are in the total (Lance, 24 Nov 2026): in it, the amount is
+      // in the totalling column; quoted but not part of the job, the amount sits beside it and the column shows $0.
+      var can = f.can_leave_out || {};
       fin += '<div class="kv money">' + FEES.map(function (k) {
-        return '<span class="k">' + k[1] + '</span><span class="v">' + (edm ? '<input class="amt" type="text" inputmode="decimal" data-fee="' + k[0] + '" value="' + esc(F.fee[k[0]]) + '" aria-label="' + k[1] + '">' : esc(usd2(f[k[0]] || 0))) + '</span>';
+        var key = k[0], sw = key === 'consult' || key === 'permitting';
+        if (edm) {
+          return '<span class="k' + (sw && can[key] ? ' krow' : '') + '">' + k[1] +
+            (sw && can[key] ? '<button type="button" class="incl" data-flag="' + key + '" aria-pressed="' + (F.flag[key] ? 'true' : 'false') + '">' + (F.flag[key] ? 'In the total' : 'Quoted only') + '</button>' : '') +
+            '</span><span class="v"><input class="amt" type="text" inputmode="decimal" data-fee="' + key + '" value="' + esc(F.fee[key]) + '" aria-label="' + k[1] + '"></span>';
+        }
+        if (sw && !FE.inc[key]) return '<span class="k krow">' + k[1] + '<span class="rate">' + esc(usd2(f[key] || 0)) + '</span></span><span class="v">$0</span>';
+        return '<span class="k">' + k[1] + '</span><span class="v">' + esc(usd2(f[key] || 0)) + '</span>';
       }).join('');
       if (f.total != null) fin += '<span class="k total">Contract total</span><span class="v total">' + esc(usd2(f.total)) + '</span>';
       // Added services: the hourly rate (plain; it is changed with Edit like every other amount), the list that opens under it, and the total in line with the fees
@@ -1454,7 +1473,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
         }).join('') : '<span class="k sub">None yet.</span><span class="v"></span>';
       }
       if (m && m.value != null) fin += '<span class="k total">Total value</span><span class="v total">' + esc(usd2(m.value)) + '</span>';
-      fin += '</div><p class="note" style="margin-top:8px">Consult: ' + esc(p.consult) + '. Permitting: ' + esc(p.permitting) + '.' + (edm ? ' The totals follow when you save.' : '') + '</p>';
+      fin += '</div>' + (edm ? '<p class="note" style="margin-top:8px">The totals follow when you save.</p>' : '');
       if (edm) fin += '<div class="marks"><button class="go" type="button" id="money-save">Save</button> <button class="text quiet" type="button" id="money-cancel">Cancel</button></div>';
       fin += (state.moneyMsg ? '<p class="note">' + esc(state.moneyMsg) + '</p>' : '') + busy;
     }
@@ -1644,6 +1663,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       on('item-add', function () { state.moneyForm.items.push({ row: null, desc: '', amount: '', orig: null }); render(); var d = $('detail').querySelectorAll('[data-item-desc]'); if (d.length) d[d.length - 1].focus(); });
       on('more-edits', function () { state.allEdits = true; render(); });
       each('[data-fee]', 'input', function (el) { state.moneyForm.fee[el.getAttribute('data-fee')] = el.value; });
+      each('[data-flag]', 'click', function (el) { var k = el.getAttribute('data-flag'); state.moneyForm.flag[k] = !state.moneyForm.flag[k]; render(); });
       each('[data-item-desc]', 'input', function (el) { state.moneyForm.items[+el.getAttribute('data-item-desc')].desc = el.value; });
       each('[data-item-amt]', 'input', function (el) { state.moneyForm.items[+el.getAttribute('data-item-amt')].amount = el.value; });
       each('[data-item-del]', 'click', function (el) { state.moneyForm.items[+el.getAttribute('data-item-del')].gone = true; render(); });
