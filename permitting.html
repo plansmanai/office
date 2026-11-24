@@ -221,8 +221,24 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
 .msg .ask input { flex: 1 1 150px; min-width: 0; padding: 9px 10px; font-size: 16px; font-family: inherit; border: 1px solid var(--rule); background: #fff; }
 .msg .ask .was { color: var(--muted); font-size: 13px; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
+/* Pictures in a chat box (db/073; the code is PIX, below): the Picture button, the small ones waiting under the box,
+   and a picture in the conversation (a tap opens it whole). The same rules are in dashboard.html and drafting.html. */
+label.pick { display: inline-flex; align-items: center; justify-content: center; flex: none; min-height: 42px; padding: 0 16px; border: 1px solid var(--ink); color: var(--ink); background: transparent;
+  font-family: var(--sans); text-transform: uppercase; letter-spacing: .18em; font-weight: 400; font-size: .66rem; cursor: pointer; }
+label.pick input { display: none; }
+@media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
+.pixrow { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; } .pixrow:empty { display: none; }
+.pixrow .px { position: relative; width: 68px; height: 68px; border: 1px solid var(--rule); background: var(--soft) center / cover no-repeat; display: flex; align-items: flex-end; }
+.pixrow .px i { font-style: normal; font-size: 10px; line-height: 1.2; padding: 2px 4px; background: var(--bg); color: var(--muted); }
+.pixrow .px.bad { border-color: var(--long); } .pixrow .px.bad i { color: var(--long); }
+.pixrow .px.busy { opacity: .6; }
+.pixrow .px button { position: absolute; top: -9px; right: -9px; width: 24px; height: 24px; min-height: 0; padding: 0; margin: 0; border: 1px solid var(--ink); background: var(--bg); color: var(--ink);
+  font-size: 14px; line-height: 1; letter-spacing: 0; cursor: pointer; }
+img.pic { display: block; max-width: min(100%, 280px); max-height: 220px; min-width: 60px; min-height: 40px; margin: 8px 0 4px; border: 1px solid var(--rule); background: var(--soft); cursor: zoom-in; }
+#pixview { position: fixed; inset: 0; z-index: 300; background: rgba(27, 27, 25, .93); display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
+#pixview img { max-width: 96vw; max-height: 92vh; background: #fff; }
 </style>
-<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-183314";</script>
+<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-184505";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -256,7 +272,8 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
   <section class="talk">
     <div id="said"></div>
     <form id="say"><textarea id="text" placeholder="Talk to Drew" aria-label="Talk to Drew"></textarea>
-      <div class="bar"><button class="go" id="send" type="submit">Send</button><span id="note">Enter sends. Shift+Enter starts a new line.</span></div></form>
+      <div class="pixrow" id="say-pix" data-pix-row="say"></div>
+      <div class="bar"><button class="go" id="send" type="submit">Send</button><label class="pick">Picture<input type="file" id="say-pick" accept="image/*" multiple data-pix="say"></label><span id="note">Enter sends. Shift+Enter starts a new line.</span></div></form>
   </section>
 </main>
 <script>
@@ -311,6 +328,113 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
     return fetch(CFG.url + '/rest/v1/rpc/' + name, { method: 'POST', headers: { apikey: CFG.key, Authorization: 'Bearer ' + CFG.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
   }
+  // PICTURES IN A CHAT BOX (db/073; Lance, 23 Nov 2026: "Can the chat be made to accept pasting images and uploading
+  // images?"). The same code is in dashboard.html (Jake's boxes) and drafting.html (Drew's and Cora's): change both.
+  // A chat box takes pictures three ways: the Picture button (the phone offers the camera and the photo library),
+  // pasting into the box, and dropping a file on it. Each picture is made smaller here (longest side 2,200 px, a
+  // JPEG), saved at once, and shown small under the box with an x to take it off. When he sends, his words carry a
+  // marker for each, "[picture:<id>]"; in a conversation the marker is shown as the picture, and a tap opens it whole.
+  // A form joins in with two things: <input type="file" data-pix="KEY" data-proj="26-59"> and <div data-pix-row="KEY">.
+  //   PIX.marks(key)  the markers to put after his words      PIX.busy(key)  a picture is still being saved
+  //   PIX.clear(key)  after a send                            PIX.show(html) markers in escaped text become pictures
+  var PIX = (function () {
+    var boxes = {}, cache = {}, asked = {};
+    var BLANK = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+    function list(key) { return boxes[key] || (boxes[key] = []); }
+    function esc2(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+    function shrink(file) {
+      return new Promise(function (ok, bad) {
+        var url = URL.createObjectURL(file), im = new Image();
+        im.onload = function () {
+          var draw = function (max, q) {
+            var s = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight)), c = document.createElement('canvas');
+            c.width = Math.max(1, Math.round(im.naturalWidth * s)); c.height = Math.max(1, Math.round(im.naturalHeight * s));
+            var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height);
+            return c.toDataURL('image/jpeg', q);
+          };
+          try { var full = draw(2200, .86), thumb = draw(360, .72); URL.revokeObjectURL(url); ok({ data: full.slice(full.indexOf(',') + 1), thumb: thumb }); }
+          catch (e) { URL.revokeObjectURL(url); bad(e); }
+        };
+        im.onerror = function () { URL.revokeObjectURL(url); bad(new Error('this is not a picture the browser can read')); };
+        im.src = url;
+      });
+    }
+    function paint(key) {
+      [].forEach.call(document.querySelectorAll('[data-pix-row]'), function (el) { if (el.getAttribute('data-pix-row') === key) el.innerHTML = html(key); });
+    }
+    function html(key) {
+      return list(key).map(function (it, i) {
+        return '<span class="px' + (it.busy ? ' busy' : '') + (it.err ? ' bad' : '') + '"' + (it.thumb ? ' style="background-image:url(' + it.thumb + ')"' : '') +
+          ' title="' + esc2(it.err ? 'Not added: ' + it.err : it.name) + '">' + (it.err ? '<i>Not added</i>' : it.busy ? '<i>Adding…</i>' : '') +
+          '<button type="button" data-pix-x="' + esc2(key) + '" data-i="' + i + '" aria-label="Take this picture off">×</button></span>';
+      }).join('');
+    }
+    function add(key, proj, files) {
+      [].slice.call(files || []).filter(function (f) { return /^image\//.test(f.type || ''); }).slice(0, 8).forEach(function (f) {
+        var it = { busy: true, name: f.name || 'pasted picture' };
+        list(key).push(it); paint(key);
+        shrink(f).then(function (p) {
+          it.thumb = p.thumb; paint(key);
+          return rpc('office_upload', { p_token: token, p_proj: proj, p_mime: 'image/jpeg', p_data: p.data, p_thumb: p.thumb, p_name: it.name });
+        }).then(function (d) {
+          it.busy = false;
+          if (d && d.ok && d.saved) { it.id = d.id; cache[d.id] = it.thumb; } else it.err = d && d.ok ? (d.why || 'not saved') : 'signed out';
+          paint(key);
+        }).catch(function (e) { it.busy = false; it.err = e.message; paint(key); });
+      });
+    }
+    function input(el) { var f = el && el.closest && el.closest('form'); return f ? f.querySelector('input[type="file"][data-pix]') : null; }
+    document.addEventListener('change', function (e) {
+      var t = e.target;
+      if (t && t.matches && t.matches('input[type="file"][data-pix]')) { add(t.getAttribute('data-pix'), t.getAttribute('data-proj'), t.files); t.value = ''; }
+    });
+    document.addEventListener('paste', function (e) {
+      var inp = input(e.target), cd = e.clipboardData, files = cd && cd.files ? [].slice.call(cd.files).filter(function (f) { return /^image\//.test(f.type || ''); }) : [];
+      if (!inp || !files.length) return;
+      if (!(cd.getData && cd.getData('text/plain'))) e.preventDefault();       // a picture alone: nothing to type in
+      add(inp.getAttribute('data-pix'), inp.getAttribute('data-proj'), files);
+    });
+    document.addEventListener('dragover', function (e) { if (input(e.target) && e.dataTransfer && [].indexOf.call(e.dataTransfer.types || [], 'Files') >= 0) e.preventDefault(); });
+    document.addEventListener('drop', function (e) {
+      var inp = input(e.target);
+      if (!inp || !e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files.length) return;
+      e.preventDefault(); add(inp.getAttribute('data-pix'), inp.getAttribute('data-proj'), e.dataTransfer.files);
+    });
+    document.addEventListener('click', function (e) {
+      var t = e.target;
+      if (t && t.getAttribute && t.getAttribute('data-pix-x') != null) { var k = t.getAttribute('data-pix-x'); list(k).splice(+t.getAttribute('data-i'), 1); paint(k); return; }
+      if (t && t.id === 'pixview' || (t && t.parentNode && t.parentNode.id === 'pixview')) { var v = document.getElementById('pixview'); if (v) v.parentNode.removeChild(v); return; }
+      if (t && t.tagName === 'IMG' && t.getAttribute('data-pic')) open(t.getAttribute('data-pic'), t.src);
+    });
+    function open(id, small) {
+      var v = document.createElement('div'); v.id = 'pixview'; v.innerHTML = '<img alt="The picture" src="' + small + '">';
+      document.body.appendChild(v);
+      rpc('office_upload_get', { p_token: token, p_id: +id, p_full: true }).then(function (d) {
+        var im = v.querySelector('img'); if (im && d && d.ok && d.found && d.data) im.src = 'data:' + d.mime + ';base64,' + d.data;
+      }).catch(function () {});
+    }
+    function want(id) {
+      if (asked[id]) return;
+      asked[id] = 1;
+      rpc('office_upload_get', { p_token: token, p_id: +id }).then(function (d) {
+        if (!d || !d.ok || !d.found || !d.thumb) return;
+        cache[id] = d.thumb;
+        [].forEach.call(document.querySelectorAll('img[data-pic="' + id + '"]'), function (im) { im.src = d.thumb; });
+      }).catch(function () { delete asked[id]; });
+    }
+    return {
+      html: html,
+      marks: function (key) { return list(key).filter(function (it) { return it.id; }).map(function (it) { return '[picture:' + it.id + ']'; }).join(' '); },
+      busy: function (key) { return list(key).some(function (it) { return it.busy; }); },
+      clear: function (key) { boxes[key] = []; paint(key); },
+      show: function (h) {
+        return String(h).replace(/\s*\[picture:(\d+)\]/g, function (_m, id) {
+          if (!cache[id]) want(id);
+          return '<img class="pic" data-pic="' + id + '" alt="A picture you sent" src="' + (cache[id] || BLANK) + '">';
+        });
+      }
+    };
+  })();
   function gate(html) { $('gate').innerHTML = html; $('gate').hidden = false; $('head').hidden = $('main').hidden = $('tabs').hidden = true; }
   // The box standard (scratch/BOX_SPEC.md). Lance, 23 Nov 2026, looking at a "Drew asks" box that had only a Yes: "I'd
   // like there to be consistency with these boxed formal questions and my buttons to work through them." So every box
@@ -506,7 +630,7 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
       if (key && BXN[key] && extra.indexOf('<button') >= 0) extra += line(esc(BXN[key]), true);      // why a tap was not saved, while the box still waits
       if (key && RP && RP.key === key && extra.indexOf('data-rp-text') >= 0) cls += ' rpo';
       return '<div class="msg ' + cls + '">' + (m.kind === 'progress' ? '' : '<div class="lbl">' + who + is + ' · ' + esc(stamp(m.created_at)) + '</div>') +
-        '<div class="txt">' + esc(m.body).replace(/\*\*([^*]+?)\*\*/g, '<b>$1</b>') + '</div>' + (m.files && m.files.checkin && m.who === WHO ? '<a class="open" data-sheet="' + m.files.checkin + '">Open check-in</a>' : '') + extra + '</div>';
+        '<div class="txt">' + PIX.show(esc(m.body).replace(/\*\*([^*]+?)\*\*/g, '<b>$1</b>')) + '</div>' + (m.files && m.files.checkin && m.who === WHO ? '<a class="open" data-sheet="' + m.files.checkin + '">Open check-in</a>' : '') + extra + '</div>';
     }).join('') : DR.length ? '' : '<p class="empty">Nothing said here yet. ' + T.empty + '</p>') + draftsHtml();
     if (atEnd || sending) box.scrollTop = box.scrollHeight;
   }
@@ -575,10 +699,12 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
   function send(e) {
     if (e) e.preventDefault();
     var t = $('text').value.trim();
+    if (PIX.busy('say')) { $('note').textContent = 'A picture is still being added. Send again in a moment.'; return; }
+    t = (t + ' ' + PIX.marks('say')).trim();                 // his pictures go with his words; a picture alone is a message too
     if (!t || sending) return;
     sending = true; $('send').disabled = true;
     rpc('office_drew_say', { p_token: token, p_proj: NO, p_body: t, p_who: WHO }).then(function (d) {
-      if (d && d.ok && d.saved) { $('text').value = ''; $('note').textContent = 'Enter sends. Shift+Enter starts a new line.'; }
+      if (d && d.ok && d.saved) { $('text').value = ''; PIX.clear('say'); $('note').textContent = 'Enter sends. Shift+Enter starts a new line.'; }
       else $('note').textContent = d && d.ok ? 'Not sent. Try again.' : 'Signed out. Open the dashboard and sign in.';
     }).catch(function (err) { $('note').textContent = 'Not sent (' + err.message + '). Your words are still here.'; })
       .then(function () { sending = false; $('send').disabled = false; loop(); setTimeout(function () { sending = false; }, 4000); });
@@ -592,6 +718,7 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
   document.querySelector('.tabs [data-show="sheets"]').textContent = T.sheets;
   document.querySelector('.switch [data-stage="sheets"]').textContent = T.sheets;
   $('text').placeholder = 'Talk to ' + T.name; $('text').setAttribute('aria-label', 'Talk to ' + T.name);
+  $('say-pick').setAttribute('data-proj', NO);
   $('live').alt = T.screen; $('live-note').textContent = T.looking;
   document.querySelector('#sheet-list .none').textContent = 'No check-ins on this job yet. ' + T.name + ' posts one when ' + (WHO === 'cora' ? 'she wants' : 'he wants') + ' you to look at something.';
   // her two questions in the conversation: go ahead or not, and a login
