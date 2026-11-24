@@ -243,7 +243,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .kv .v { text-align: right; overflow-wrap: anywhere; }
 .kv .total { font-weight: 500; border-top: 1px solid var(--rule); padding-top: 7px; }
 .below { font-size: .84rem; font-weight: 700; letter-spacing: .2em; }
-.filt { display: flex; align-items: center; gap: 20px; margin: 26px 0 0; }
+.filt { display: flex; align-items: center; gap: 18px; margin: 26px 0 0; }
 .filt button { font-family: var(--sans); font-size: .66rem; text-transform: uppercase; letter-spacing: .2em; color: var(--muted); background: none; border: 0; border-bottom: 1px solid transparent; border-radius: 0; padding: 8px 0 6px; cursor: pointer; }
 .filt button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); }
 .filt .n { margin-left: auto; background: var(--ink); color: var(--on-ink); font-family: var(--sans); font-size: .64rem; letter-spacing: .08em; padding: 2px 7px 1px; font-variant-numeric: tabular-nums; }
@@ -497,7 +497,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-145214";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-150143";</script>
 </head>
 <body>
 
@@ -1208,17 +1208,27 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   // Queue is the jobs being worked (anything not finished, or with something open for him); a year is every job of
   // that year. The black box at the right is how many jobs the chosen filter shows.
   function yearList() { var y = {}; P.forEach(function (p) { y['20' + p.no.slice(0, 2)] = 1; }); return Object.keys(y).sort().reverse(); }
-  function inFilter(p, f) { return f === 'queue' ? (p.court !== 'done' || openNeeds(p).length > 0) : '20' + p.no.slice(0, 2) === f; }
+  // ...and Leads, at the right of the years: every job not signed yet (and not abandoned), whatever its year.
+  function inFilter(p, f) { return f === 'queue' ? (p.court !== 'done' || openNeeds(p).length > 0) : f === 'leads' ? p.court === 'lead' : '20' + p.no.slice(0, 2) === f; }
+  var LEAD_ORDER = ['Rough Quote', 'Follow Up', 'Proposal Out', 'Legacy Follow Up'];      // the order a lead moves through them
   function filterBar(which, count) {
-    if (state[which] !== 'queue' && yearList().indexOf(state[which]) < 0) state[which] = 'queue';
-    return '<div class="filt" data-which="' + which + '">' + ['queue'].concat(yearList()).map(function (f) {
-      return '<button type="button" data-filt="' + f + '" aria-pressed="' + (state[which] === f ? 'true' : 'false') + '">' + (f === 'queue' ? 'Queue' : f) + '</button>';
+    var extra = which === 'pf' ? ['leads'] : [];          // Leads is a Projects filter only: a lead has no value on the books yet, so in Financials it would always be empty
+    if (state[which] !== 'queue' && extra.indexOf(state[which]) < 0 && yearList().indexOf(state[which]) < 0) state[which] = 'queue';
+    return '<div class="filt" data-which="' + which + '">' + ['queue'].concat(yearList(), extra).map(function (f) {
+      return '<button type="button" data-filt="' + f + '" aria-pressed="' + (state[which] === f ? 'true' : 'false') + '">' + (f === 'queue' ? 'Queue' : f === 'leads' ? 'Leads' : f) + '</button>';
     }).join('') + '<span class="n" aria-label="' + count + ' jobs">' + count + '</span></div>';
   }
   function projectsTab() {
     var bar = filterBar('pf', 0), f = state.pf, list = P.filter(function (p) { return inFilter(p, f); });
     bar = filterBar('pf', list.length);
-    return f === 'queue' ? bar + queue() : bar + '<div class="rows">' + (list.sort(byNewest).map(plainRow).join('') || '<div class="empty">Nothing here.</div>') + '</div>';
+    if (f === 'queue') return bar + queue();
+    if (f === 'leads') {                               // the leads under the phase each is in, in the order a lead moves; one with no phase last
+      var by = {};
+      list.sort(byNewest).forEach(function (p) { var k = LEAD_ORDER.indexOf(p.phase) >= 0 ? p.phase : 'No phase yet'; (by[k] = by[k] || []).push(p); });
+      return bar + (LEAD_ORDER.concat(['No phase yet']).filter(function (k) { return by[k]; }).map(function (k) { return section(k, '', by[k].map(plainRow)); }).join('') ||
+        '<div class="rows"><div class="empty">No leads.</div></div>');
+    }
+    return bar + '<div class="rows">' + (list.sort(byNewest).map(plainRow).join('') || '<div class="empty">Nothing here.</div>') + '</div>';
   }
   // FINANCIALS: the jobs that carry a balance, each with its total and its balance, and the selection's totals on top.
   // The money is each job's as the card shows it (edits since the last read of the sheets included).
