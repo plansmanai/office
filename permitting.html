@@ -271,7 +271,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-204011";</script>
+<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-205234";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -1089,7 +1089,14 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   function openDoc(id) {
     var x = DOC.list.filter(function (y) { return y.id === id; })[0];
     if (!x) return;
-    DOC.open = { id: id, path: x.path, name: x.name }; clearTimeout(DOC.poll);
+    // Who answers for it: a round's folder holds the city's comments and the responses to them, and the responses are
+    // Drew's, so what he writes under one of those goes straight to Drew (Lance, 23 Nov 2026: "Cora downloads them to the
+    // folder. Drew reads them and responds. They just display on Cora's page. Cora then uploads those when she resubmits").
+    // Any other permit document (an application, a form, a receipt) is Cora's.
+    var to = roundOf(x.folder) != null ? 'drew' : WHO, toName = to === 'drew' ? 'Drew' : T.name;
+    DOC.open = { id: id, path: x.path, name: x.name, to: to, toName: toName }; clearTimeout(DOC.poll);
+    $('d-text').placeholder = to === 'drew' ? 'A correction for Drew: the item number and what the response should say' : 'A note for ' + toName + ' about this document';
+    $('d-text').setAttribute('aria-label', $('d-text').placeholder);
     showSheets(); $('sheet-list').hidden = true; $('sheet-open').hidden = true; $('doc-open').hidden = false;
     $('d-title').textContent = x.name; $('d-msg').textContent = ''; $('d-scroll').scrollTop = 0; docZoom(1);
     $('d-wrap').innerHTML = '<p class="st">Opening\u2026</p>';
@@ -1118,8 +1125,13 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     if (text === null) { $('d-msg').textContent = ATT.WAIT; return; }
     if (!text) { $('d-msg').textContent = 'Write the correction first.'; return; }
     $('d-msg').textContent = 'Sending\u2026'; $('d-send').disabled = true;
-    rpc('office_drew_say', { p_token: token, p_proj: NO, p_who: WHO, p_body: 'About the document "' + DOC.open.path + '" in this job\u2019s PERMITTING folder:\n' + text }).then(function (d) {
-      if (d && d.ok && d.saved) { $('d-text').value = ''; ATT.clear('doc'); $('d-msg').textContent = 'Sent to ' + T.name + '. The answer is under the ' + T.name + ' tab.'; loop(); }
+    var o = DOC.open;
+    rpc('office_drew_say', { p_token: token, p_proj: NO, p_who: o.to, p_body: 'About the document "' + o.path + '" in this job\u2019s PERMITTING folder:\n' + text }).then(function (d) {
+      if (d && d.ok && d.saved) {
+        $('d-text').value = ''; ATT.clear('doc');
+        $('d-msg').textContent = o.to === WHO ? 'Given to ' + o.toName + '. The answer is under the ' + o.toName + ' tab.' : 'Given to ' + o.toName + '. His answer is in his window: the ' + o.toName + ' button at the top.';
+        loop();
+      }
       else $('d-msg').textContent = d && d.ok ? 'Not sent. Try again.' : 'Signed out. Open the dashboard and sign in.';
     }).catch(function (e) { $('d-msg').textContent = 'Not sent (' + e.message + '). Your words are still here.'; }).then(function () { $('d-send').disabled = false; });
   }
