@@ -243,7 +243,8 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .kv .total { font-weight: 500; border-top: 1px solid var(--rule); padding-top: 7px; }
 .below { font-size: .84rem; font-weight: 700; letter-spacing: .2em; }
 .sec h3.tooled { position: relative; }
-.sec h3 .sectool { position: absolute; right: 34px; top: 50%; transform: translateY(-50%); margin: 0; }
+.sec h3 .sectool { position: absolute; right: 34px; top: 50%; transform: translateY(-50%); margin: 0; gap: 6px; flex-wrap: nowrap; }
+.sec h3 .sectool button.go { font-size: .64rem; padding: 6px 12px 5px 13px; min-height: 0; }
 .kv.money { align-items: center; }
 .kv.money .k.krow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .kv input.amt { width: 6.4em; text-align: right; font: inherit; font-size: 16px; padding: 5px 7px; border: 1px solid var(--ink); border-radius: 0; background: transparent; color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -471,7 +472,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-115647";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-120116";</script>
 </head>
 <body>
 
@@ -1434,10 +1435,12 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     var FE = edited(p), f = FE.fees, m = FE.money, edm = CFG && state.editMoney === p.no && state.moneyForm, F = state.moneyForm;
     var busy = savingEdit(p) ? '<p class="note" style="margin-top:8px">Saving your edit…</p>' : '';
     var sc = state.editScope === p.no && CFG
-      ? '<textarea class="edit-area" id="scope-text" aria-label="Scope of work">' + esc(state.scopeText) + '</textarea><div class="marks"><button class="go" type="button" id="scope-save">Save</button> <button class="text quiet" type="button" id="scope-cancel">Cancel</button></div>'
+      ? '<textarea class="edit-area" id="scope-text" aria-label="Scope of work">' + esc(state.scopeText) + '</textarea>'
       : '<p>' + (FE.scope ? esc(FE.scope) : '<span class="note">No scope written yet.</span>') + (p.sqft ? ' <span class="note">' + esc(p.sqft) + ' sq ft</span>' : '') + '</p>';
-    h += sec('Scope', sc + (state.scopeMsg ? '<p class="note">' + esc(state.scopeMsg) + '</p>' : ''), '',
-      CFG && state.editScope !== p.no ? '<button class="text quiet" type="button" id="scope-edit">Edit</button>' : '');
+    // a section's buttons stay in its heading row: Edit, and while editing Save and Cancel in the same place
+    var saveCancel = function (id) { return '<button class="go" type="button" id="' + id + '-save">Save</button><button class="text quiet" type="button" id="' + id + '-cancel">Cancel</button>'; };
+    h += sec('Scope', (state.scopeMsg ? '<p class="note" style="margin:0 0 8px">' + esc(state.scopeMsg) + '</p>' : '') + sc, '',
+      !CFG ? '' : state.editScope === p.no ? saveCancel('scope') : '<button class="text quiet" type="button" id="scope-edit">Edit</button>');
     var fin = '';
     if (f) {
       var open = !!edm || !!state.itemsOpen[p.no], its = (m && m.items) || [];
@@ -1474,10 +1477,9 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       }
       if (m && m.value != null) fin += '<span class="k total">Total value</span><span class="v total">' + esc(usd2(m.value)) + '</span>';
       fin += '</div>' + (edm ? '<p class="note" style="margin-top:8px">The totals follow when you save.</p>' : '');
-      if (edm) fin += '<div class="marks"><button class="go" type="button" id="money-save">Save</button> <button class="text quiet" type="button" id="money-cancel">Cancel</button></div>';
-      fin += (state.moneyMsg ? '<p class="note">' + esc(state.moneyMsg) + '</p>' : '') + busy;
+      fin = (state.moneyMsg ? '<p class="note" style="margin:0 0 8px">' + esc(state.moneyMsg) + '</p>' : '') + fin + busy;
     }
-    h += sec('Financial', fin, '', CFG && f && !edm ? '<button class="text quiet" type="button" id="money-edit">Edit</button>' : '');
+    h += sec('Financial', fin, '', !CFG || !f ? '' : edm ? saveCancel('money') : '<button class="text quiet" type="button" id="money-edit">Edit</button>');
     if (m) {
       // what was invoiced, then what is still owed, together (Lance, 24 Nov 2026: "combine")
       var got = m.value != null && m.due != null ? m.value - m.due : null;
