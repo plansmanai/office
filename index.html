@@ -451,7 +451,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261123-230010";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-092511";</script>
 </head>
 <body>
 
@@ -815,13 +815,17 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   function actRow(a) {
     return replyRow('action:' + a.id, a.proj_no, btn('go', 'Yes', 'data-act="approve" data-id="' + a.id + '"'), btn('dim', 'No', 'data-act="cancel" data-id="' + a.id + '"'));
   }
+  // A recorded payment (kind 'payment', core/payments.py) is listed the same way as a schedule change: what was
+  // recorded in Jake's one line, the outcome, and Undo, which writes the same cells of the Financial sheet back.
   function actItem(a) {
-    var h = '<div class="item act"><div class="head"><b>Change to the schedule</b><span>' + esc(stamp(a.proposed_at)) + '</span></div>' + actLines(a);
+    var pay = a.kind === 'payment', back = pay && /^Undo: /.test(a.summary || '');
+    var h = '<div class="item act"><div class="head"><b>' + (back ? 'Payment taken back off the sheet' : pay ? 'Payment recorded' : 'Change to the schedule') + '</b><span>' + esc(stamp(a.proposed_at)) + '</span></div>' +
+      (pay ? '<div class="body">' + esc((a.summary || '').replace(/^Undo: /, '')) + '</div>' : actLines(a));
     if (a.state === 'proposed') h += actRow(a);
-    else if (a.state === 'approved') h += '<div class="body note">' + esc(a.result || 'Writing it to the schedule…') + '</div>';
-    else if (a.state === 'done') h += '<div class="body ok">' + esc(a.result || 'Changed on the schedule.') + (a.finished_at ? ' ' + esc(stamp(a.finished_at)) : '') +
-      (a.undone_by ? ' Undone since.' : (CFG ? ' <button class="text quiet" type="button" data-act="undo" data-id="' + a.id + '">Undo</button>' : '')) + '</div>';
-    else if (a.state === 'failed') h += '<div class="body late">' + esc(a.result || 'Not changed.') + '</div>';
+    else if (a.state === 'approved') h += '<div class="body note">' + esc(a.result || (pay ? 'Writing it to the Financial sheet…' : 'Writing it to the schedule…')) + '</div>';
+    else if (a.state === 'done') h += '<div class="body ok">' + esc(a.result || (pay ? 'Recorded.' : 'Changed on the schedule.')) + (a.finished_at ? ' ' + esc(stamp(a.finished_at)) : '') +
+      (a.undone_by ? ' Undone since.' : (CFG && !back ? ' <button class="text quiet" type="button" data-act="undo" data-id="' + a.id + '">Undo</button>' : '')) + '</div>';
+    else if (a.state === 'failed') h += '<div class="body late">' + esc(a.result || (pay ? 'Not recorded.' : 'Not changed.')) + '</div>';
     return h + '</div>';
   }
   function daysSince(iso) { var t = new Date(iso).getTime(); return isNaN(t) ? null : Math.max(0, Math.floor((Date.now() - t) / 86400000)); }
@@ -2356,7 +2360,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     // Changing the password and signing out moved to the Admin page (Lance, 23 Nov 2026: "an admin page. That has the
     // log out, the password change, and this inside of it like a settings section"). The foot is one quiet line now.
     drawFoot = function () {
-      $('foot').textContent = CFG ? 'Jake keeps the phase and the due dates by your rules; each change is on the job with Undo. Nothing goes out until you tap Send.' : 'Read-only private preview. Tapping changes nothing.';
+      $('foot').textContent = CFG ? 'Jake keeps the phase and the due dates by your rules, and records payments that come in by Venmo, PayPal, Zelle or ACH; each one is on the job with Undo. Nothing goes out until you tap Send.' : 'Read-only private preview. Tapping changes nothing.';
     };
     drawFoot();
     $('login').hidden = true; $('shell').hidden = false;
