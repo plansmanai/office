@@ -35,7 +35,7 @@
   color-scheme: light only;      /* no dark mode: Lance does not like it */
   --bg: #FCFBF9; --soft: #F4F2ED; --sand: #ECE8DE; --bar: #E7E5E0; --ink: #1B1B19; --muted: #6E695F; --rule: rgba(27, 27, 25, .2);
   --oak: #B2906B; --oak-ink: #7A5E3C; --sage: #4F6B66; --long: #9A3B2E;
-  --lead: #E2B43C;      /* a lead's phase bubble (Lance, 24 Nov 2026: red ours, green out of our court, yellow a lead) */
+  --lead: #8A6712; --lead-bg: rgba(226, 180, 60, .26);      /* a lead's phase bubble (Lance, 24 Nov 2026: red ours, green out of our court, yellow a lead) */
   --jake: #0873A4; --drew: #007B71; --cora: #CB2F68;      /* each one's own color (Lance, 23 Nov 2026): on that one's count, wherever it shows */
   --new-bg: rgba(79, 107, 102, .11); --old-bg: rgba(178, 144, 107, .17); --long-bg: rgba(154, 59, 46, .1);
   --on-ink: #FCFBF9; --surface: #FCFBF9; --line: var(--rule); --late: var(--long); --ok-ink: var(--sage);
@@ -250,6 +250,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .filt + h2 { margin-top: 22px; }
 .fintot { margin-top: 16px; padding: 12px 14px; border: 1px solid var(--rule); }
 .row.fin .rtags .ph { order: 0; margin-right: 0; }
+.row.fin .rhead { background: var(--bar); }      /* the grey title bar, as on the Projects rows (Lance, 24 Nov 2026) */
 .row.fin .rtags .bal { order: 1; margin-left: auto; font-weight: 500; font-variant-numeric: tabular-nums; }
 .row.fin .rtags .bal.late { color: var(--red, #9a3b34); }
 #totop { position: fixed; right: max(14px, env(safe-area-inset-right, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); z-index: 60; width: 46px; height: 46px; padding: 0;
@@ -396,9 +397,11 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
    of it (with the client, at the city, approved, in construction), yellow when it is a lead. A finished job, and
    one with no phase, stay quiet grey: nobody's move. */
 .ph { background: var(--bar); color: var(--muted); border-color: var(--bar); }
-.ph.c-ours { background: var(--long); color: #fff; border-color: var(--long); }
-.ph.c-client, .ph.c-city, .ph.c-approved, .ph.c-construction { background: var(--sage); color: #fff; border-color: var(--sage); }
-.ph.c-lead { background: var(--lead); color: var(--ink); border-color: var(--lead); }
+/* muted (Lance, the same day: "Make them muted"): a soft tint with the color in the words, and no outline, so the
+   phase never reads as one of the outlined waiting bubbles beside it */
+.ph.c-ours { background: var(--long-bg); color: var(--long); border-color: transparent; }
+.ph.c-client, .ph.c-city, .ph.c-approved, .ph.c-construction { background: var(--new-bg); color: var(--sage); border-color: transparent; }
+.ph.c-lead { background: var(--lead-bg); color: var(--lead); border-color: transparent; }
 .ph.c-unknown, .ph.c-done { background: var(--bar); color: var(--muted); border-color: var(--bar); }
 .row.fin .rtags .ph { background: var(--bar); color: var(--ink); border-color: var(--bar); }
 .rtags .ph { order: 1; margin-right: auto; }
@@ -493,7 +496,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-144444";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-145109";</script>
 </head>
 <body>
 
