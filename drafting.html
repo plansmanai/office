@@ -46,9 +46,10 @@ header .brand { display: none; }
 }
 .teambar span, .teambar a { height: 42px; box-sizing: border-box; padding: 0 8px; display: flex; align-items: center; justify-content: center; }
 header .brand a { display: inline-flex; align-items: baseline; }
-/* whether he is here: said only while it is not so (connecting, not running, cannot be reached), on the live picture */
-header .status { display: none; }
-body.off header .status { display: flex; }
+/* The line under the job says something only when there is something to say: he is working (and on what), or he is
+   not running. "Drew is here" said nothing and took a line of the phone (Lance, 23 Nov 2026: "remove the Drew is
+   here"), so while he is simply there the line is gone. On a PC it sits on the live picture, only while he is not there. */
+body.here header .status { display: none; }
 .view.live { position: relative; }
 .view.live > .status { display: none; position: absolute; top: 12px; left: 14px; z-index: 6; margin: 0; padding: 7px 11px; background: var(--bg); border: 1px solid var(--rule);
   font-size: 13px; color: var(--muted); align-items: center; gap: 8px; }
@@ -195,14 +196,21 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
 .sscore summary { cursor: pointer; font-family: var(--sans); letter-spacing: .14em; text-transform: uppercase; font-size: .62rem; color: var(--ink); }
 .sscore table { border-collapse: collapse; margin-top: 10px; width: 100%; max-width: 560px; } .sscore td, .sscore th { text-align: left; padding: 4px 14px 4px 0; font-weight: 400; }
 .sscore th { font-size: .58rem; letter-spacing: .14em; text-transform: uppercase; } .sscore td.n { font-variant-numeric: tabular-nums; }
+/* A sheet open for his marks, top to bottom: its buttons, the sheet, what was said about it, his answer (Lance, 23 Nov
+   2026: "switch the description the image location so that the image is below the buttons. Also the size needs to be
+   formatted to the proportions of a 24x36 sheet. The current window crops"). The sheet's window has the shape of a
+   24x36 sheet lying down (3 wide to 2 high), and the picture is fitted whole into it when it opens (fit(), below), so
+   nothing is cut off until he zooms in. The description takes what room is left and scrolls in its own place, so the
+   sheet and his buttons do not move. */
 #sheet-open { display: flex; flex-direction: column; height: 100%; } #sheet-open[hidden] { display: none; }
 .sbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
 .sbar b { font-weight: 500; flex: 1; min-width: 120px; } .sbar .tools { display: flex; gap: 6px; }
 .sbar button { background: none; border: 1px solid var(--ink); color: var(--ink); padding: 8px 11px; cursor: pointer; font-family: var(--sans); text-transform: uppercase; letter-spacing: .14em; font-size: .6rem; }
 .sbar button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); }
-#s-note { padding: 8px 14px; color: var(--muted); font-size: 14px; } #s-note:empty { display: none; }
-#s-scroll { flex: 1; min-height: 200px; overflow: auto; background: #d9d6cf; -webkit-overflow-scrolling: touch; }
-#s-wrap { position: relative; width: 100%; } #s-img { display: block; width: 100%; height: auto; background: #fff; }
+#s-note { flex: 1 1 0; min-height: 66px; overflow: auto; -webkit-overflow-scrolling: touch; padding: 10px 14px; color: var(--muted); font-size: 14px; }
+#s-note:empty { min-height: 0; padding: 0; }
+#s-scroll { flex: none; width: 100%; aspect-ratio: 3 / 2; max-height: max(160px, calc(100vh - 420px)); overflow: auto; background: #d9d6cf; border-bottom: 1px solid var(--rule); -webkit-overflow-scrolling: touch; }
+#s-wrap { position: relative; width: 100%; margin: 0 auto; } #s-img { display: block; width: 100%; height: auto; background: #fff; }
 #s-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: pan-x pan-y; }
 #s-canvas.draw { touch-action: none; cursor: crosshair; }
 .sanswer { border-top: 1px solid var(--rule); padding: 10px 14px max(12px, env(safe-area-inset-bottom, 0px)); }
@@ -214,7 +222,7 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
 .msg .ask .was { color: var(--muted); font-size: 13px; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-172739";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-183314";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -236,8 +244,8 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
         <div class="sbar"><b id="s-title"></b>
           <span class="tools"><button type="button" id="s-draw" aria-pressed="true">Draw</button><button type="button" id="s-undo">Undo</button><button type="button" id="s-clear">Clear</button>
           <button type="button" id="s-out">&minus;</button><button type="button" id="s-in">+</button></span></div>
-        <div id="s-note"></div>
         <div id="s-scroll"><div id="s-wrap"><img id="s-img" alt=""><canvas id="s-canvas"></canvas></div></div>
+        <div id="s-note"></div>
         <div class="sanswer"><textarea id="s-text" placeholder="What to change (optional if your marks say it)"></textarea>
           <!-- the box standard: the black button takes it (Looks right, when he was asked to look) and comes first; his markup is the reply -->
           <div class="bar"><button class="go" type="button" id="s-ok">Looks right</button><button class="sec" type="button" id="s-send">Send markup</button><span id="s-msg"></span></div></div>
@@ -510,6 +518,7 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
       (st.busy && st.updated_at && (Date.now() - new Date(st.updated_at).getTime() < 30 * 60000));
     BUSY = !!st.busy;
     document.body.classList.toggle('off', !alive);          // the line shows only while he is not there
+    document.body.classList.toggle('here', !!alive && !BUSY);      // there and not working: nothing to say, no line
     $('dot').className = 'dot' + (!alive ? '' : BUSY ? ' busy' : ' on');
     $('status').textContent = !alive ? T.name + ' is not running' : BUSY ? T.name + ' is working' + (st.doing ? ': ' + st.doing : '') : T.name + ' is here';
   }
@@ -796,7 +805,16 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
       g.stroke();
     });
   }
-  function setZoom(z) { SH.zoom = Math.max(1, Math.min(6, z)); $('s-wrap').style.width = (SH.zoom * 100) + '%'; setTimeout(paint, 30); }
+  // The picture is fitted WHOLE into the sheet's window: as wide as the window when it has a sheet's proportions, and
+  // narrower (centred) when it is taller than a sheet, a portrait page or a screen picture. Zooming is from there.
+  function fit() {
+    var box = $('s-scroll'), img = $('s-img'), nw = img.naturalWidth, nh = img.naturalHeight;
+    if (!nw || !nh || !box.clientWidth) return;
+    SH.base = Math.max(60, Math.floor(Math.min(box.clientWidth, box.clientHeight * nw / nh)));
+    $('s-wrap').style.width = Math.round(SH.base * SH.zoom) + 'px';
+    setTimeout(paint, 30);
+  }
+  function setZoom(z) { SH.zoom = Math.max(1, Math.min(6, z)); fit(); }
   // one entry of the history: that picture as it was, with his marks on it, to look at (nothing to send from here)
   function openSheet(id) {
     showSheets(); $('sheet-list').hidden = true; $('sheet-open').hidden = false; $('s-title').textContent = 'Opening…'; $('s-msg').textContent = '';
@@ -853,7 +871,7 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
       e.preventDefault();
       var r = sc.getBoundingClientRect(), cx = (t[0].x + t[1].x) / 2, cy = (t[0].y + t[1].y) / 2;
       var z = Math.max(1, Math.min(6, gest.z * Math.hypot(t[0].x - t[1].x, t[0].y - t[1].y) / gest.d));
-      if (Math.abs(z - SH.zoom) > 0.01) { SH.zoom = z; $('s-wrap').style.width = (z * 100) + '%'; }
+      if (Math.abs(z - SH.zoom) > 0.01) { SH.zoom = z; $('s-wrap').style.width = Math.round((SH.base || sc.clientWidth) * z) + 'px'; }
       sc.scrollLeft = gest.ax * SH.zoom - (cx - r.left); sc.scrollTop = gest.ay * SH.zoom - (cy - r.top);
       return;
     }
@@ -871,7 +889,7 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
   $('s-clear').addEventListener('click', function () { SH.strokes = []; paint(); });
   $('s-in').addEventListener('click', function () { setZoom(SH.zoom * 1.5); });
   $('s-out').addEventListener('click', function () { setZoom(SH.zoom / 1.5); });
-  window.addEventListener('resize', paint);
+  window.addEventListener('resize', function () { if (SH.open) fit(); else paint(); });      // turned, or the window changed: fitted again
   function sendMark(ok) {
     if (!SH.open) return;
     var text = $('s-text').value.trim();
