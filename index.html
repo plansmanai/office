@@ -241,6 +241,21 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .kv .k { color: var(--muted); }
 .kv .v { text-align: right; overflow-wrap: anywhere; }
 .kv .total { font-weight: 500; border-top: 1px solid var(--rule); padding-top: 7px; }
+.below { font-size: .84rem; font-weight: 700; letter-spacing: .2em; }
+.kv.money { align-items: center; }
+.kv.money .k.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.kv input.amt { width: 6.4em; text-align: right; font: inherit; font-size: 16px; padding: 5px 7px; border: 1px solid var(--ink); border-radius: 0; background: transparent; color: var(--ink); font-variant-numeric: tabular-nums; }
+.kv input.desc { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 5px 7px; border: 1px solid var(--rule); border-radius: 0; background: transparent; color: var(--ink); }
+.ratebox { font: inherit; font-size: 14.5px; padding: 2px 9px; border: 1px solid var(--ink); border-radius: 0; background: transparent; color: var(--ink); font-variant-numeric: tabular-nums; }
+button.ratebox { cursor: pointer; }
+.treetog { background: none; border: 0; padding: 4px 0; font: inherit; color: var(--muted); cursor: pointer; text-align: left; }
+.treetog i { font-style: normal; padding-left: 6px; }
+.kv .sub { color: var(--muted); font-size: 14.5px; padding-left: 14px; }
+.kv .sub small { display: block; font-size: 12.5px; }
+.kv .subv { color: var(--muted); font-size: 14.5px; }
+.kv .sub.row { display: flex; align-items: center; gap: 6px; padding-left: 0; }
+.kv .xdel { background: none; border: 0; color: var(--muted); font-size: 1.25rem; line-height: 1; padding: 2px 6px; cursor: pointer; }
+textarea.edit-area { width: 100%; box-sizing: border-box; min-height: 110px; font: inherit; font-size: 16px; padding: 9px 10px; border: 1px solid var(--ink); border-radius: 0; background: transparent; color: var(--ink); }
 .note { color: var(--muted); font-size: 14px; }
 .late { color: var(--long); }
 .item { padding: 10px 0; }
@@ -451,7 +466,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-092511";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-105751";</script>
 </head>
 <body>
 
@@ -497,7 +512,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   var CFG = window.OFFICE || null;                 // set on the web build: { url, key }
   var TOKEN_KEY = 'plansman_office_token';
   var DATA = null, P = [], BY = {}, SAID = [], token = null;
-  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', loose: {}, mailQ: '', openMail: null, mailBody: {}, editPerson: null, personForm: {}, personMsg: '', personAsk: null, needReply: null, needText: {}, jobAll: {}, chatAll: false, chatPending: false, chatLast: '', lastList: 'queue', decWrong: null, decText: {}, decMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null };
+  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', loose: {}, mailQ: '', openMail: null, mailBody: {}, editPerson: null, personForm: {}, personMsg: '', personAsk: null, needReply: null, needText: {}, jobAll: {}, chatAll: false, chatPending: false, chatLast: '', lastList: 'queue', decWrong: null, decText: {}, decMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null, editScope: null, scopeText: '', scopeMsg: '', editMoney: null, moneyForm: null, moneyMsg: '', itemsOpen: {}, allEdits: false };
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var usd = function (n) { return n == null ? '' : (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 }); };
@@ -815,17 +830,147 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   function actRow(a) {
     return replyRow('action:' + a.id, a.proj_no, btn('go', 'Yes', 'data-act="approve" data-id="' + a.id + '"'), btn('dim', 'No', 'data-act="cancel" data-id="' + a.id + '"'));
   }
-  // A recorded payment (kind 'payment', core/payments.py) is listed the same way as a schedule change: what was
-  // recorded in Jake's one line, the outcome, and Undo, which writes the same cells of the Financial sheet back.
+  // THE JOB'S ADMIN (Lance, 24 Nov 2026). Fees, the add-service rate and items, and the scope are edited on the card.
+  // An edit is saved as a change of kind 'edit' (db/080) and written where the job lives by the worker within a few
+  // seconds (26 and older: the sheet, core/job_edit.py), checked, and listed in History with Undo.
+  var FEES = [['consult', 'Consult'], ['design', 'Design'], ['architectural', 'Architectural'], ['engineering', 'Engineering'], ['permitting', 'Permitting']];
+  var FEE_LABEL = { consult: 'Consult', design: 'Design', architectural: 'Architectural', engineering: 'Engineering', permitting: 'Permitting', rate: 'Added services rate' };
+  function num(t) { t = String(t == null ? '' : t).replace(/[$,\s]/g, ''); if (t === '') return 0; return /^\d+(\.\d{1,2})?$/.test(t) ? parseFloat(t) : null; }
+  function usd2(n) { return n == null ? '' : (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); }
+  function plain(n) { return n ? String(n) : '0'; }
+  function editActs(p) { return ACTS.filter(function (a) { return a.proj_no === p.no && a.kind === 'edit'; }); }
+  function savingEdit(p) { return editActs(p).some(function (a) { return a.state === 'approved'; }); }
+  // What the card shows: the last read of the sheets, with every edit made SINCE that read laid over it, so his
+  // edit shows at once and the totals follow, before the next read comes round.
+  function edited(p) {
+    var f = p.fees ? JSON.parse(JSON.stringify(p.fees)) : null, m = p.money ? JSON.parse(JSON.stringify(p.money)) : null, scope = p.scope || '';
+    if (m && !m.items) m.items = [];
+    var since = DATA && DATA.read_iso ? Date.parse(DATA.read_iso) : Infinity;
+    var bump = function (d) { if (m) { if (m.value != null) m.value += d; if (m.due != null) m.due += d; } };
+    editActs(p).filter(function (a) { return (a.state === 'approved' || a.state === 'done') && Date.parse(a.finished_at || a.decided_at) > since; })
+      .sort(function (x, y) { return x.id - y.id; }).forEach(function (a) {
+        Object.keys(a.change || {}).forEach(function (k) {
+          var to = a.change[k].to;
+          if (k === 'scope') { scope = to || ''; return; }
+          if (k.indexOf('fee.') === 0) {
+            if (!f) return;
+            var key = k.slice(4) === 'rate' ? 'hourly' : k.slice(4), old = f[key] || 0, nv = num(to) || 0;
+            f[key] = nv;
+            // the sheet's own rule: a consult that is not charged, and permitting that was not bought, are not in the total
+            if (key !== 'hourly' && !(key === 'consult' && p.consult === 'none') && !(key === 'permitting' && p.permitting === 'not bought')) {
+              if (f.total != null) f.total += nv - old;
+              if (p.signed) bump(nv - old);
+            }
+            return;
+          }
+          if (!m) return;
+          var z = k.split('.'), row = z[1], w = z[2], it = m.items.filter(function (i) { return String(i.row) === row; })[0];
+          if (!it) { it = { row: row, date: '', hours: '', desc: '', billed: '', amount: 0 }; m.items.push(it); }
+          if (w === 'amount') { var o = it.amount || 0, n = num(to) || 0; it.amount = n; m.add_services = (m.add_services || 0) + n - o; bump(n - o); }
+          else if (w !== 'proj') it[w] = to || '';
+        });
+      });
+    if (m) m.items = m.items.filter(function (i) { return i.amount || i.desc; });
+    return { fees: f, money: m, scope: scope };
+  }
+  function openMoney(p, focus) {
+    if (savingEdit(p)) { state.moneyMsg = 'Still saving your last edit. Try again in a few seconds.'; render(); return; }
+    var E = edited(p), f = E.fees || {};
+    state.editMoney = p.no; state.moneyMsg = '';
+    state.moneyForm = { fee: { consult: plain(f.consult), design: plain(f.design), architectural: plain(f.architectural), engineering: plain(f.engineering), permitting: plain(f.permitting), rate: plain(f.hourly) },
+      items: ((E.money && E.money.items) || []).map(function (it) { return { row: it.row, desc: it.desc || '', amount: plain(it.amount), orig: it }; }) };
+    render();
+    var el = focus && document.querySelector('#detail [data-fee="' + focus + '"]');
+    if (el) { el.focus(); el.select(); }
+  }
+  function saveMoney(p) {
+    var E = edited(p), F = state.moneyForm, ch = {}, bad = false, fresh = 0;
+    FEES.map(function (k) { return k[0]; }).concat(['rate']).forEach(function (k) {
+      var old = (E.fees || {})[k === 'rate' ? 'hourly' : k] || 0, nv = num(F.fee[k]);
+      if (nv === null) { bad = true; return; }
+      if (nv !== old) ch['fee.' + k] = { from: String(old), to: String(nv) };
+    });
+    F.items.forEach(function (it) {
+      var nv = num(it.amount), d = (it.desc || '').trim();
+      if (nv === null) { bad = true; return; }
+      if (it.orig) {
+        var o = it.orig, r = 'item.' + o.row + '.';
+        if (it.gone) {
+          [['proj', p.no], ['date', o.date], ['hours', o.hours], ['desc', o.desc], ['billed', o.billed], ['amount', o.amount ? String(o.amount) : '']]
+            .forEach(function (x) { if (x[1]) ch[r + x[0]] = { from: x[1], to: '' }; });
+        } else {
+          if (nv !== (o.amount || 0)) ch[r + 'amount'] = { from: String(o.amount || 0), to: String(nv) };
+          if (d !== (o.desc || '')) ch[r + 'desc'] = { from: o.desc || '', to: d };
+        }
+      } else if (!it.gone && (nv || d)) {
+        ch['item.new' + fresh + '.desc'] = { from: '', to: d || 'Add services' };
+        ch['item.new' + fresh + '.amount'] = { from: '', to: String(nv) };
+        fresh++;
+      }
+    });
+    if (bad) { state.moneyMsg = 'An amount is not a number. Use digits, like 2500 or 2500.50.'; render(); return; }
+    sendEdit(p, ch, function () { state.editMoney = null; state.moneyForm = null; }, function (m) { state.moneyMsg = m; });
+  }
+  function saveScope(p) {
+    var E = edited(p), to = (state.scopeText || '').replace(/\s+/g, ' ').trim();
+    sendEdit(p, to === (E.scope || '').replace(/\s+/g, ' ').trim() ? {} : { scope: { from: E.scope || '', to: to } }, function () { state.editScope = null; }, function (m) { state.scopeMsg = m; });
+  }
+  function sendEdit(p, ch, done, say) {
+    if (!Object.keys(ch).length) { done(); say(''); render(); return; }
+    say('Saving…'); render();
+    rpc('office_job_edit', { p_token: token, p_proj: p.no, p_change: ch }).then(function (d) {
+      if (d && d.ok && d.saved) {
+        var t = new Date().toISOString();
+        ACTS.unshift({ id: d.id, proj_no: p.no, kind: 'edit', change: ch, summary: 'Edit on the job card', state: 'approved', proposed_at: t, decided_at: t, by_who: 'lance' });
+        done(); say(''); watchActs();
+      } else say(d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and sign in.');
+      render();
+    }).catch(function (e) { say('Not saved (' + e.message + '). Your edit is still here: tap Save again.'); render(); });
+  }
+  // One edit, as lines: each fee and the scope as "from to", an add-service as added, removed or changed.
+  function editLines(a) {
+    var ch = a.change || {}, out = [], items = {};
+    var line = function (label, from, to) { return '<div class="body"><b>' + esc(label) + ':</b> ' + esc(from || '(blank)') + ' <span class="arrow">to</span> <b>' + esc(to || '(blank)') + '</b></div>'; };
+    Object.keys(ch).forEach(function (k) {
+      var v = ch[k];
+      if (k === 'scope') out.push(line('Scope', v.from, v.to));
+      else if (k.indexOf('fee.') === 0) out.push(line(FEE_LABEL[k.slice(4)] || k, usd2(num(v.from) || 0), usd2(num(v.to) || 0)));
+      else { var z = k.split('.'); (items[z[1]] = items[z[1]] || {})[z[2]] = v; }
+    });
+    Object.keys(items).forEach(function (r) {
+      var it = items[r], d = it.desc || {}, am = it.amount || {};
+      var added = it.proj ? (!it.proj.from && it.proj.to) : /^new/.test(r), gone = it.proj && it.proj.from && !it.proj.to;
+      if (added) out.push('<div class="body"><b>Added service added:</b> ' + esc(d.to || 'Add services') + ', <b>' + esc(usd2(num(am.to) || 0)) + '</b></div>');
+      else if (gone) out.push('<div class="body"><b>Added service removed:</b> ' + esc(d.from || 'Add services') + ', ' + esc(usd2(num(am.from) || 0)) + '</div>');
+      else {
+        if (it.amount) out.push(line('Added service amount', usd2(num(am.from) || 0), usd2(num(am.to) || 0)));
+        if (it.desc) out.push(line('Added service', d.from, d.to));
+      }
+    });
+    return out.join('');
+  }
+  // An edit can be undone only while nothing later has changed the same thing: otherwise Undo would wipe that later
+  // correction. The older one still shows what it was, so it can be typed back.
+  function overtaken(a) {
+    var keys = Object.keys(a.change || {});
+    return ACTS.some(function (b) {
+      return b.id > a.id && b.id !== a.undone_by && b.proj_no === a.proj_no && b.kind === 'edit' && (b.state === 'approved' || b.state === 'done') &&
+        Object.keys(b.change || {}).some(function (k) { return keys.indexOf(k) >= 0; });
+    });
+  }
+  // Every change to the job's record, one item each, in History: his own edits, Jake's schedule changes, and recorded
+  // payments (kind 'payment', core/payments.py). Undo writes the same cells back.
   function actItem(a) {
-    var pay = a.kind === 'payment', back = pay && /^Undo: /.test(a.summary || '');
-    var h = '<div class="item act"><div class="head"><b>' + (back ? 'Payment taken back off the sheet' : pay ? 'Payment recorded' : 'Change to the schedule') + '</b><span>' + esc(stamp(a.proposed_at)) + '</span></div>' +
-      (pay ? '<div class="body">' + esc((a.summary || '').replace(/^Undo: /, '')) + '</div>' : actLines(a));
+    var pay = a.kind === 'payment', edit = a.kind === 'edit', back = /^Undo: /.test(a.summary || ''), who = a.by_who === 'lance' ? 'You' : 'Jake';
+    var title = edit ? (back ? 'You changed it back' : who + ' edited the job') : pay ? (back ? 'Payment taken back off the sheet' : 'Payment recorded') : 'Change to the schedule';
+    var h = '<div class="item act"><div class="head"><b>' + title + '</b><span>' + esc(stamp(a.proposed_at)) + '</span></div>' +
+      (pay ? '<div class="body">' + esc((a.summary || '').replace(/^Undo: /, '')) + '</div>' : edit ? editLines(a) : actLines(a));
+    var undo = CFG && !(pay && back) && !(edit && overtaken(a));
     if (a.state === 'proposed') h += actRow(a);
-    else if (a.state === 'approved') h += '<div class="body note">' + esc(a.result || (pay ? 'Writing it to the Financial sheet…' : 'Writing it to the schedule…')) + '</div>';
-    else if (a.state === 'done') h += '<div class="body ok">' + esc(a.result || (pay ? 'Recorded.' : 'Changed on the schedule.')) + (a.finished_at ? ' ' + esc(stamp(a.finished_at)) : '') +
-      (a.undone_by ? ' Undone since.' : (CFG && !back ? ' <button class="text quiet" type="button" data-act="undo" data-id="' + a.id + '">Undo</button>' : '')) + '</div>';
-    else if (a.state === 'failed') h += '<div class="body late">' + esc(a.result || (pay ? 'Not recorded.' : 'Not changed.')) + '</div>';
+    else if (a.state === 'approved') h += '<div class="body note">' + esc(a.result || (edit ? 'Saving…' : pay ? 'Writing it to the Financial sheet…' : 'Writing it to the schedule…')) + '</div>';
+    else if (a.state === 'done') h += '<div class="body ok">' + esc(a.result || (edit ? 'Saved.' : pay ? 'Recorded.' : 'Changed on the schedule.')) + (a.finished_at ? ' ' + esc(stamp(a.finished_at)) : '') +
+      (a.undone_by ? ' Undone since.' : (undo ? ' <button class="text quiet" type="button" data-act="undo" data-id="' + a.id + '">Undo</button>' : '')) + '</div>';
+    else if (a.state === 'failed') h += '<div class="body late">' + esc(a.result || (edit ? 'Not saved.' : pay ? 'Not recorded.' : 'Not changed.')) + '</div>';
     return h + '</div>';
   }
   function daysSince(iso) { var t = new Date(iso).getTime(); return isNaN(t) ? null : Math.max(0, Math.floor((Date.now() - t) / 86400000)); }
@@ -1239,9 +1384,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 
     // 2. the box he writes to Jake in, under the thread
     var tell = '';
-    var acts = ACTS.filter(function (a) { return a.proj_no === p.no && a.state !== 'proposed' && a.state !== 'cancelled'; });
-    if (acts.length) tell += '<div class="said">' + acts.map(actItem).join('') + '</div>';
-    if (state.actMsg) tell += '<p class="note">' + esc(state.actMsg) + '</p>';
+    // (the list of changes with Undo moved to History, 24 Nov 2026: "History would be the place that tracks all edits")
     if (CFG) {
       tell += '<form id="tell"><textarea id="tell-text" placeholder="What&#39;s next" aria-label="Instruction to the team">' + esc(state.draft[p.no] || '') + '</textarea>' +
         ATT.row('job:' + p.no) +
@@ -1272,29 +1415,57 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     // reference, below
     var checked = (p.shadow || []).filter(function (x) { return x.mode === 'answered'; });
     h += sec('Shadow check: Jake against what you sent', checked.map(shadowItem).join(''), 'lead');
-    h += '<div class="below">Reference</div>';
-    // Lance's rule: information is shown once, in the right place. Everything about money is in one section,
-    // in the order it happens: what was agreed, what was added, what was invoiced, what is still owed.
-    var f = p.fees, m = p.money, money = '';
-    if (p.scope) money += '<p>' + esc(p.scope) + (p.sqft ? ' <span class="note">' + esc(p.sqft) + ' sq ft</span>' : '') + '</p>';
-    var lines = [];
+    h += '<div class="below">Admin</div>';
+    // Lance's order (24 Nov 2026): the scope; what was agreed, line by line, with the added services and their rate;
+    // what was invoiced; what is still owed. Each amount and the scope are edited here.
+    var FE = edited(p), f = FE.fees, m = FE.money, edm = CFG && state.editMoney === p.no && state.moneyForm, F = state.moneyForm;
+    var busy = savingEdit(p) ? '<p class="note" style="margin-top:8px">Saving your edit…</p>' : '';
+    var sc = state.editScope === p.no && CFG
+      ? '<textarea class="edit-area" id="scope-text" aria-label="Scope of work">' + esc(state.scopeText) + '</textarea><div class="marks"><button class="go" type="button" id="scope-save">Save</button> <button class="text quiet" type="button" id="scope-cancel">Cancel</button></div>'
+      : '<p>' + (FE.scope ? esc(FE.scope) : '<span class="note">No scope written yet.</span>') + (p.sqft ? ' <span class="note">' + esc(p.sqft) + ' sq ft</span>' : '') + '</p>' +
+        (CFG ? '<div class="marks slim"><button class="text quiet" type="button" id="scope-edit">Edit</button></div>' : '');
+    h += sec('Scope', sc + (state.scopeMsg ? '<p class="note">' + esc(state.scopeMsg) + '</p>' : ''));
+    var fin = '';
     if (f) {
-      lines = [['Site consult', f.consult], ['Design', f.design], ['Plans', f.plans], ['Permitting', f.permitting], ['Construction', f.construction]]
-        .filter(function (x) { return x[1]; }).map(function (x) { return [x[0], usd(x[1])]; });
-      if (f.total != null) lines.push(['Contract total', usd(f.total), ' total']);
+      var open = !!edm || !!state.itemsOpen[p.no], its = (m && m.items) || [];
+      fin += '<div class="kv money">' + FEES.map(function (k) {
+        return '<span class="k">' + k[1] + '</span><span class="v">' + (edm ? '<input class="amt" type="text" inputmode="decimal" data-fee="' + k[0] + '" value="' + esc(F.fee[k[0]]) + '" aria-label="' + k[1] + '">' : esc(usd2(f[k[0]] || 0))) + '</span>';
+      }).join('');
+      if (f.total != null) fin += '<span class="k total">Contract total</span><span class="v total">' + esc(usd2(f.total)) + '</span>';
+      // Added services: the rate in its box, the list that opens under it, and the total in line with the fees
+      fin += '<span class="k row"><button type="button" class="treetog" id="items-tog" aria-expanded="' + open + '">Added services<i aria-hidden="true">' + (open ? '&minus;' : '+') + '</i></button>' +
+        (edm ? '<input class="amt" type="text" inputmode="decimal" data-fee="rate" value="' + esc(F.fee.rate) + '" aria-label="Added services rate per hour">'
+             : CFG ? '<button type="button" class="ratebox" id="money-rate" aria-label="Rate per hour. Tap to edit.">' + esc(usd2(f.hourly || 0)) + '</button>' : '<span class="ratebox">' + esc(usd2(f.hourly || 0)) + '</span>') +
+        '</span><span class="v">' + (m ? esc(usd2(m.add_services || 0)) : '') + '</span>';
+      if (open && edm) {
+        fin += F.items.map(function (it, i) {
+          return it.gone ? '' : '<span class="k sub row"><input class="desc" type="text" data-item-desc="' + i + '" value="' + esc(it.desc) + '" placeholder="What it was" aria-label="Added service ' + (i + 1) + '">' +
+            '<button type="button" class="xdel" data-item-del="' + i + '" aria-label="Remove this added service">&times;</button></span>' +
+            '<span class="v"><input class="amt" type="text" inputmode="decimal" data-item-amt="' + i + '" value="' + esc(it.amount) + '" aria-label="Amount"></span>';
+        }).join('') + (m ? '<span class="k sub"><button class="add" type="button" id="item-add">+ Added service</button></span><span class="v"></span>' : '');
+      } else if (open) {
+        fin += its.length ? its.map(function (it, i) {
+          var when = [it.date, it.hours ? it.hours + ' hr' : '', it.billed ? 'on invoice ' + it.billed : 'not invoiced yet'].filter(Boolean).join(' · ');
+          return '<span class="k sub">' + (i + 1) + '. ' + esc(it.desc || 'Add services') + '<small>' + esc(when) + '</small></span><span class="v subv">' + esc(usd2(it.amount || 0)) + '</span>';
+        }).join('') : '<span class="k sub">None yet.</span><span class="v"></span>';
+      }
+      if (m && m.value != null) fin += '<span class="k total">Total value</span><span class="v total">' + esc(usd2(m.value)) + '</span>';
+      fin += '</div><p class="note" style="margin-top:8px">Consult: ' + esc(p.consult) + '. Permitting: ' + esc(p.permitting) + '.' + (edm ? ' The totals follow when you save.' : '') + '</p>';
+      if (edm) fin += '<div class="marks"><button class="go" type="button" id="money-save">Save</button> <button class="text quiet" type="button" id="money-cancel">Cancel</button></div>';
+      else if (CFG) fin += '<div class="marks slim"><button class="text quiet" type="button" id="money-edit">Edit</button></div>';
+      fin += (state.moneyMsg ? '<p class="note">' + esc(state.moneyMsg) + '</p>' : '') + busy;
     }
-    if (m && m.add_services) lines.push(['Added services so far', usd(m.add_services)]);
-    if (m && m.value != null && (!f || f.total == null || m.add_services || m.value !== f.total)) lines.push(['Total value', usd(m.value), ' total']);
-    if (lines.length) money += kv(lines);
-    if (f) money += '<p class="note" style="margin-top:8px">Site consult: ' + esc(p.consult) + '. Permitting: ' + esc(p.permitting) + '.' + (f.hourly ? ' Added services at ' + usd(f.hourly) + ' an hour.' : '') + '</p>';
+    h += sec('Financial', fin);
     if (m) {
-      money += m.invoices.map(function (i) {
+      h += sec('Invoices', m.invoices.map(function (i) {
         return '<div class="item"><div class="head"><b>Invoice ' + esc(i.no) + '</b><span' + (i.paid ? '' : ' class="late"') + '>' + esc(i.paid ? 'paid ' + i.paid : 'not marked paid') + '</span></div>' +
           '<div class="body">sent ' + esc(i.sent || '?') + (i.amount != null ? ' · ' + usd(i.amount) + ' received' : '') + '</div></div>';
-      }).join('');
-      if (m.due != null) money += '<div style="margin-top:10px">' + kv([['Balance due', usd(m.due) || '$0', ' total']]) + '</div>';
+      }).join(''));
+      if (m.due != null) {
+        var got = m.value != null ? m.value - m.due : null;
+        h += sec('Balance', kv([['Total value', usd2(m.value)], ['Received', got != null ? usd2(got) : '']].filter(function (x) { return x[1]; }).concat([['Balance due', usd2(m.due) || '$0', ' total']])));
+      }
     }
-    h += sec('Financial', money);
     if (p.permit) {
       var pm = p.permit;
       h += sec('Permit', kv([['City', pm.city], ['Record', pm.record || 'none yet'], ['Stage', [pm.stage, pm.round ? 'round ' + pm.round : ''].filter(Boolean).join(', ')],
@@ -1366,7 +1537,11 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
           return '<div class="tl"><span class="d">' + esc(e.when) + '</span><span><span class="p">' + esc(e.who.charAt(0).toUpperCase() + e.who.slice(1)) + '</span><div class="n">' + esc(e.line) + '</div></span></div>';
         }).join('') : ''));
     }
-    h += sec('Status and history', now + shown.map(function (e) {
+    var hacts = ACTS.filter(function (a) { return a.proj_no === p.no && a.state !== 'proposed' && a.state !== 'cancelled'; });
+    var hist = (state.actMsg ? '<p class="note">' + esc(state.actMsg) + '</p>' : '') +
+      hacts.slice(0, state.allEdits ? 999 : 6).map(actItem).join('') +
+      (hacts.length > 6 && !state.allEdits ? '<button class="text more" id="more-edits" type="button">Show all ' + hacts.length + ' changes</button>' : '');
+    h += sec('History', (hist ? '<div class="edits">' + hist + '</div>' : '') + now + shown.map(function (e) {
       return '<div class="tl"><span class="d">' + esc(day(e.when)) + '</span><span>' + (e.phase ? '<span class="p">' + esc(e.phase) + '</span>' : '') +
         (e.note ? '<div class="n">' + esc(e.note) + '</div>' : '') + '</span></div>';
     }).join('') + (tl.length > shown.length ? '<button class="text more" id="more" type="button">Show all ' + tl.length + ' entries</button>' : ''));
@@ -1448,6 +1623,29 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     Array.prototype.forEach.call($('detail').querySelectorAll('[data-act]'), function (b) {
       b.addEventListener('click', function () { decideAct(+b.getAttribute('data-id'), b.getAttribute('data-act')); });
     });
+    // Admin: the scope, the fees, the added services
+    if (p) {
+      var on = function (id, fn) { var el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
+      var each = function (sel, ev, fn) { Array.prototype.forEach.call($('detail').querySelectorAll(sel), function (el) { el.addEventListener(ev, function () { fn(el); }); }); };
+      on('scope-edit', function () {
+        if (savingEdit(p)) { state.scopeMsg = 'Still saving your last edit. Try again in a few seconds.'; render(); return; }
+        state.editScope = p.no; state.scopeText = edited(p).scope; state.scopeMsg = ''; render(); var t = document.getElementById('scope-text'); if (t) t.focus();
+      });
+      on('scope-cancel', function () { state.editScope = null; state.scopeMsg = ''; render(); });
+      on('scope-save', function () { saveScope(p); });
+      var st = document.getElementById('scope-text'); if (st) st.addEventListener('input', function () { state.scopeText = st.value; });
+      on('money-edit', function () { openMoney(p); });
+      on('money-rate', function () { openMoney(p, 'rate'); });
+      on('money-cancel', function () { state.editMoney = null; state.moneyForm = null; state.moneyMsg = ''; render(); });
+      on('money-save', function () { saveMoney(p); });
+      on('items-tog', function () { if (state.editMoney === p.no) return; state.itemsOpen[p.no] = !state.itemsOpen[p.no]; render(); });
+      on('item-add', function () { state.moneyForm.items.push({ row: null, desc: '', amount: '', orig: null }); render(); var d = $('detail').querySelectorAll('[data-item-desc]'); if (d.length) d[d.length - 1].focus(); });
+      on('more-edits', function () { state.allEdits = true; render(); });
+      each('[data-fee]', 'input', function (el) { state.moneyForm.fee[el.getAttribute('data-fee')] = el.value; });
+      each('[data-item-desc]', 'input', function (el) { state.moneyForm.items[+el.getAttribute('data-item-desc')].desc = el.value; });
+      each('[data-item-amt]', 'input', function (el) { state.moneyForm.items[+el.getAttribute('data-item-amt')].amount = el.value; });
+      each('[data-item-del]', 'click', function (el) { state.moneyForm.items[+el.getAttribute('data-item-del')].gone = true; render(); });
+    }
     Array.prototype.forEach.call(document.querySelectorAll('#detail [data-draft], #listbody [data-draft], #chatlog [data-draft]'), function (b) {
       b.addEventListener('click', function () { decideDraft(+b.getAttribute('data-id'), b.getAttribute('data-draft')); });
     });
@@ -1607,7 +1805,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     }
     if (state.no) { try { localStorage.setItem('p4_last_job', state.no); } catch (e) {} }
     if (state.no && !prev && state.routed) keepPlace();     // leaving the list for a job: remember where the list was
-    if (state.no !== prev) { state.mailQ = ''; state.openMail = null; state.allTimeline = false; state.allSaid = false; state.jobAll = {}; state.tellMsg = ''; state.pick = null; state.markMsg = ''; }
+    if (state.no !== prev) { state.mailQ = ''; state.openMail = null; state.allTimeline = false; state.allEdits = false; state.editScope = null; state.editMoney = null; state.moneyForm = null; state.moneyMsg = ''; state.scopeMsg = ''; state.allSaid = false; state.jobAll = {}; state.tellMsg = ''; state.pick = null; state.markMsg = ''; }
     render();
     if (state.no && state.no !== prev) { window.scrollTo(0, 0); $('detail').scrollTop = 0; }
     if (!state.no && state.view !== 'chat' && (prev || !state.routed || moved)) backToPlace();      // back on the list (or the page just opened on it): where he left it
@@ -1981,6 +2179,14 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   // on Lance's word). Then watch until the worker reports done or failed. Yes and No leave their quiet line in the
   // job's thread; the one for Yes gets Undo once the change is written.
   var actWatch = null;
+  function watchActs() {
+    if (actWatch) return;
+    var until = Date.now() + 4 * 60 * 1000;
+    actWatch = setInterval(function () {
+      if (Date.now() > until || !ACTS.some(function (a) { return a.state === 'approved'; })) { clearInterval(actWatch); actWatch = null; return; }
+      loadActs();
+    }, 3000);
+  }
   function decideAct(id, decision) {
     state.actMsg = '';
     rpc('office_act', { p_token: token, p_id: id, p_decision: decision }).then(function (d) {
