@@ -451,7 +451,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261123-194649";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261123-195133";</script>
 </head>
 <body>
 
@@ -727,7 +727,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   // the wording first, or drop it. A draft answering an email that waits on him is shown on that email.
   var DRAFTS = [], PUSHED = null, WAITING = null;      // WAITING: what Drew and Cora have waiting on him, read live with the drafts
   var BLANK = /\[[A-Z][^\]\[a-z]{1,200}\]/g;                  // [FEE]: a fact only he has, left for him to fill
-  var ATTACH = /\battach(?:ed|ment|ments|ing)?\b|\benclosed\b/i;     // P4 cannot attach a file yet
+  var ATTACH = /\battach(?:ed|ment|ments|ing)?\b|\benclosed\b/i;     // wording that may promise a file: a draft with none on it says so (a warning, not a stop)
   function blanksIn(t) { return (t || '').match(BLANK) || []; }
   function typing() { return document.activeElement && /^(TEXTAREA|INPUT)$/.test(document.activeElement.tagName); }
   // The words of a text or voicemail, as written, with the few before it in the same conversation. key is 'text:<id>'.
@@ -763,7 +763,9 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     if (editing) h += '<textarea data-draft-text="' + d.id + '" aria-label="The email text">' + esc(state.draftText[d.id] != null ? state.draftText[d.id] : d.body) + '</textarea>';
     else h += '<div class="txt">' + para(d.body) + '</div>';
     var fileLine = function (label, list) {
-      return list.length ? '<div class="body"><b>' + label + ' </b>' + list.map(function (a) { return esc(a.name) + ' <span class="note">(' + esc(a.size_text || a.size || '') + (a.modified ? ', last changed ' + esc(day(a.modified)) : '') + ')</span>'; }).join('; ') + '</div>' : '';
+      return list.length ? '<div class="body"><b>' + label + ' </b>' + list.map(function (a) {
+        return esc(a.name) + ' <span class="note">(' + esc(a.size_text || a.size || '') + (a.modified ? ', last changed ' + esc(day(a.modified)) : '') + ')</span>' +
+          (a.upload && open ? ' <button class="text" type="button" data-draft-off="' + d.id + '" data-upload="' + a.upload + '">Take off</button>' : ''); }).join('; ') + '</div>' : '';
     };
     // a file too large to email goes as a link to it on Google Drive, made when he taps Send (anyone with the link can look)
     if (files.length && d.state !== 'sent') h += fileLine('Attached:', files.filter(function (a) { return !a.link; })) + fileLine('Too large to attach, sent as a Google Drive link:', files.filter(function (a) { return a.link; }));
@@ -771,7 +773,10 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     else if (d.state === 'approved' || d.state === 'sending') h += '<div class="body note">' + esc(d.result || (d.channel === 'action' ? 'Doing it…' : 'Sending…')) + '</div>';
     else if (d.state === 'sent') h += '<div class="body ok">' + esc(d.result || 'Sent.') + '</div>';
     if (open && !editing && blanks.length) h += '<div class="body note">Fill in ' + esc(blanks.join(', ')) + ' before it can go: tap Edit.</div>';
-    if (open && !editing && file) h += '<div class="body note">It says a file is attached, and nothing is. Tell Jake which file to attach, or tap Edit and take that out.</div>';
+    // The wording may promise a file and none is on it: he is told, and acts here. The paperclip puts a file of his on
+    // the draft; Send sends it as it is (his tap with this in front of him is the judgment: db/076).
+    if (open && !editing && file) h += '<div class="body note">It says something is attached, and no file is on it. Put one on with the paperclip, or Send sends it as it is.</div>';
+    if (open && d.channel === 'email') h += ATT.row('d:' + d.id);
     if (own) h += itemThread(aboutItem(key));
     // The standard's row: Send, Reply, Drop, Edit. Send keeps its guards (a blank to fill, a file it says is attached).
     // Reply goes to Jake with the draft named, which is how he has Jake change it; a stale draft has Reply and Drop.
@@ -781,8 +786,8 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       else if (state.needReply === key) h += replyBox(key, 'Tell Jake what to do', 'data-need-text="' + esc(key) + '" data-proj="' + esc(proj) + '"', state.needText[key],
         'data-need-send="' + esc(key) + '" data-proj="' + esc(proj) + '"');
       else h += (open && d.channel === 'action' ? '<div class="body note">To change it, tap Reply and tell Jake.</div>' : '') +
-        btnRow([open && !blanks.length && !file ? send : '', replyBtn(key), btn('dim', 'Drop', 'data-draft="drop" data-id="' + d.id + '"'),
-          open && d.channel !== 'action' ? btn('dim', 'Edit', 'data-draft="edit" data-id="' + d.id + '"') : '']);
+        btnRow([open && !blanks.length ? send : '', replyBtn(key), btn('dim', 'Drop', 'data-draft="drop" data-id="' + d.id + '"'),
+          open && d.channel !== 'action' ? btn('dim', 'Edit', 'data-draft="edit" data-id="' + d.id + '"') : '', open && d.channel === 'email' ? ATT.clip('d:' + d.id, proj) : '']);
     }
     if (state.draftMsg && state.draftMsgId === d.id) h += '<p class="note">' + esc(state.draftMsg) + '</p>';
     return h + '</div>';
@@ -1633,8 +1638,9 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   // each, "[file:<id>]"; in a conversation the marker shows as the picture or as the file's name, and a tap opens it.
   // A NEW BOX JOINS IN WITH THREE THINGS: ATT.row(key) under its text, ATT.clip(key, proj) in its row of buttons, and
   // its send says  text = ATT.join(key, text)  (null while a file is still going up) and ATT.clear(key) once sent.
+  // A DRAFT is different: its paperclip puts the file ON the draft (ATT.done('d:', ...) below), so it goes with the email.
   var ATT = (function () {
-    var boxes = {}, meta = {}, asked = {};
+    var boxes = {}, meta = {}, asked = {}, hooks = [];
     var PIECE = 1500000, MAX = 314572800, WEB = { 'image/jpeg': 1, 'image/png': 1, 'image/webp': 1, 'image/gif': 1 };
     var CLIP = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
       '<path d="M20.5 11.5l-8.6 8.6a5.2 5.2 0 0 1-7.4-7.4l9-9a3.5 3.5 0 0 1 5 5l-9 9a1.8 1.8 0 0 1-2.6-2.6l8.3-8.3"/></svg>';
@@ -1728,7 +1734,11 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
           paint(key);
           return sendAll(it, proj || 'office', blob, key);
         }).then(function (id) {
-          it.busy = false; it.id = id; meta[id] = { id: id, name: it.name, mime: it.mime, bytes: it.bytes, thumb: it.thumb, kept: it.bytes <= 20971520 }; paint(key);
+          it.busy = false; it.id = id; meta[id] = { id: id, name: it.name, mime: it.mime, bytes: it.bytes, thumb: it.thumb, kept: it.bytes <= 20971520 };
+          // a box whose files are not sent as part of a message (a draft: the file goes on the draft) takes each one here
+          var h = hooks.filter(function (x) { return key.indexOf(x.prefix) === 0; })[0];
+          if (h) { var l = list(key), at = l.indexOf(it); if (at >= 0) l.splice(at, 1); paint(key); h.fn(key, it); return; }
+          paint(key);
         }).catch(function (e) { it.busy = false; it.err = e.message; paint(key); });
       });
     }
@@ -1815,6 +1825,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
         return (String(text || '').trim() + ' ' + l.filter(function (it) { return it.id; }).map(function (it) { return '[file:' + it.id + ']'; }).join(' ')).trim();
       },
       WAIT: 'A file is still going up. Send again in a moment.',
+      done: function (prefix, fn) { hooks.push({ prefix: prefix, fn: fn }); },      // files of boxes whose key starts so are handed to fn(key, file) as each arrives
       clear: function (key) { boxes[key] = []; paint(key); },
       show: function (h) { return String(h).replace(MARK, function (_m, id) { if (!meta[id]) want(id); return one(id); }); },      // in escaped text: markers become the pictures and files
       quiet: function (t) { return String(t == null ? '' : t).replace(MARK, ' (attachment)'); }                                   // in one plain line
@@ -1868,6 +1879,18 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   }
   // Draft emails: read on load and every 20 seconds while the page is open. The same call says when the
   // dashboard's data was last pushed, so the page reloads its data by itself instead of waiting for a refresh.
+  // A file put on a draft with its paperclip, or taken off again: saved on the draft, and the drafts are read again.
+  function draftFile(id, upload, off) {
+    rpc('office_draft_attach', { p_token: token, p_id: +id, p_upload: +upload, p_remove: !!off }).then(function (r) {
+      state.draftMsgId = +id; state.draftMsg = r && r.ok ? (r.saved ? '' : 'The file was not put on it: ' + (r.why || 'try again') + '.') : 'Signed out. Reload and sign in.';
+      loadDrafts(); render();
+    }).catch(function (e) { state.draftMsgId = +id; state.draftMsg = 'The file was not put on it (' + e.message + ').'; render(); });
+  }
+  ATT.done('d:', function (key, it) { draftFile(key.slice(2), it.id); });
+  document.addEventListener('click', function (e) {
+    var b = e.target && e.target.getAttribute ? e.target : null;
+    if (b && b.getAttribute('data-draft-off')) draftFile(b.getAttribute('data-draft-off'), b.getAttribute('data-upload'), true);
+  });
   function loadDrafts() {
     if (!CFG || !token || document.hidden) return;
     rpc('office_drafts', { p_token: token }).then(function (d) {
@@ -1917,8 +1940,8 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       var left = blanksIn(editing ? text : d.body);
       if (editing && !text) { state.draftMsg = 'The email is empty.'; render(); return; }
       if (left.length) { state.draftMsg = 'Fill in ' + left.join(', ') + ' first.'; render(); return; }
-      if (ATTACH.test(editing ? text : d.body) && !(d.attachments || []).length) { state.draftMsg = 'It still says a file is attached, and nothing is.'; render(); return; }
     }
+    var asIs = what === 'approve' && ATTACH.test(text != null ? text : d.body) && !(d.attachments || []).length;      // he saw the warning on the draft and sends it as it is
     var was = { state: d.state, body: d.body, result: d.result }, gone = null;
     if (what === 'approve') { d.state = 'approved'; d.result = null; if (text) d.body = text; }
     else {
@@ -1937,7 +1960,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       if (text != null) state.editDraft = id;
       state.draftMsg = msg; render();
     }
-    rpc('office_draft', { p_token: token, p_id: id, p_decision: what, p_text: what === 'approve' && text && text !== was.body ? text : null }).then(function (r) {
+    rpc('office_draft', { p_token: token, p_id: id, p_decision: what, p_text: what === 'approve' && text && text !== was.body ? text : null, p_as_is: asIs }).then(function (r) {
       if (!r || !r.ok) return back('Signed out. Reload and sign in; your text is still here.');
       if (!r.saved) return back('Not saved: ' + (r.why || 'try again') + '.');
       delete state.draftText[id];
