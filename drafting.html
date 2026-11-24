@@ -214,7 +214,7 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
 .msg .ask .was { color: var(--muted); font-size: 13px; }
 .msg a.open { display: inline-block; margin-top: 8px; border: 1px solid var(--ink); padding: 7px 11px 6px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; cursor: pointer; }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-135014";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261123-170422";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -362,6 +362,14 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
   var DR = [], drAt = 0, drEdit = null, drText = {}, drMsg = {};
   function loadDrafts() {
     drAt = Date.now();
+    // Jake's count on his button, the same number as on the job's page (Lance, 23 Nov 2026: "Add it to Jake's button on
+    // top too like the other 2"). It is counted on the server (db/071), since this window does not read Jake's thread.
+    rpc('office_jake_count', { p_token: token, p_proj: NO }).then(function (d) {
+      if (!d || !d.ok) return;
+      var a = $('tb-jake'), old = a.querySelector('.badge');
+      if (old) a.removeChild(old);
+      if (d.jake) { var i = document.createElement('i'); i.className = 'badge jake'; i.textContent = d.jake; a.appendChild(i); }
+    }).catch(function () {});
     return rpc('office_drafts', { p_token: token }).then(function (d) {
       if (d && d.ok) {
         if (d.read_at) $('read').textContent = 'Sheets read ' + d.read_at;

@@ -419,7 +419,7 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   #detail { grid-column: 3; grid-row: 2 / 6; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin-top: 14px; }
 }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261123-135014";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261123-170422";</script>
 </head>
 <body>
 
@@ -880,7 +880,8 @@ textarea.ruletext { display: block; width: 100%; min-height: 3em; padding: 6px 8
   }
   // How many things each of the three has waiting on him on a job: the number on that one's button at the top of the
   // job, and on the job's row in every list. Jake's is what his Pending button counts (a draft that shows on the item
-  // it answers is not counted twice).
+  // it answers is not counted twice). Drew's and Cora's windows show Jake's count too, and get it from the server:
+  // db/071 office_jake_count counts the SAME things. Change one and you change the other.
   function teamCounts(p) {
     var c = { jake: 0, drew: 0, cora: 0 }, open = openNeeds(p).filter(function (n) { return n.kind !== 'team'; });
     teamNeeds(p).forEach(function (n) { if (c[n.who] != null) c[n.who]++; });
