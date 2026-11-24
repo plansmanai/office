@@ -243,7 +243,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .kv .total { font-weight: 500; border-top: 1px solid var(--rule); padding-top: 7px; }
 .below { font-size: .84rem; font-weight: 700; letter-spacing: .2em; }
 .kv.money { align-items: center; }
-.kv.money .k.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.kv.money .k.krow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .kv input.amt { width: 6.4em; text-align: right; font: inherit; font-size: 16px; padding: 5px 7px; border: 1px solid var(--ink); border-radius: 0; background: transparent; color: var(--ink); font-variant-numeric: tabular-nums; }
 .kv input.desc { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 5px 7px; border: 1px solid var(--rule); border-radius: 0; background: transparent; color: var(--ink); }
 .ratebox { font: inherit; font-size: 14.5px; padding: 2px 9px; border: 1px solid var(--ink); border-radius: 0; background: transparent; color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -253,7 +253,9 @@ button.ratebox { cursor: pointer; }
 .kv .sub { color: var(--muted); font-size: 14.5px; padding-left: 14px; }
 .kv .sub small { display: block; font-size: 12.5px; }
 .kv .subv { color: var(--muted); font-size: 14.5px; }
-.kv .sub.row { display: flex; align-items: center; gap: 6px; padding-left: 0; }
+.kv .sub.krow { display: flex; align-items: center; gap: 6px; padding-left: 0; }
+.kv input.amt.rate { width: 4.6em; }
+.kv button.add { background: none; border: 0; padding: 8px 0; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .62rem; color: var(--ink); cursor: pointer; }
 .kv .xdel { background: none; border: 0; color: var(--muted); font-size: 1.25rem; line-height: 1; padding: 2px 6px; cursor: pointer; }
 textarea.edit-area { width: 100%; box-sizing: border-box; min-height: 110px; font: inherit; font-size: 16px; padding: 9px 10px; border: 1px solid var(--ink); border-radius: 0; background: transparent; color: var(--ink); }
 .note { color: var(--muted); font-size: 14px; }
@@ -466,7 +468,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-105751";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-105950";</script>
 </head>
 <body>
 
@@ -1433,13 +1435,13 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       }).join('');
       if (f.total != null) fin += '<span class="k total">Contract total</span><span class="v total">' + esc(usd2(f.total)) + '</span>';
       // Added services: the rate in its box, the list that opens under it, and the total in line with the fees
-      fin += '<span class="k row"><button type="button" class="treetog" id="items-tog" aria-expanded="' + open + '">Added services<i aria-hidden="true">' + (open ? '&minus;' : '+') + '</i></button>' +
-        (edm ? '<input class="amt" type="text" inputmode="decimal" data-fee="rate" value="' + esc(F.fee.rate) + '" aria-label="Added services rate per hour">'
+      fin += '<span class="k krow"><button type="button" class="treetog" id="items-tog" aria-expanded="' + open + '">Added services<i aria-hidden="true">' + (open ? '&minus;' : '+') + '</i></button>' +
+        (edm ? '<input class="amt rate" type="text" inputmode="decimal" data-fee="rate" value="' + esc(F.fee.rate) + '" aria-label="Added services rate per hour">'
              : CFG ? '<button type="button" class="ratebox" id="money-rate" aria-label="Rate per hour. Tap to edit.">' + esc(usd2(f.hourly || 0)) + '</button>' : '<span class="ratebox">' + esc(usd2(f.hourly || 0)) + '</span>') +
         '</span><span class="v">' + (m ? esc(usd2(m.add_services || 0)) : '') + '</span>';
       if (open && edm) {
         fin += F.items.map(function (it, i) {
-          return it.gone ? '' : '<span class="k sub row"><input class="desc" type="text" data-item-desc="' + i + '" value="' + esc(it.desc) + '" placeholder="What it was" aria-label="Added service ' + (i + 1) + '">' +
+          return it.gone ? '' : '<span class="k sub krow"><input class="desc" type="text" data-item-desc="' + i + '" value="' + esc(it.desc) + '" placeholder="What it was" aria-label="Added service ' + (i + 1) + '">' +
             '<button type="button" class="xdel" data-item-del="' + i + '" aria-label="Remove this added service">&times;</button></span>' +
             '<span class="v"><input class="amt" type="text" inputmode="decimal" data-item-amt="' + i + '" value="' + esc(it.amount) + '" aria-label="Amount"></span>';
         }).join('') + (m ? '<span class="k sub"><button class="add" type="button" id="item-add">+ Added service</button></span><span class="v"></span>' : '');
