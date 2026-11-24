@@ -242,9 +242,15 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .kv .v { text-align: right; overflow-wrap: anywhere; }
 .kv .total { font-weight: 500; border-top: 1px solid var(--rule); padding-top: 7px; }
 .below { font-size: .84rem; font-weight: 700; letter-spacing: .2em; }
-h2.yr { scroll-margin-top: 14px; }
-.yearjump { display: inline-flex; gap: 16px; margin-left: 18px; vertical-align: baseline; }
-.yearjump button { font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--ink); background: none; border: 0; padding: 6px 0; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+.filt { display: flex; align-items: center; gap: 20px; margin: 26px 0 0; }
+.filt button { font-family: var(--sans); font-size: .66rem; text-transform: uppercase; letter-spacing: .2em; color: var(--muted); background: none; border: 0; border-bottom: 1px solid transparent; border-radius: 0; padding: 8px 0 6px; cursor: pointer; }
+.filt button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+.filt .n { margin-left: auto; background: var(--ink); color: var(--on-ink); font-family: var(--sans); font-size: .64rem; letter-spacing: .08em; padding: 2px 7px 1px; font-variant-numeric: tabular-nums; }
+.filt + h2 { margin-top: 22px; }
+.fintot { margin-top: 16px; padding: 12px 14px; border: 1px solid var(--rule); }
+.row.fin .rtags .ph { order: 0; margin-right: 0; }
+.row.fin .rtags .bal { order: 1; margin-left: auto; font-weight: 500; font-variant-numeric: tabular-nums; }
+.row.fin .rtags .bal.late { color: var(--red, #9a3b34); }
 #totop { position: fixed; right: max(14px, env(safe-area-inset-right, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); z-index: 60; width: 46px; height: 46px; padding: 0;
   border: 1px solid var(--ink); border-radius: 0; background: var(--bg); color: var(--ink); cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 8px rgba(27, 27, 25, .14); }
 #totop[hidden] { display: none; }
@@ -479,7 +485,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-132415";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-142112";</script>
 </head>
 <body>
 
@@ -495,10 +501,10 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 
 <div class="shell" id="shell" hidden>
   <div class="pane" id="list">
-    <div class="brand"><a href="#queue" aria-label="Plansman: back to the queue"><b>Plansman</b></a><span id="read"></span></div>
+    <div class="brand"><a href="#projects" aria-label="Plansman: back to the projects"><b>Plansman</b></a><span id="read"></span></div>
     <div id="notice" hidden></div>
     <div id="notify" hidden></div>
-    <nav class="nav" aria-label="Views"><a href="#chat" id="nav-chat">Chat<i id="chat-dot" hidden></i></a><a href="#queue" id="nav-queue">Queue</a><a href="#projects" id="nav-projects">All projects</a><a href="admin.html" id="nav-admin">Admin</a></nav>
+    <nav class="nav" aria-label="Views"><a href="#chat" id="nav-chat">Chat<i id="chat-dot" hidden></i></a><a href="#projects" id="nav-projects">Projects</a><a href="#financials" id="nav-financials">Financials</a><a href="admin.html" id="nav-admin">Admin</a></nav>
     <div id="chatview" hidden>
       <div class="chat" id="chatlog"></div>
       <form id="ask" hidden>
@@ -526,7 +532,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   var CFG = window.OFFICE || null;                 // set on the web build: { url, key }
   var TOKEN_KEY = 'plansman_office_token';
   var DATA = null, P = [], BY = {}, SAID = [], token = null;
-  var state = { view: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', loose: {}, mailQ: '', openMail: null, mailBody: {}, editPerson: null, personForm: {}, personMsg: '', personAsk: null, needReply: null, needText: {}, jobAll: {}, chatAll: false, chatPending: false, chatLast: '', lastList: 'queue', decWrong: null, decText: {}, decMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null, editScope: null, scopeText: '', scopeMsg: '', editMoney: null, moneyForm: null, moneyMsg: '', itemsOpen: {}, allEdits: false };
+  var state = { view: 'projects', pf: 'queue', ff: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', loose: {}, mailQ: '', openMail: null, mailBody: {}, editPerson: null, personForm: {}, personMsg: '', personAsk: null, needReply: null, needText: {}, jobAll: {}, chatAll: false, chatPending: false, chatLast: '', lastList: 'queue', decWrong: null, decText: {}, decMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null, editScope: null, scopeText: '', scopeMsg: '', editMoney: null, moneyForm: null, moneyMsg: '', itemsOpen: {}, allEdits: false };
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var usd = function (n) { return n == null ? '' : (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 }); };
@@ -1177,20 +1183,50 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       section('Leads', 'Not signed.', group('lead')) +
       section('No phase set', '', group('unknown')) + scoreBoard();
   }
+  // Jobs by year, newest first: what a search shows.
+  function byNewest(a, b) { return a.no.slice(0, 2) === b.no.slice(0, 2) ? (parseFloat(b.no.slice(3)) || 0) - (parseFloat(a.no.slice(3)) || 0) : (a.no.slice(0, 2) < b.no.slice(0, 2) ? 1 : -1); }
+  function plainRow(p) { var ns = openNeeds(p); return row(p, who(p), '', false, p.phase || 'No phase', bubsFor(ns), worstSev(ns)); }
   function projects(list) {
     var years = {};
     list.forEach(function (p) { var y = '20' + p.no.slice(0, 2); (years[y] = years[y] || []).push(p); });
-    // newest job first: the years newest first, and inside a year the highest number at the top (Lance, 24 Nov 2026:
-    // "Just in reverse numerical order. Newest job at the top")
-    var n = function (p) { return parseFloat(p.no.slice(3)) || 0; };
-    // each year's heading carries the other years: a tap jumps to that year (Lance, 24 Nov 2026: "Add 24 and 25 to jump down")
-    var ys = Object.keys(years).sort().reverse();
-    return ys.map(function (y) {
-      var jump = ys.length > 1 ? '<span class="yearjump">' + ys.filter(function (o) { return o !== y; }).map(function (o) {
-        return '<button type="button" data-year="' + o + '" aria-label="Jump to ' + o + '">' + o + '</button>'; }).join('') + '</span>' : '';
-      return section(y, '', years[y].slice().sort(function (a, b) { return n(b) - n(a); }).map(function (p) { var ns = openNeeds(p); return row(p, who(p), '', false, p.phase || 'No phase', bubsFor(ns), worstSev(ns)); }))
-        .replace('<h2>', '<h2 class="yr" id="y-' + y + '">').replace('</h2>', jump + '</h2>');
-    }).join('') || '<div class="empty">No project matches.</div>';
+    return Object.keys(years).sort().reverse().map(function (y) { return section(y, '', years[y].slice().sort(byNewest).map(plainRow)); }).join('') ||
+      '<div class="empty">No project matches.</div>';
+  }
+  // THE FILTERS, the same row on Projects and on Financials (Lance, 24 Nov 2026): Queue, then each year, newest first.
+  // Queue is the jobs being worked (anything not finished, or with something open for him); a year is every job of
+  // that year. The black box at the right is how many jobs the chosen filter shows.
+  function yearList() { var y = {}; P.forEach(function (p) { y['20' + p.no.slice(0, 2)] = 1; }); return Object.keys(y).sort().reverse(); }
+  function inFilter(p, f) { return f === 'queue' ? (p.court !== 'done' || openNeeds(p).length > 0) : '20' + p.no.slice(0, 2) === f; }
+  function filterBar(which, count) {
+    if (state[which] !== 'queue' && yearList().indexOf(state[which]) < 0) state[which] = 'queue';
+    return '<div class="filt" data-which="' + which + '">' + ['queue'].concat(yearList()).map(function (f) {
+      return '<button type="button" data-filt="' + f + '" aria-pressed="' + (state[which] === f ? 'true' : 'false') + '">' + (f === 'queue' ? 'Queue' : f) + '</button>';
+    }).join('') + '<span class="n" aria-label="' + count + ' jobs">' + count + '</span></div>';
+  }
+  function projectsTab() {
+    var bar = filterBar('pf', 0), f = state.pf, list = P.filter(function (p) { return inFilter(p, f); });
+    bar = filterBar('pf', list.length);
+    return f === 'queue' ? bar + queue() : bar + '<div class="rows">' + (list.sort(byNewest).map(plainRow).join('') || '<div class="empty">Nothing here.</div>') + '</div>';
+  }
+  // FINANCIALS: the jobs that carry a balance, each with its total and its balance, and the selection's totals on top.
+  // The money is each job's as the card shows it (edits since the last read of the sheets included).
+  function finRow(p, m) {
+    var open = (m.invoices || []).filter(function (i) { return i.sent && !(i.amount > 0); });
+    var what = [who(p)].concat(open.map(function (i) { return 'Invoice ' + i.no + ' sent ' + i.sent + (i.billed ? ', ' + usd2(i.billed) : '') + ', not paid'; })).filter(Boolean).join(' · ');
+    return '<a class="row fin" href="#p-' + esc(p.no) + '"' + (state.no === p.no ? ' aria-current="true"' : '') + '>' +
+      '<span class="rhead"><span class="no">' + esc(p.no) + '</span><span class="addr">' + esc(p.address) + '</span></span>' +
+      '<span class="rtags"><span class="ph">Total ' + esc(usd2(m.value || 0)) + '</span><span class="bal' + (m.due < 0 ? ' late' : '') + '">Balance ' + esc(usd2(m.due)) + '</span></span>' +
+      (what ? '<span class="what">' + esc(what) + '</span>' : '') + '</a>';
+  }
+  function financials(q) {
+    var bar = q ? '' : filterBar('ff', 0), f = state.ff, tv = 0, td = 0;
+    var list = (q ? P.filter(function (p) { return matches(p, q); }) : P.filter(function (p) { return inFilter(p, f); }))
+      .map(function (p) { return [p, edited(p).money]; }).filter(function (x) { return x[1] && Math.abs(x[1].due || 0) > 0.005; })
+      .sort(function (x, y) { return byNewest(x[0], y[0]); });
+    list.forEach(function (x) { tv += x[1].value || 0; td += x[1].due || 0; });
+    return (q ? '' : filterBar('ff', list.length)) +
+      '<div class="fintot">' + kv([['Total value', usd2(tv)], ['Received', usd2(tv - td)], ['Balance due', usd2(td), ' total']]) + '</div>' +
+      '<div class="rows">' + (list.map(function (x) { return finRow(x[0], x[1]); }).join('') || '<div class="empty">No job here carries a balance.</div>') + '</div>';
   }
   function matches(p, q) {
     var hay = [p.no, p.address, p.contact, p.company, p.type, p.phase].concat(p.people.map(function (x) { return x.name + ' ' + x.company; })).join(' ').toLowerCase();
@@ -1502,7 +1538,10 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       h += sec('Invoices and balance', m.invoices.map(function (i) {
         return '<div class="item"><div class="head"><b>Invoice ' + esc(i.no) + '</b><span' + (i.paid ? '' : ' class="late"') + '>' + esc(i.paid ? 'paid ' + i.paid : 'not marked paid') + '</span></div>' +
           '<div class="body">sent ' + esc(i.sent || '?') + (i.amount != null ? ' · ' + usd(i.amount) + ' received' : '') + '</div></div>';
-      }).join('') + (m.due != null ? '<div style="margin-top:' + (m.invoices.length ? '12' : '0') + 'px">' +
+      }).join('') + (m.pays || []).map(function (x) {
+        return '<div class="item"><div class="head"><b>Payment ' + esc(x.n) + '</b><span>' + esc(x.date || '') + '</span></div>' +
+          '<div class="body">' + usd2(x.amount) + ' received' + (x.method ? ' · ' + esc(x.method) : '') + '</div></div>';
+      }).join('') + (m.due != null ? '<div style="margin-top:' + (m.invoices.length || (m.pays || []).length ? '12' : '0') + 'px">' +
         kv([['Total value', usd2(m.value)], ['Received', got != null ? usd2(got) : '']].filter(function (x) { return x[1]; }).concat([['Balance due', usd2(m.due) || '$0', ' total']])) + '</div>' : ''));
     }
     if (p.permit) {
@@ -1628,7 +1667,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     var q = state.q.trim().toLowerCase();
     // On a wide screen the general chat has a column of its own beside the list, so both are always there.
     var wide3 = window.innerWidth >= 1500;
-    if (wide3 && state.view === 'chat') state.view = state.lastList || 'queue';
+    if (wide3 && state.view === 'chat') state.view = state.lastList || 'projects';
     var inChat = state.view === 'chat', showChat = inChat || wide3;
     $('chatview').hidden = !showChat; $('listview').hidden = inChat;
     if (showChat) {
@@ -1640,9 +1679,9 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       var mc = $('more-chat'); if (mc) mc.addEventListener('click', function () { state.chatAll = true; render(); });
     }
     if (!inChat) {
-      $('listbody').innerHTML = q ? projects(P.filter(function (p) { return matches(p, q); })) : (state.view === 'projects' ? projects(P) : queue());
+      $('listbody').innerHTML = state.view === 'financials' ? financials(q) : q ? projects(P.filter(function (p) { return matches(p, q); })) : projectsTab();
     }
-    ['chat', 'queue', 'projects'].forEach(function (v) { if (state.view === v && (!q || v === 'chat')) $('nav-' + v).setAttribute('aria-current', 'page'); else $('nav-' + v).removeAttribute('aria-current'); });
+    ['chat', 'projects', 'financials'].forEach(function (v) { if (state.view === v && (!q || v === 'chat')) $('nav-' + v).setAttribute('aria-current', 'page'); else $('nav-' + v).removeAttribute('aria-current'); });
     var waiting = chatItems().filter(chatPending).length, pb = $('pend-btn'), dot = $('chat-dot');
     dot.textContent = waiting ? waiting : ''; dot.className = waiting ? 'n' : '';
     dot.setAttribute('aria-label', waiting ? waiting + ' to resolve' : 'new');
@@ -1827,13 +1866,13 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       form.addEventListener('submit', function (e) { e.preventDefault(); tell(p.no); });
     }
   }
-  var PAGES = ['chat', 'queue', 'projects'];             // left to right, the order of the tabs
+  var PAGES = ['chat', 'projects', 'financials'];        // left to right, the order of the tabs
   function route() {
-    var hsh = (location.hash || '#queue').slice(1), prev = state.no;
+    var hsh = (location.hash || '#projects').slice(1), prev = state.no;
     if (hsh.indexOf('p-') === 0 && BY[hsh.slice(2)]) { state.no = hsh.slice(2); }
     else {
       var before = state.view, wasOpen = !!prev;
-      state.no = null; state.view = hsh === 'projects' ? 'projects' : hsh === 'chat' ? 'chat' : 'queue';
+      state.no = null; state.view = hsh === 'financials' ? 'financials' : hsh === 'chat' ? 'chat' : 'projects';      // an old link to #queue lands on Projects
       if (state.view !== 'chat') state.lastList = state.view; else state.chatStick = true;
       if (!wasOpen && before !== state.view) {
         if (before !== 'chat' && state.routed) keepPlace(before);      // each list keeps its own place while he is on another page
@@ -1854,12 +1893,13 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   // The list's place, per list, kept for the session: the page's own scroll on a phone, the list's on a PC.
   function lastJob() { try { return localStorage.getItem('p4_last_job') || ''; } catch (e) { return ''; } }
   function listBox() { return $(window.innerWidth >= 1500 ? 'listview' : 'list'); }      // what scrolls the list on a PC
+  function placeOf(v) { return v + ':' + (v === 'financials' ? state.ff : state.pf); }      // each tab, under each filter, keeps its own place
   function keepPlace(which) {
-    try { sessionStorage.setItem('p4_place_' + (which || state.lastList || 'queue'), JSON.stringify([window.scrollY || 0, listBox().scrollTop || 0])); } catch (e) {}
+    try { sessionStorage.setItem('p4_place_' + placeOf(which || state.lastList || 'projects'), JSON.stringify([window.scrollY || 0, listBox().scrollTop || 0])); } catch (e) {}
   }
   function backToPlace() {
     var at = null;
-    try { at = JSON.parse(sessionStorage.getItem('p4_place_' + state.view) || 'null'); } catch (e) {}
+    try { at = JSON.parse(sessionStorage.getItem('p4_place_' + placeOf(state.view)) || 'null'); } catch (e) {}
     if (!at) { if (window.innerWidth < 960) window.scrollTo(0, 0); return; }
     var go = function () { if (window.innerWidth < 960) window.scrollTo(0, at[0]); else listBox().scrollTop = at[1]; };
     go(); setTimeout(go, 60); setTimeout(go, 300);      // again once the list has laid itself out
@@ -2688,21 +2728,21 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     // ONE ROW OF FIVE PAGES, left to right: Chat | Queue | Jake | Drew | Cora (Lance, 22 Nov 2026). Finger to the right
     // brings in the page on the left, finger to the left the page on the right; at either end nothing happens. Jake,
     // Drew and Cora are the job he was last on (Jake is its page here; the other two are their windows on it), so
-    // from the queue a swipe to the left lands on that job. "All projects" stands where the Queue does.
+    // from the list a swipe to the left lands on that job. Projects and Financials each stand where the Queue did.
     var back = dx > 0;
     if (document.body.getAttribute('data-show') !== 'list') {      // on a job (Jake)
       if (!state.no) return;
-      if (back) location.hash = '#' + (state.lastList || 'queue');
+      if (back) location.hash = '#' + (state.lastList || 'projects');
       else location.replace('drafting.html#' + encodeURIComponent(state.no));
       return;
     }
     state.swipe = back ? 'slide-r' : 'slide-l';
-    if (state.view === 'chat') { if (!back) location.hash = '#' + (state.lastList || 'queue'); return; }
+    if (state.view === 'chat') { if (!back) location.hash = '#' + (state.lastList || 'projects'); return; }
     if (back) { location.hash = '#chat'; return; }
     var last = lastJob();
     if (last && BY[last]) location.hash = '#p-' + last;
   }, { passive: true });
-  // On a PC the left side and the job on the right are two things: choosing Chat, Queue or All projects on the left
+  // On a PC the left side and the job on the right are two things: choosing Chat, Projects or Financials on the left
   // keeps the job open on the right (Lance, 22 Nov 2026: "on the desktop can this page show the general chat on the
   // left while on this screen"). On a phone there is one page at a time, so a tab is a page of its own, as before.
   document.addEventListener('click', function (e) {
@@ -2738,10 +2778,17 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 
   var embedded = null;
   try { embedded = JSON.parse($('data').textContent); } catch (e) {}
-  // A year on a heading of All projects: jump to that year's heading.
+  // A filter is tapped: that tab shows that selection, and remembers it.
+  ['pf', 'ff'].forEach(function (w) { try { var v = localStorage.getItem('p4_' + w); if (v) state[w] = v; } catch (e) {} });
   $('listbody').addEventListener('click', function (e) {
-    var b = e.target.closest ? e.target.closest('[data-year]') : null, h = b && document.getElementById('y-' + b.getAttribute('data-year'));
-    if (h) h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    var b = e.target.closest ? e.target.closest('[data-filt]') : null;
+    if (!b) return;
+    var which = b.parentNode.getAttribute('data-which'), f = b.getAttribute('data-filt');
+    if (state[which] === f) return;
+    keepPlace(state.view);
+    state[which] = f;
+    try { localStorage.setItem('p4_' + which, f); } catch (e2) {}
+    render(); backToPlace();
   });
   // The arrow at the bottom right: back to the very top, from anywhere (Lance, 24 Nov 2026). It shows once there is
   // somewhere to go back from, and not in Chat, where the box to write in is at the bottom. On a wide screen the list
