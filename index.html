@@ -468,7 +468,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-105950";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-111224";</script>
 </head>
 <body>
 
@@ -924,7 +924,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       if (d && d.ok && d.saved) {
         var t = new Date().toISOString();
         ACTS.unshift({ id: d.id, proj_no: p.no, kind: 'edit', change: ch, summary: 'Edit on the job card', state: 'approved', proposed_at: t, decided_at: t, by_who: 'lance' });
-        done(); say(''); watchActs();
+        done(); say(''); pushEdit(d.id);
       } else say(d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and sign in.');
       render();
     }).catch(function (e) { say('Not saved (' + e.message + '). Your edit is still here: tap Save again.'); render(); });
@@ -2078,8 +2078,24 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       if (!d || !d.ok) return;
       var before = JSON.stringify(ACTS), typing = document.activeElement && /^(TEXTAREA|INPUT)$/.test(document.activeElement.tagName);
       ACTS = d.actions || [];
+      ACTS.forEach(function (a) { if (a.kind === 'edit' && a.state === 'approved') pushEdit(a.id); });   // one left waiting (a call cut off, the page closed) is finished now
       if (JSON.stringify(ACTS) !== before && !typing) render();
     }).catch(function () {});
+  }
+  // An edit is written to its Google Sheet by the record itself, PC on or off (db/081; Lance, 24 Nov 2026: "Edits
+  // should be wired to the google doc which is online"). Each call is one short step; `again` and `retry` mean call
+  // once more. If the record has no Sheets sign-in of its own it answers wait = 'pc', and the PC writes the edit.
+  var pushing = {};
+  function pushEdit(id, tries) {
+    if (!CFG || !token || (pushing[id] && tries === undefined)) return;
+    pushing[id] = true;
+    tries = tries || 0;
+    rpc('office_edit_write', { p_token: token, p_id: id }).then(function (d) {
+      if (d && d.ok && (d.again || d.retry || d.busy) && tries < 6) { setTimeout(function () { pushEdit(id, tries + 1); }, d.again ? 0 : 900); return; }
+      delete pushing[id];
+      if (d && d.ok && (d.state === 'done' || d.state === 'failed')) loadActs();
+      else watchActs();
+    }).catch(function () { delete pushing[id]; watchActs(); });
   }
   // Draft emails: read on load and every 20 seconds while the page is open. The same call says when the
   // dashboard's data was last pushed, so the page reloads its data by itself instead of waiting for a refresh.
