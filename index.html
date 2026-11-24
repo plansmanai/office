@@ -242,6 +242,8 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .kv .v { text-align: right; overflow-wrap: anywhere; }
 .kv .total { font-weight: 500; border-top: 1px solid var(--rule); padding-top: 7px; }
 .below { font-size: .84rem; font-weight: 700; letter-spacing: .2em; }
+.sec h3.tooled { position: relative; }
+.sec h3 .sectool { position: absolute; right: 34px; top: 50%; transform: translateY(-50%); margin: 0; }
 .kv.money { align-items: center; }
 .kv.money .k.krow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .kv input.amt { width: 6.4em; text-align: right; font: inherit; font-size: 16px; padding: 5px 7px; border: 1px solid var(--ink); border-radius: 0; background: transparent; color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -468,7 +470,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-111224";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-114330";</script>
 </head>
 <body>
 
@@ -1203,11 +1205,12 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   var CLOSED_KEY = 'plansman_closed';
   var SHUT_AT_FIRST = { 'Team log': 1, 'Your answers to Jake': 1 };                  // there when he wants it, out of the way until then
   function closedSecs() { try { return JSON.parse(localStorage.getItem(CLOSED_KEY) || '{}') || {}; } catch (e) { return {}; } }
-  function sec(title, html, cls) {
+  // `tool`: one small button for the heading row, beside the toggle (the section's Edit), shown while the section is open
+  function sec(title, html, cls, tool) {
     if (!html) return '';
     var c0 = closedSecs(), shut = c0[title] === undefined ? !!SHUT_AT_FIRST[title] : !!c0[title];
-    return '<div class="sec' + (cls ? ' ' + cls : '') + (shut ? ' shut' : '') + '"><h3><button type="button" class="sectog" data-sec="' + esc(title) + '" aria-expanded="' + (shut ? 'false' : 'true') + '">' +
-      '<span>' + esc(title) + '</span><i aria-hidden="true">' + (shut ? '+' : '&minus;') + '</i></button></h3>' + (shut ? '' : html) + '</div>';
+    return '<div class="sec' + (cls ? ' ' + cls : '') + (shut ? ' shut' : '') + '"><h3' + (tool && !shut ? ' class="tooled"' : '') + '><button type="button" class="sectog" data-sec="' + esc(title) + '" aria-expanded="' + (shut ? 'false' : 'true') + '">' +
+      '<span>' + esc(title) + '</span><i aria-hidden="true">' + (shut ? '+' : '&minus;') + '</i></button>' + (tool && !shut ? '<span class="marks slim sectool">' + tool + '</span>' : '') + '</h3>' + (shut ? '' : html) + '</div>';
   }
   function taskItem(t, showWho) {
     var td = dueText(t.days);
@@ -1424,9 +1427,9 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     var busy = savingEdit(p) ? '<p class="note" style="margin-top:8px">Saving your edit…</p>' : '';
     var sc = state.editScope === p.no && CFG
       ? '<textarea class="edit-area" id="scope-text" aria-label="Scope of work">' + esc(state.scopeText) + '</textarea><div class="marks"><button class="go" type="button" id="scope-save">Save</button> <button class="text quiet" type="button" id="scope-cancel">Cancel</button></div>'
-      : '<p>' + (FE.scope ? esc(FE.scope) : '<span class="note">No scope written yet.</span>') + (p.sqft ? ' <span class="note">' + esc(p.sqft) + ' sq ft</span>' : '') + '</p>' +
-        (CFG ? '<div class="marks slim"><button class="text quiet" type="button" id="scope-edit">Edit</button></div>' : '');
-    h += sec('Scope', sc + (state.scopeMsg ? '<p class="note">' + esc(state.scopeMsg) + '</p>' : ''));
+      : '<p>' + (FE.scope ? esc(FE.scope) : '<span class="note">No scope written yet.</span>') + (p.sqft ? ' <span class="note">' + esc(p.sqft) + ' sq ft</span>' : '') + '</p>';
+    h += sec('Scope', sc + (state.scopeMsg ? '<p class="note">' + esc(state.scopeMsg) + '</p>' : ''), '',
+      CFG && state.editScope !== p.no ? '<button class="text quiet" type="button" id="scope-edit">Edit</button>' : '');
     var fin = '';
     if (f) {
       var open = !!edm || !!state.itemsOpen[p.no], its = (m && m.items) || [];
@@ -1454,19 +1457,17 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       if (m && m.value != null) fin += '<span class="k total">Total value</span><span class="v total">' + esc(usd2(m.value)) + '</span>';
       fin += '</div><p class="note" style="margin-top:8px">Consult: ' + esc(p.consult) + '. Permitting: ' + esc(p.permitting) + '.' + (edm ? ' The totals follow when you save.' : '') + '</p>';
       if (edm) fin += '<div class="marks"><button class="go" type="button" id="money-save">Save</button> <button class="text quiet" type="button" id="money-cancel">Cancel</button></div>';
-      else if (CFG) fin += '<div class="marks slim"><button class="text quiet" type="button" id="money-edit">Edit</button></div>';
       fin += (state.moneyMsg ? '<p class="note">' + esc(state.moneyMsg) + '</p>' : '') + busy;
     }
-    h += sec('Financial', fin);
+    h += sec('Financial', fin, '', CFG && f && !edm ? '<button class="text quiet" type="button" id="money-edit">Edit</button>' : '');
     if (m) {
-      h += sec('Invoices', m.invoices.map(function (i) {
+      // what was invoiced, then what is still owed, together (Lance, 24 Nov 2026: "combine")
+      var got = m.value != null && m.due != null ? m.value - m.due : null;
+      h += sec('Invoices and balance', m.invoices.map(function (i) {
         return '<div class="item"><div class="head"><b>Invoice ' + esc(i.no) + '</b><span' + (i.paid ? '' : ' class="late"') + '>' + esc(i.paid ? 'paid ' + i.paid : 'not marked paid') + '</span></div>' +
           '<div class="body">sent ' + esc(i.sent || '?') + (i.amount != null ? ' · ' + usd(i.amount) + ' received' : '') + '</div></div>';
-      }).join(''));
-      if (m.due != null) {
-        var got = m.value != null ? m.value - m.due : null;
-        h += sec('Balance', kv([['Total value', usd2(m.value)], ['Received', got != null ? usd2(got) : '']].filter(function (x) { return x[1]; }).concat([['Balance due', usd2(m.due) || '$0', ' total']])));
-      }
+      }).join('') + (m.due != null ? '<div style="margin-top:' + (m.invoices.length ? '12' : '0') + 'px">' +
+        kv([['Total value', usd2(m.value)], ['Received', got != null ? usd2(got) : '']].filter(function (x) { return x[1]; }).concat([['Balance due', usd2(m.due) || '$0', ' total']])) + '</div>' : ''));
     }
     if (p.permit) {
       var pm = p.permit;
@@ -1543,7 +1544,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     var hist = (state.actMsg ? '<p class="note">' + esc(state.actMsg) + '</p>' : '') +
       hacts.slice(0, state.allEdits ? 999 : 6).map(actItem).join('') +
       (hacts.length > 6 && !state.allEdits ? '<button class="text more" id="more-edits" type="button">Show all ' + hacts.length + ' changes</button>' : '');
-    h += sec('History', (hist ? '<div class="edits">' + hist + '</div>' : '') + now + shown.map(function (e) {
+    var histSec = sec('History', (hist ? '<div class="edits">' + hist + '</div>' : '') + now + shown.map(function (e) {
       return '<div class="tl"><span class="d">' + esc(day(e.when)) + '</span><span>' + (e.phase ? '<span class="p">' + esc(e.phase) + '</span>' : '') +
         (e.note ? '<div class="n">' + esc(e.note) + '</div>' : '') + '</span></div>';
     }).join('') + (tl.length > shown.length ? '<button class="text more" id="more" type="button">Show all ' + tl.length + ' entries</button>' : ''));
@@ -1558,6 +1559,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
             (full.thread ? '<div style="margin-top:10px"><a class="open" target="_blank" rel="noopener" href="https://mail.google.com/mail/?authuser=' + encodeURIComponent(full.mailbox || '') + '#all/' + encodeURIComponent(full.thread) + '">Open in Gmail</a></div>' : '')
             : '<span class="note">Opening…</span>') + '</div>' : '') + '</span></div>';
     }).join('') + ((p.mail || []).length ? '<p class="note" style="margin-top:8px">' + (p.mail.length === 1 ? 'The one email' : 'All ' + p.mail.length + ' emails') + ' on this job since 21 Aug. Tap one to read it.</p>' : ''));
+    h += histSec;                                      // History is the very last thing on the card (Lance, 24 Nov 2026)
     return h + '</div>';
   }
 
