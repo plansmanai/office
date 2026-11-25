@@ -497,7 +497,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-150143";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-180911";</script>
 </head>
 <body>
 
@@ -1241,13 +1241,25 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       (what ? '<span class="what">' + esc(what) + '</span>' : '') + '</a>';
   }
   function financials(q) {
-    var bar = q ? '' : filterBar('ff', 0), f = state.ff, tv = 0, td = 0;
-    var list = (q ? P.filter(function (p) { return matches(p, q); }) : P.filter(function (p) { return inFilter(p, f); }))
-      .map(function (p) { return [p, edited(p).money]; }).filter(function (x) { return x[1] && Math.abs(x[1].due || 0) > 0.005; })
-      .sort(function (x, y) { return byNewest(x[0], y[0]); });
-    list.forEach(function (x) { tv += x[1].value || 0; td += x[1].due || 0; });
+    // THE TOTALS ARE THE WHOLE SELECTION'S, every job of it, the way the sheet's own top row adds them (Total Value,
+    // Total Add Ser, Total Income, Total Due): until 24 Nov 2026 they were only the listed jobs', so the value and the
+    // received read far too low beside the sheet. Received is the payments themselves, added up, as the sheet does.
+    // The LIST under them is the jobs that carry a balance.
+    var f = state.ff, tv = 0, ta = 0, tr = 0, td = 0;
+    var pool = (q ? P.filter(function (p) { return matches(p, q); }) : P.filter(function (p) { return inFilter(p, f); }))
+      .map(function (p) { return [p, edited(p).money]; }).filter(function (x) { return x[1]; });
+    pool.forEach(function (x) {
+      var m = x[1];
+      tv += m.value || 0; ta += m.add_services || 0; td += m.due || 0;
+      (m.invoices || []).forEach(function (i) { tr += i.amount || 0; });
+      (m.pays || []).forEach(function (i) { tr += i.amount || 0; });
+    });
+    var list = pool.filter(function (x) { return Math.abs(x[1].due || 0) > 0.005; }).sort(function (x, y) { return byNewest(x[0], y[0]); });
+    var whole = function (n) { return usd(Math.round(Math.round(n * 100) / 100 + 1e-9)) || '$0'; };      // to the cent first, then the dollar, as the sheet rounds
+    var lines = [['Total value', whole(tv)]].concat(ta ? [['Added services, in that', whole(ta)]] : [], [['Received', whole(tr)], ['Balance due', whole(td), ' total']]);
     return (q ? '' : filterBar('ff', list.length)) +
-      '<div class="fintot">' + kv([['Total value', usd2(tv)], ['Received', usd2(tv - td)], ['Balance due', usd2(td), ' total']]) + '</div>' +
+      '<div class="fintot">' + kv(lines) + '<p class="note" style="margin:10px 0 0">All ' + pool.length + (pool.length === 1 ? ' job' : ' jobs') +
+        (q ? ' found' : f === 'queue' ? ' being worked' : ' of ' + f) + '. ' + list.length + (list.length === 1 ? ' carries' : ' carry') + ' a balance, listed below.</p></div>' +
       '<div class="rows">' + (list.map(function (x) { return finRow(x[0], x[1]); }).join('') || '<div class="empty">No job here carries a balance.</div>') + '</div>';
   }
   function matches(p, q) {
