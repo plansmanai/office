@@ -521,7 +521,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261125-134657";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261125-140747";</script>
 </head>
 <body>
 
@@ -2478,12 +2478,44 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     }).catch(function () {});
     loadActs(); loadAdj();
   }
+  // A SCHEDULE CHANGE SHOWS AT ONCE (Lance, 25 Nov 2026, minutes after Jake moved 26-84 to In Design: "Jake drafted the
+  // invoice but didn't change the phase. Seems half done"). Jake had changed it; the page still showed the last read of
+  // the sheets, and a refresh that was already running published its older reading over the change. So every schedule
+  // change made SINCE the read on screen (Jake's or his own, an Undo included) is laid over the job, the way his edits
+  // are (see `edited`): phase, due date and status note, and a lead that moves into a job's phase reads as signed and
+  // ours. What was read is kept (`_was`) and laid over afresh each time, so the next read simply takes its place.
+  var JOB_PHASES = ['In Design', 'Client Review', 'Const. Docs', 'Submitted', 'Backcheck', 'Resubmitted', 'Approved', 'Revision', 'Construction', 'Complete'];
+  function laySchedule() {
+    if (!P || !P.length) return;
+    var since = DATA && DATA.read_iso ? Date.parse(DATA.read_iso) : Infinity, WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    P.forEach(function (p) { if (p._was) { Object.keys(p._was).forEach(function (k) { p[k] = p._was[k]; }); delete p._was; } });
+    ACTS.filter(function (a) { return a.kind === 'schedule' && a.state === 'done' && Date.parse(a.finished_at || a.decided_at) > since; })
+      .sort(function (x, y) { return x.id - y.id; }).forEach(function (a) {
+        var p = BY[a.proj_no], c = a.change || {};
+        if (!p) return;
+        if (!p._was) p._was = { phase: p.phase, due: p.due, days: p.days, status: p.status, signed: p.signed, court: p.court };
+        if (c.phase) {
+          p.phase = c.phase.to || '';
+          if (JOB_PHASES.indexOf(p.phase) >= 0 && p.court === 'lead') { p.signed = true; p.court = 'ours'; }
+        }
+        if (c.status) p.status = String(c.status.to || '').replace(/\s+-\s+JAKE \d+\/\d+\/\d+\s*$/, '');
+        if (c.due) {
+          var m = /^(\d+)\/(\d+)\/(\d{4})$/.exec(c.due.to || '');
+          if (m) {
+            var d = new Date(+m[3], +m[1] - 1, +m[2]), t = new Date();
+            t.setHours(0, 0, 0, 0);
+            p.due = WD[d.getDay()] + ', ' + (+m[1]) + '/' + (+m[2]) + '/' + m[3].slice(2); p.days = Math.round((d - t) / 86400000);
+          } else { p.due = ''; p.days = null; }
+        }
+      });
+  }
   function loadActs() {
     if (!CFG || !token) return;
     rpc('office_acts', { p_token: token }).then(function (d) {
       if (!d || !d.ok) return;
       var before = JSON.stringify(ACTS), typing = document.activeElement && /^(TEXTAREA|INPUT)$/.test(document.activeElement.tagName);
       ACTS = d.actions || [];
+      laySchedule();
       ACTS.forEach(function (a) { if (a.kind === 'edit' && a.state === 'approved') pushEdit(a.id); });   // one left waiting (a call cut off, the page closed) is finished now
       if (JSON.stringify(ACTS) !== before && !typing) render();
     }).catch(function () {});
@@ -2988,6 +3020,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   function start(data, readLine) {
     DATA = data; P = data.projects; BY = {};
     P.forEach(function (p) { BY[p.no] = p; });
+    laySchedule();                                     // a schedule change made since this read shows now, not at the next read
     $('read').textContent = readLine;
     $('notice').hidden = !data.notice; $('notice').textContent = data.notice || '';
     $('nav-admin').hidden = !CFG;                      // Admin (app/admin.html) works on the live record, so it is on plansman.ai only
