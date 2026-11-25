@@ -521,7 +521,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261125-101100";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261125-132422";</script>
 </head>
 <body>
 
@@ -1854,7 +1854,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     // schedule's history. Each is one short line; tapping it opens it in full. Filters narrow it to one kind.
     var evs = [], T = function (iso) { var t = Date.parse(iso); return isNaN(t) ? 0 : t; };
     (p.mail || []).forEach(function (m) {
-      evs.push({ k: 'm:' + m.id, f: m.call ? 'call' : 'mail', t: T(m.when), tag: m.call ? (m.meet ? 'Video call' : 'Call') : (m.t24 ? 'T24 email' : 'Email') + (m.dir === 'out' ? ' out' : ''), who: m.who,
+      evs.push({ k: 'm:' + m.id, f: m.call ? 'call' : 'mail', t: T(m.when), tag: m.call ? (m.meet ? 'Video call' : 'Call') : m.dir === 'out' ? 'Email out' : 'Email', who: m.who,
         n: m.subject + (m.files ? ' · ' + m.files + (m.files === 1 ? ' file' : ' files') : ''), gist: m.gist || '', mail: m.id, call: !!m.call });
     });
     (p.phone || []).forEach(function (x) {
