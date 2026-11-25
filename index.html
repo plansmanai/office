@@ -503,7 +503,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-191926";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-192410";</script>
 </head>
 <body>
 
@@ -781,7 +781,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   // write-off. They live in P4 only, for every year; the sheets are not told. `amount` is what the balance goes DOWN
   // by (an overpayment is negative: it brings a minus balance up to nothing).
   var ADJ = [];
-  var ADJ_KIND = { discount: 'Cash discount', overpayment: 'Overpaid, credit held', credit: 'Agreed credit', writeoff: 'Written off', other: 'Adjustment' };
+  var ADJ_KIND = { discount: 'Cash discount', overpayment: 'Overpaid, credit held', credit: 'Agreed credit', abandoned: 'Abandoned', writeoff: 'Written off', other: 'Adjustment' };
   function loadAdj() {
     if (!CFG || !token) return;
     rpc('office_adjustments', { p_token: token }).then(function (d) {
@@ -1821,7 +1821,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       on('adj-open', function () {
         var bal = (edited(p).money || {}).due || 0;
         state.adjust = p.no; state.adjMsg = '';
-        state.adjForm = { kind: bal < 0 ? 'overpayment' : 'discount', amount: bal ? String(Math.abs(bal)) : '', note: '', gone: {} };
+        state.adjForm = { kind: bal < 0 ? 'overpayment' : p.phase === 'Abandoned' ? 'abandoned' : 'discount', amount: bal ? String(Math.abs(bal)) : '', note: '', gone: {} };
         render(); var el = document.getElementById('adj-amt'); if (el) { el.focus(); el.select(); }
       });
       on('adj-cancel', function () { state.adjust = null; state.adjForm = null; state.adjMsg = ''; render(); });
