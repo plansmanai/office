@@ -306,7 +306,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261125-023333";</script>
+<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261125-092209";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -805,7 +805,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
         extra = gs ? line(quiet(gs)) : RP && RP.key === key ? replyHtml(key, false)
           : '<div class="acts">' + boxBtn('go', 'data-go="' + m.files.go + '" data-yes="1"', 'Yes', key) + replyBtn(key) + boxBtn('dim', 'data-go="' + m.files.go + '"', 'No', key) + '</div>';
       }
-      if (m.kind === 'login' && m.files && m.files.login) {      // a login she asked for: typed here, kept on the AI PC
+      if (m.kind === 'login' && m.files && m.files.login) {      // a login she asked for: typed here, kept in the record with the others (Admin, Logins; db/087)
         var L = m.files.login, v = LOGIN[m.id] || (LOGIN[m.id] = { u: L.username || '', p: '' }), ls;
         key = 'login:' + m.id; is = ' needs a login'; ls = SAID[key];
         extra = L.saved ? line('Saved' + (L.username ? ' · ' + esc(L.username) : '') + (ls && ls.how === 'saved' ? ' · ' + esc(stamp(ls.at)) : ''))

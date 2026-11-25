@@ -12,8 +12,13 @@
 <style>
 /* The Admin page. Lance, 23 Nov 2026, drawing a box at the right of the dashboard's tabs: "Make an area here that takes
    me to an admin page. That has the log out, the password change, and this inside of it like a settings section"
-   ("this" is the Knowledge page). So this one page is Admin: its front lists the settings (Knowledge, Password, Sign
-   out), and Knowledge opens inside it. A new setting is a new section on the front, never a link on the dashboard.
+   ("this" is the Knowledge page). So this one page is Admin: its front lists the settings (Knowledge, Logins, Password,
+   Sign out), and Knowledge and Logins open inside it. A new setting is a new section on the front, never a link on the
+   dashboard.
+
+   Logins (db/087). Lance, 25 Nov 2026: "I cannot find the password for Huntington Beach's city login. Due to all the
+   password secrecy that I didn't want I don't know how to get it back." The website logins the team signs in with, kept
+   encrypted in the record: each one's address, user name and password (Show), with Edit, Delete and Add.
 
    Knowledge is THE TREE (db/067): folders, the way Lance pictures it ("like a folder or family tree"). Company, then Jake,
    Drew and Cora, then Cities and Kinds of project; every rule and page lives in one folder and is shown in a second one
@@ -124,8 +129,16 @@ form.edit { padding: 0 0 6px; }
 .offscreen { position: absolute !important; left: -9999px; width: 1px !important; height: 1px; opacity: 0; }
 #pwform { display: grid; gap: 8px; margin-top: 4px; max-width: 360px; }
 #pwform .bar { margin-top: 6px; }
+/* Logins: one block a login. The password is dots until he taps Show; shown, it is in a plain fixed-width face so an l,
+   an I and a 1 can be told apart. */
+.lg .t b { font-weight: 500; }
+.lg .m { overflow-wrap: anywhere; }
+.lg .pwv { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size: 15px; color: var(--ink); background: var(--soft); padding: 1px 6px; user-select: all; -webkit-user-select: all; }
+.lg .m button.text { margin-left: 14px; }
+.lg.off .t { color: var(--muted); }
+form.edit input.plain { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size: 16px; }
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261125-023333";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261125-092209";</script>
 </head>
 <body>
 <div id="gate" hidden></div>
@@ -192,6 +205,8 @@ form.edit { padding: 0 0 6px; }
     ++seq;
     var h = '<p class="back"><a href="./">‹ Dashboard</a></p><h1>Admin</h1>';
     h += '<h2>Knowledge</h2><ul class="list"><li><a href="#k"><div>What the team knows<small>' + (MAP ? MAP.active.toLocaleString('en-US') + ' line items, in folders. Read them, search them, change them.' : 'Read it, search it, change it.') + '</small></div></a></li></ul>';
+    h += '<h2>Logins</h2><ul class="list"><li><a href="#logins"><div>Website logins<small>' + (LG ? (LG.length === 1 ? '1 login' : LG.length + ' logins') + ': city portals and the like. ' : '') +
+      'See a password, change one, add one.</small></div></a></li></ul>';
     // He changes his password himself: his current one, the new one twice. It is checked and kept (as a one-way hash)
     // by the record; this page never keeps it. Changing it signs his other devices out and keeps this one.
     h += '<h2>Password</h2><div class="set">' + (pw.open
@@ -205,6 +220,93 @@ form.edit { padding: 0 0 6px; }
     h += '<h2>This device</h2><div class="set"><p class="muted">Signing out here leaves your other devices signed in.</p><button class="text" type="button" id="out">Sign out</button></div>';
     main.innerHTML = h;
     if (!MAP) needMap().then(function () { if (!location.hash.replace('#', '') && !pw.open) showAdmin(); }).catch(function () {});
+    if (!LG) needLogins().then(function () { if (!location.hash.replace('#', '') && !pw.open) showAdmin(); }).catch(function () {});
+  }
+
+  // ---- Logins: the websites the team signs in to (db/087) ----
+  // LG the list (never a password in it) · PW the passwords he has asked to see, by id, gone when he leaves the page ·
+  // LEDIT the one being changed ('new' for a new one) · LSAID what just happened to one, by id
+  var LG = null, PW = {}, LEDIT = null, LSAID = {};
+  function needLogins(fresh) {
+    if (LG && !fresh) return Promise.resolve(LG);
+    return call('office_logins', {}).then(function (d) { LG = d.logins || []; return LG; });
+  }
+  function site(u) { return /^https?:\/\//i.test(u) ? u : 'https://' + u; }
+  function loginForm(r) {
+    return '<form class="edit" data-login="' + esc(r.id || 'new') + '" autocomplete="off">' +
+      '<label>Name<input name="name" maxlength="80" value="' + esc(r.name || '') + '" placeholder="The city or the site" required></label>' +
+      '<label>Web address<input name="url" maxlength="500" value="' + esc(r.url || '') + '" placeholder="The sign-in page" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false"></label>' +
+      '<div class="row"><label>User name<input name="username" maxlength="200" value="' + esc(r.username || '') + '" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></label>' +
+      '<label>Password<input class="plain" name="password" maxlength="200" value="' + esc(PW[r.id] || '') + '" placeholder="' + (r.has_password && PW[r.id] == null ? 'Leave empty to keep the one saved' : '') +
+      '" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></label></div>' +
+      '<label>Note<textarea name="note" rows="2" maxlength="1000" placeholder="Anything worth knowing about signing in there">' + esc(r.note || '') + '</textarea></label>' +
+      '<div class="bar"><button class="go" type="submit">Save</button><button class="text" type="button" data-lg-cancel>Cancel</button><span class="msg" role="status"></span></div></form>';
+  }
+  function loginHtml(r) {
+    if (LEDIT === r.id) return '<div class="rule lg" data-lg="' + r.id + '">' + loginForm(r) + '</div>';
+    var said = LSAID[r.id], h = '<div class="rule lg' + (r.gone ? ' off' : '') + '" data-lg="' + r.id + '"><p class="t"><b>' + esc(r.name) + '</b></p>';
+    if (r.gone) return h + '<p class="n">Deleted. The team can no longer sign in with it.</p><div class="acts"><button class="text" type="button" data-lg-do="undo">Undo</button><span class="msg" role="status"></span></div></div>';
+    if (r.url) h += '<p class="m"><a class="lnk" href="' + esc(site(r.url)) + '" target="_blank" rel="noopener">' + esc(r.url.replace(/^https?:\/\//i, '')) + '</a></p>';
+    h += '<p class="m">User name: ' + (r.username ? '<b>' + esc(r.username) + '</b><button class="text" type="button" data-lg-copy="u">Copy</button>' : 'none saved') + '</p>';
+    h += '<p class="m">Password: ' + (!r.has_password ? 'none saved' : PW[r.id] != null
+      ? '<span class="pwv">' + esc(PW[r.id]) + '</span><button class="text" type="button" data-lg-copy="p">Copy</button><button class="text" type="button" data-lg-hide>Hide</button>'
+      : '<b>••••••••</b><button class="text" type="button" data-lg-show>Show</button>') + '</p>';
+    if (r.note) h += '<p class="n">' + esc(r.note) + '</p>';
+    return h + '<div class="acts"><button class="text" type="button" data-lg-edit>Edit</button><button class="text" type="button" data-lg-do="delete">Delete</button>' +
+      '<span class="msg' + (said ? ' ok' : '') + '" role="status">' + esc(said || '') + '</span></div></div>';
+  }
+  function drawLogins() {
+    var h = '<p class="back"><a href="#">‹ Admin</a></p><h1>Logins</h1>' +
+      '<p class="muted">The websites Jake, Drew and Cora sign in to for you. Kept encrypted in the record, not on a PC, so a change of computer loses nothing. ' +
+      'The team never sees a password: their browser types it into the page.</p>';
+    h += LG.length ? LG.map(loginHtml).join('') : '<p class="muted" style="margin-top:16px">None saved yet.</p>';
+    h += LEDIT === 'new' ? '<div class="rule lg">' + loginForm({}) + '</div>' : '<div class="bar"><button class="go" type="button" data-lg-add>Add a login</button></div>';
+    main.innerHTML = h;
+  }
+  function showLogins() {
+    var mine = ++seq;
+    PW = {}; LEDIT = null; LSAID = {};
+    if (LG) drawLogins(); else main.innerHTML = '<p class="back"><a href="#">‹ Admin</a></p><h1>Logins</h1><p class="muted">Loading…</p>';
+    needLogins(true).then(function () { if (mine === seq && !LEDIT) drawLogins(); }).catch(function (err) {
+      if (err && err.message === 'signed out') return;
+      main.innerHTML = '<p class="back"><a href="#">‹ Admin</a></p><p class="msg">Could not load (' + esc(err && err.message) + '). <button class="text" type="button" onclick="location.reload()">Try again</button></p>';
+    });
+  }
+  function loginOf(el) { var id = +el.getAttribute('data-lg'); return LG.filter(function (r) { return r.id === id; })[0]; }
+  function redrawLogin(r) { var el = main.querySelector('.lg[data-lg="' + r.id + '"]'); if (el) el.outerHTML = loginHtml(r); }
+  function showPw(r, el) {
+    say(el, 'Getting it…', true);
+    call('office_login_show', { p_id: r.id }).then(function (d) {
+      if (!d.found) { say(el, 'That login is no longer there.'); return; }
+      PW[r.id] = d.password; delete LSAID[r.id]; redrawLogin(r);
+    }).catch(function (err) { if (err.message !== 'signed out') say(el, 'Could not get it (' + err.message + ').'); });
+  }
+  function copy(text, r) {
+    var done = function (ok) { LSAID[r.id] = ok ? 'Copied.' : 'Could not copy: press and hold it instead.'; redrawLogin(r); };
+    try { navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); }); } catch (e) { done(false); }
+  }
+  function saveLogin(f) {
+    var id = f.getAttribute('data-login'), isNew = id === 'new', v = function (n) { return f.elements[n].value; }, btn = f.querySelector('button.go');
+    btn.disabled = true; say(f, 'Saving…', true);
+    call('office_login_set', { p_id: isNew ? null : +id, p_name: v('name'), p_url: v('url'), p_username: v('username'), p_password: v('password'), p_note: v('note') }).then(function (d) {
+      if (!d.saved) { btn.disabled = false; say(f, d.why || 'Not saved. Try again.'); return; }
+      var typed = v('password');
+      LEDIT = null;
+      return needLogins(true).then(function () {
+        if (typed) PW[d.id] = typed;                      // he has just typed it: it stays in view, as he left it
+        LSAID = {}; LSAID[d.id] = 'Saved. The team signs in with it from now on.';
+        drawLogins();
+      });
+    }).catch(function (err) { btn.disabled = false; if (err.message !== 'signed out') say(f, 'Not saved (' + err.message + '). What you typed is still here.'); });
+  }
+  // Delete is at once, with an Undo beside it, like a line of Knowledge: the way back from a slip of the thumb is the Undo.
+  function dropLogin(r, undo, el) {
+    say(el, undo ? 'Bringing it back…' : 'Deleting…', true);
+    call('office_login_drop', { p_id: r.id, p_undo: undo }).then(function (d) {
+      if (!d.saved) { say(el, d.why || 'Not done. Try again.'); var b = el.querySelector('[data-lg-do]'); if (b) b.disabled = false; return; }
+      if (undo) { delete r.gone; LSAID[r.id] = 'Back in the list.'; } else { r.gone = true; delete PW[r.id]; }
+      redrawLogin(r);
+    }).catch(function (err) { if (err.message !== 'signed out') say(el, 'Not done (' + err.message + ').'); });
   }
   function savePw() {
     var cur = $('pw-cur').value.trim(), a = $('pw-new').value.trim(), b = $('pw-new2').value.trim(), tell = function (m) { $('pw-msg').textContent = m; };
@@ -448,12 +550,14 @@ form.edit { padding: 0 0 6px; }
   }
 
   // ---- what is on the page follows the address, so Back works ----
-  // "" the front of Admin · "k" the tree · "k/<folder>" the tree open at a folder · "q/<words>" a search · "p/<page>" reference notes
+  // "" the front of Admin · "logins" the website logins · "k" the tree · "k/<folder>" the tree open at a folder · "q/<words>" a search · "p/<page>" reference notes
   function route() {
     var h = (location.hash || '').replace(/^#/, '');
     try { h = decodeURIComponent(h); } catch (e) {}
-    $('find').hidden = !h;                                 // the search is Knowledge's; the front of Admin has none
+    $('find').hidden = !h || h === 'logins';               // the search is Knowledge's; the front of Admin and Logins have none
+    if (h !== 'logins') PW = {};                           // a password he asked to see is not kept once he leaves Logins
     if (!h) { window.scrollTo(0, 0); showAdmin(); return; }
+    if (h === 'logins') { window.scrollTo(0, 0); showLogins(); return; }
     if (h.indexOf('q/') === 0) { window.scrollTo(0, 0); $('q').value = h.slice(2); showSearch(h.slice(2)); return; }
     $('q').value = '';
     if (h.indexOf('p/') === 0) { window.scrollTo(0, 0); showPage(h.slice(2)); return; }
@@ -472,6 +576,17 @@ form.edit { padding: 0 0 6px; }
     if (b.id === 'pw') { pw.open = true; pw.msg = ''; showAdmin(); $('pw-cur').focus(); return; }
     if (b.id === 'pw-cancel') { pw.open = false; pw.msg = ''; showAdmin(); return; }
     if (b.id === 'out') { b.disabled = true; signOut(); return; }
+    if (b.hasAttribute('data-lg-add')) { LEDIT = 'new'; LSAID = {}; drawLogins(); main.querySelector('form[data-login] input').focus(); return; }
+    if (b.hasAttribute('data-lg-cancel')) { LEDIT = null; drawLogins(); return; }
+    var lg = b.closest('.lg[data-lg]'), lr = lg && LG && loginOf(lg);
+    if (lr) {
+      if (b.hasAttribute('data-lg-show')) { b.disabled = true; showPw(lr, lg); return; }
+      if (b.hasAttribute('data-lg-hide')) { delete PW[lr.id]; delete LSAID[lr.id]; redrawLogin(lr); return; }
+      if (b.hasAttribute('data-lg-copy')) { copy(b.getAttribute('data-lg-copy') === 'p' ? PW[lr.id] : lr.username, lr); return; }
+      if (b.hasAttribute('data-lg-edit')) { LEDIT = lr.id; LSAID = {}; drawLogins(); var lf = main.querySelector('form[data-login]'); if (lf) { grow(lf.elements.note); lf.scrollIntoView({ block: 'nearest' }); } return; }
+      if (b.hasAttribute('data-lg-do')) { b.disabled = true; dropLogin(lr, b.getAttribute('data-lg-do') === 'undo', lg); return; }
+      return;
+    }
     var item = b.closest('.item'), part = b.closest('.part'), id = item && item.getAttribute('data-id');
     if (b.hasAttribute('data-sec')) { var k = CUR + '|' + b.getAttribute('data-sec'); SEC[k] = !b.parentNode.classList.contains('open'); redraw(); return; }
     if (b.hasAttribute('data-add')) { EDIT = 'new:' + b.getAttribute('data-add'); redraw(); var t = main.querySelector('form.edit textarea'); if (t) t.focus(); return; }
@@ -485,7 +600,7 @@ form.edit { padding: 0 0 6px; }
   main.addEventListener('submit', function (e) {
     e.preventDefault();
     var f = e.target;
-    if (f.id === 'pwform') savePw(); else if (f.hasAttribute('data-form')) saveRule(f); else if (f.hasAttribute('data-part-form')) savePart(f);
+    if (f.id === 'pwform') savePw(); else if (f.hasAttribute('data-login')) saveLogin(f); else if (f.hasAttribute('data-form')) saveRule(f); else if (f.hasAttribute('data-part-form')) savePart(f);
   });
   main.addEventListener('change', function (e) {
     var t = e.target; if (t.name !== 'link' || !t.value) return;
