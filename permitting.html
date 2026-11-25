@@ -233,6 +233,7 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
 #s-wrap { position: relative; width: 100%; margin: 0 auto; } #s-img { display: block; width: 100%; height: auto; background: #fff; }
 #s-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: pan-x pan-y; }
 #s-canvas.draw { touch-action: none; cursor: crosshair; }
+#s-ink { display: block; width: 100%; height: 100%; pointer-events: none; }
 .sanswer { border-top: 1px solid var(--rule); padding: 10px 14px max(12px, env(safe-area-inset-bottom, 0px)); }
 .sanswer textarea { min-height: 48px; } .sanswer .bar { flex-wrap: wrap; gap: 10px; } .sanswer .bar button { min-height: 40px; }
 /* THE PHONE TURNED ON ITS SIDE (Lance, 25 Nov 2026: "In horizontal view on my phone the drawing window is very small.
@@ -305,7 +306,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261125-005049";</script>
+<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261125-015320";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -327,7 +328,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
         <div class="sbar"><button type="button" id="s-back">Sheets</button><b id="s-title"></b>
           <span class="tools"><button type="button" id="s-draw" aria-pressed="true">Draw</button><button type="button" id="s-undo">Undo</button><button type="button" id="s-clear">Clear</button>
 </span></div>
-        <div id="s-scroll"><div id="s-wrap"><img id="s-img" alt=""><canvas id="s-canvas"></canvas></div></div>
+        <div id="s-scroll"><div id="s-wrap"><img id="s-img" alt=""><div id="s-canvas"><svg id="s-ink" preserveAspectRatio="none" aria-hidden="true"><g id="s-g" fill="none" stroke="#DC1E1E" stroke-linecap="round" stroke-linejoin="round"></g></svg></div></div></div>
         <div id="s-note"></div>
         <div class="sanswer"><textarea id="s-text" placeholder="What to change (optional if your marks say it)"></textarea>
           <div class="attrow" data-att-row="sheet"></div>
@@ -1281,15 +1282,29 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
         : '<p class="none">No check-ins on this job yet. ' + T.name + ' posts one when ' + (WHO === 'cora' ? 'she wants' : 'he wants') + ' you to look at something.</p>';
     }).catch(function () {});
   }
+  // HIS MARKS ARE DRAWN LINES, NOT A PICTURE (Lance, 25 Nov 2026: "When zoomed all the way in there's a lag drawing the
+  // red line. It sometimes shows up, sometimes it doesn't"). They were painted on a canvas the size of the whole zoomed
+  // sheet: at full zoom on a phone that is some 11,000 by 7,400 dots, more than a phone gives a canvas (so nothing
+  // showed), and it was made again on every move of the finger (so it lagged). Each mark is now one line over the
+  // sheet, in the picture's own measure: it has no size to run out of, it is sharp at any zoom, and a move of the
+  // finger adds to the one line being drawn and touches nothing else. Do not go back to a canvas here.
+  function inkWidth() {            // the line is 3px on the screen whatever the zoom
+    var img = $('s-img'), w = img.clientWidth;
+    if (w && img.naturalWidth) $('s-g').setAttribute('stroke-width', (3 * img.naturalWidth / w).toFixed(2));
+  }
   function paint() {
-    var cv = $('s-canvas'), img = $('s-img'), w = img.clientWidth, h = img.clientHeight, dpr = window.devicePixelRatio || 1;
-    if (!w || !h) return;
-    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
-    var g = cv.getContext('2d'); g.scale(dpr, dpr); g.lineWidth = 3; g.lineCap = g.lineJoin = 'round'; g.strokeStyle = '#DC1E1E';
-    SH.strokes.concat(SH.cur ? [SH.cur] : []).forEach(function (st) {
-      g.beginPath(); st.forEach(function (p, i) { if (i) g.lineTo(p[0] * w, p[1] * h); else g.moveTo(p[0] * w, p[1] * h); });
-      if (st.length === 1) g.lineTo(st[0][0] * w + .1, st[0][1] * h + .1);
-      g.stroke();
+    var img = $('s-img'), nw = img.naturalWidth, nh = img.naturalHeight, g = $('s-g');
+    if (!nw || !nh) return;
+    var box = '0 0 ' + nw + ' ' + nh, all = SH.strokes.concat(SH.cur ? [SH.cur] : []);
+    if ($('s-ink').getAttribute('viewBox') !== box) { $('s-ink').setAttribute('viewBox', box); g.textContent = ''; }
+    inkWidth();
+    while (g.childNodes.length > all.length) g.removeChild(g.lastChild);
+    all.forEach(function (st, i) {
+      var el = g.childNodes[i] || g.appendChild(document.createElementNS('http://www.w3.org/2000/svg', 'polyline'));
+      if (el._st === st && el._n === st.length) return;       // this mark is already drawn as it stands
+      var a = st.map(function (p) { return (p[0] * nw).toFixed(1) + ',' + (p[1] * nh).toFixed(1); });
+      if (a.length === 1) a.push((st[0][0] * nw + .5).toFixed(1) + ',' + (st[0][1] * nh + .5).toFixed(1));      // a tap is a dot
+      el.setAttribute('points', a.join(' ')); el._st = st; el._n = st.length;
     });
   }
   // The picture is fitted WHOLE into the sheet's window: as wide as the window when it has a sheet's proportions, and
@@ -1366,7 +1381,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       e.preventDefault();
       var r = sc.getBoundingClientRect(), cx = (t[0].x + t[1].x) / 2, cy = (t[0].y + t[1].y) / 2;
       var z = Math.max(1, Math.min(6, gest.z * Math.hypot(t[0].x - t[1].x, t[0].y - t[1].y) / gest.d));
-      if (Math.abs(z - SH.zoom) > 0.01) { SH.zoom = z; $('s-wrap').style.width = Math.round((SH.base || sc.clientWidth) * z) + 'px'; }
+      if (Math.abs(z - SH.zoom) > 0.01) { SH.zoom = z; $('s-wrap').style.width = Math.round((SH.base || sc.clientWidth) * z) + 'px'; inkWidth(); }
       sc.scrollLeft = gest.ax * SH.zoom - (cx - r.left); sc.scrollTop = gest.ay * SH.zoom - (cy - r.top);
       return;
     }
