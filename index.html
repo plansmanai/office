@@ -521,7 +521,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261125-022423";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261125-022825";</script>
 </head>
 <body>
 
@@ -1828,15 +1828,16 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       if (fl.city_rounds.length || fl.city_loose) rows.push(['City comments', (fl.city_rounds.join(', ') || '') + (fl.city_loose ? (fl.city_rounds.length ? ' + ' : '') + fl.city_loose + ' loose PDFs' : '')]);
       h += sec('Files', kv(rows) + '<p class="note" style="margin-top:8px">Names and dates only, from the 18 Nov inventory. Files do not open from here yet.</p>');
     }
-    // Where the project stands and how it got here, together: the status, the latest note, his remarks, then
-    // the dated history (without repeating the entry that is the status).
+    // THE STATUS AND THE LATEST NOTE ARE LINES OF THE LIST, AT THEIR DATES (Lance, 25 Nov 2026: "This older history got
+    // stuck up above the new version you built"). They were a block held above the filters, so a status written on
+    // 19 Nov sat over what happened on the 25th. The status is the schedule's own entry of that day (or, when the
+    // schedule's history does not have it, a line dated the day the job entered its phase); the latest note is dated
+    // by its own signature ("- JAKE 11/19/26"). Above the list there is only what is true NOW and has no date: his
+    // standing remarks, and who on the team is holding what.
     var now = '';
     var at = p.timeline.filter(function (e) { return p.status && e.note && e.note.replace(/\s*-\s*JAKE \d\d\/\d\d\/\d\d\s*$/, '') === p.status; })[0];
-    if (p.status) now += '<div class="tl"><span class="d">' + esc(at ? day(at.when) : 'Now') + '</span><span><span class="p">Status' + (p.phase ? ' · ' + esc(p.phase) : '') + '</span><div class="n" style="color:var(--ink)">' + esc(p.status) + '</div></span></div>';
-    var noteUp = (p.needs || []).some(function (n) { return n.jake || n.kind === 'note'; });
-    if (p.latest && !noteUp) now += '<div class="tl"><span class="d"></span><span><span class="p">Latest note</span><div class="n">' + esc(p.latest) + '</div></span></div>';
     if (p.remarks) now += '<div class="tl"><span class="d"></span><span><span class="p">Your remarks</span><div class="n">' + esc(p.remarks) + '</div></span></div>';
-    var tl = p.timeline.filter(function (e) { return e !== at; });
+    var tl = p.timeline;
     // who is holding what right now: where the job stands with the team, beside its status
     ((p.team && p.team.holding) || []).forEach(function (x, i) {
       now += '<div class="tl"><span class="d"></span><span>' + (i ? '' : '<span class="p">With the team now</span>') + '<div class="n" style="color:var(--ink)">' + esc(x) + '</div></span></div>';
@@ -1868,9 +1869,16 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       if (e.kind === 'phase' && hacts.some(function (a) { return a.kind === 'schedule' && Math.abs(T(a.finished_at || a.proposed_at) - t) < 180000; })) return;   // that change is in the list, with its Undo
       evs.push({ k: 'l:' + e.at, f: 'team', t: t, tag: e.who === 'schedule' ? 'Schedule' : 'Team', who: e.who === 'schedule' ? 'The schedule' : cap(e.who), n: e.line, pre: true });
     });
+    var statusWho = 'Status' + (p.phase ? ' · ' + p.phase : '');
     tl.forEach(function (e, i) {
-      evs.push({ k: 's:' + e.when + ':' + i, f: 'sched', t: T(e.when + 'T23:59:00'), noTime: true, tag: e.phase ? 'Phase' : 'Note', who: e.phase || 'Schedule note', n: e.note || '', pre: true });
+      evs.push({ k: 's:' + e.when + ':' + i, f: 'sched', t: T(e.when + 'T23:59:00'), noTime: true, tag: e === at ? 'Status' : e.phase ? 'Phase' : 'Note',
+        who: e === at ? statusWho : e.phase || 'Schedule note', n: e.note || '', pre: true });
     });
+    var began = (p.timeline.filter(function (e) { return e.phase && e.phase === p.phase; })[0] || {}).when;      // the day the job entered the phase it is in
+    if (p.status && !at) evs.push({ k: 's:status', f: 'sched', t: began ? T(began + 'T23:59:30') : 0, noTime: true, tag: 'Status', who: statusWho, n: p.status, pre: true });
+    var lat = (p.latest || '').trim(), sig = /\s*-\s*JAKE (\d\d)\/(\d\d)\/(\d\d)\s*$/.exec(lat), latText = sig ? lat.slice(0, sig.index) : lat;
+    if (lat && latText !== p.status && !p.timeline.some(function (e) { return e.note === latText; }))      // not already a line of the schedule's history
+      evs.push({ k: 's:latest', f: 'sched', t: sig ? T('20' + sig[3] + '-' + sig[1] + '-' + sig[2] + 'T23:59:30') : began ? T(began + 'T23:59:30') : 0, noTime: true, tag: 'Note', who: 'Latest note', n: lat, pre: true });
     evs.sort(function (x, y) { return y.t - x.t; });
     var counts = {}, HF = [['all', 'All'], ['mail', 'Mail'], ['text', 'Texts'], ['call', 'Calls'], ['change', 'Changes'], ['team', 'Team'], ['sched', 'Schedule']];
     evs.forEach(function (e) { counts[e.f] = (counts[e.f] || 0) + 1; });
@@ -1892,7 +1900,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
             : '<span class="note">Opening…</span>') + '</div>' : '');
       return '<div class="tl tap ev" data-ev="' + esc(e.k) + '"' + (e.mail && CFG ? ' data-mail="' + esc(e.mail) + '"' : '') +
         ' data-hay="' + esc((e.tag + ' ' + e.who + ' ' + e.n + ' ' + (e.gist || '')).toLowerCase()) + '"' + (i >= CAP && !state.allTimeline ? ' data-late hidden' : '') + '>' +
-        '<span class="d">' + esc(dayT(e.t)) + '<small>' + esc(e.tag) + '</small></span><span>' + inner + '</span></div>';
+        '<span class="d">' + esc(e.t ? dayT(e.t) : '') + '<small>' + esc(e.tag) + '</small></span><span>' + inner + '</span></div>';
     }).join('');
     h += sec('History', (state.actMsg ? '<p class="note">' + esc(state.actMsg) + '</p>' : '') + now + chips +
       (evs.length > 8 ? '<input type="search" id="hist-q" placeholder="Find in this job&#39;s history" autocomplete="off" aria-label="Find in history" value="' + esc(state.mailQ || '') + '">' : '') + rows +
