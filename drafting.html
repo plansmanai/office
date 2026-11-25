@@ -235,6 +235,36 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
 #s-canvas.draw { touch-action: none; cursor: crosshair; }
 .sanswer { border-top: 1px solid var(--rule); padding: 10px 14px max(12px, env(safe-area-inset-bottom, 0px)); }
 .sanswer textarea { min-height: 48px; } .sanswer .bar { flex-wrap: wrap; gap: 10px; } .sanswer .bar button { min-height: 40px; }
+/* THE PHONE TURNED ON ITS SIDE (Lance, 25 Nov 2026: "In horizontal view on my phone the drawing window is very small.
+   Can you do the same and make it sheet sized when turned, but also preserve what you did in portrait mode"). On a
+   screen that is lying down and short, the header and the tabs took a third of it and the sheet's window was 160px
+   high. So there a sheet that is open takes the WHOLE screen: its window at the left, the full height of the screen
+   and still 3 wide to 2 high, and beside it one column with the way back to the list, the drawing buttons, what was
+   said about it and his answer. The header and the tabs are under it until he goes back or turns the phone upright.
+   A document of Cora's does the same (the document the full height, its box beside it). Upright, and on a PC, none of
+   this applies. The same test is TURNED in the code: change one and change the other. */
+#s-back { display: none; }
+@media (orientation: landscape) and (max-height: 560px) {
+  #sheet-open, #doc-open { position: fixed; inset: 0; z-index: 200; height: auto; background: var(--bg); display: grid;
+    --sh: calc(100vh - env(safe-area-inset-bottom, 0px)); grid-template-rows: auto minmax(0, 1fr) auto;
+    padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+  @supports (height: 100dvh) { #sheet-open, #doc-open { --sh: calc(100dvh - env(safe-area-inset-bottom, 0px)); } }
+  #sheet-open { grid-template-columns: min(calc(var(--sh) * 1.5), calc(100% - 190px)) minmax(0, 1fr); }
+  #doc-open { grid-template-columns: minmax(0, 1fr) 200px; }
+  #s-scroll, #d-scroll { grid-column: 1; grid-row: 1 / -1; width: 100%; max-height: 100%; border-bottom: 0; border-right: 1px solid var(--rule); }
+  #s-scroll { align-self: start; }
+  #d-scroll { height: 100%; min-height: 0; }
+  #sheet-open .sbar, #doc-open .sbar { grid-column: 2; grid-row: 1; padding: 8px 10px; gap: 8px; align-items: flex-start; }
+  #sheet-open .sbar b, #doc-open .sbar b { min-width: 0; font-size: 13.5px; line-height: 1.3; overflow-wrap: anywhere; align-self: center; }
+  #sheet-open .sbar .tools { flex: 1 1 100%; } #sheet-open .sbar .tools button { flex: 1; padding: 9px 4px; letter-spacing: .1em; }
+  #s-back { display: block; }
+  #doc-open .sbar b { flex: 1 1 100%; }      /* a document's name is long: under its way back, not beside it */
+  #s-note { grid-column: 2; grid-row: 2; min-height: 0; padding: 8px 10px; font-size: 13px; line-height: 1.4; }
+  #sheet-open .sanswer, #doc-open .sanswer { grid-column: 2; grid-row: 3; padding: 8px 10px; }
+  #sheet-open .sanswer textarea, #doc-open .sanswer textarea { min-height: 44px; max-height: 30vh; }
+  #sheet-open .sanswer .bar, #doc-open .sanswer .bar { gap: 6px; margin-top: 6px; }
+  #sheet-open .sanswer .bar button, #doc-open .sanswer .bar button { flex: 1 1 auto; padding: 10px 8px; letter-spacing: .12em; font-size: .6rem; }
+}
 .msg .ask { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .msg.rpo { width: 90%; }      /* a Reply box is open in it: room to type */
 .msg .ask .was.bad { color: var(--long); }
@@ -275,7 +305,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261124-211449";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261125-005049";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -294,7 +324,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     <div class="view sheets" id="stage-sheets" hidden>
       <div id="sheet-list"><p class="none">No check-ins on this job yet. Drew posts one when he wants you to look at something.</p></div>
       <div id="sheet-open" hidden>
-        <div class="sbar"><b id="s-title"></b>
+        <div class="sbar"><button type="button" id="s-back">Sheets</button><b id="s-title"></b>
           <span class="tools"><button type="button" id="s-draw" aria-pressed="true">Draw</button><button type="button" id="s-undo">Undo</button><button type="button" id="s-clear">Clear</button>
 </span></div>
         <div id="s-scroll"><div id="s-wrap"><img id="s-img" alt=""><canvas id="s-canvas"></canvas></div></div>
@@ -941,10 +971,14 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   // their pages too. The markup area leaves enough space on the screen to swipe not in the window"). Not when the
   // touch starts on the sheet being marked up or on the live picture, where a sideways drag draws or moves it,
   // and not in a box he is typing in.
+  // TURNED: the phone is on its side (a screen lying down and short). The same test as in the style, above.
+  var TURNED = window.matchMedia ? window.matchMedia('(orientation: landscape) and (max-height: 560px)') : { matches: false };
   var sw = null;
   document.addEventListener('touchstart', function (e) {
     var t = e.touches[0], el = e.target;
-    sw = (e.touches.length === 1 && !(el.closest && el.closest('#s-scroll, #stage-live, textarea, input'))) ? { x: t.clientX, y: t.clientY, at: Date.now() } : null;
+    // nor from a sheet or a document that has the whole screen (the phone turned): his marks would go with the page
+    var held = el.closest && (el.closest('#s-scroll, #stage-live, textarea, input') || (TURNED.matches && el.closest('#sheet-open, #doc-open')));
+    sw = (e.touches.length === 1 && !held) ? { x: t.clientX, y: t.clientY, at: Date.now() } : null;
   }, { passive: true });
   document.addEventListener('touchend', function (e) {
     if (!sw) return;
@@ -977,6 +1011,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       var s = b.getAttribute('data-show'); if (s !== 'drew') { $('stage-live').hidden = s !== 'live'; $('stage-sheets').hidden = s !== 'sheets'; }
       if (s === 'sheets' && was && SH.open && !SH.staying) closeSheet();      // already on a sheet: back to the list of sheets
       if (s === 'sheets' && was && DOC.open && !SH.staying) closeDoc();       // already in a document: back to the documents, where he was
+      if (s === 'sheets' && SH.open) setTimeout(fit, 0);                      // the screen may have changed while the sheet was out of sight
     });
   });
   Array.prototype.forEach.call(document.querySelectorAll('.switch button'), function (b) {
@@ -987,6 +1022,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       $('stage-live').hidden = s !== 'live'; $('stage-sheets').hidden = s !== 'sheets';
       if (s === 'sheets' && was && SH.open && !SH.staying) closeSheet();
       if (s === 'sheets' && was && DOC.open && !SH.staying) closeDoc();
+      if (s === 'sheets' && SH.open) setTimeout(fit, 0);
     });
   });
   // The bar between the view and the chat (Lance: "a slider left and right so I can maximize and minimize the
@@ -1348,7 +1384,21 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   $('s-clear').addEventListener('click', function () { SH.strokes = []; paint(); });
   // on a PC: Ctrl and the wheel (or two fingers on a trackpad) make the sheet larger or smaller, as a phone's two fingers do
   sc.addEventListener('wheel', function (e) { if (!e.ctrlKey || !SH.open) return; e.preventDefault(); setZoom(SH.zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15)); }, { passive: false });
-  window.addEventListener('resize', function () { if (SH.open) fit(); else paint(); });      // turned, or the window changed: fitted again
+  // A large phone is the wide layout on its side and the phone's tabs upright, so turning it crosses between the two.
+  // A sheet or a document he has open stays in front both ways (upright, the tabs would otherwise show the conversation).
+  var wasWide = window.innerWidth > 860;
+  window.addEventListener('resize', function () {
+    var wide = window.innerWidth > 860;
+    if (wide !== wasWide && (SH.open || DOC.open) && (wide ? $('main').getAttribute('data-show') === 'sheets' : !$('stage-sheets').hidden)) showSheets();
+    wasWide = wide;
+    if (SH.open) fit(); else paint();                    // turned, or the window changed: fitted again
+  });
+  // a phone says it has turned before its screen has settled: fit again once it has. His marks stay where they are on
+  // the drawing (they are kept as fractions of the picture), and so does how far he had zoomed.
+  var refit = function () { if (SH.open) { fit(); setTimeout(fit, 250); setTimeout(fit, 700); } };
+  if (TURNED.addEventListener) TURNED.addEventListener('change', refit); else if (TURNED.addListener) TURNED.addListener(refit);
+  window.addEventListener('orientationchange', refit);
+  $('s-back').addEventListener('click', closeSheet);       // turned, the tabs are under the sheet: this goes back to the list
   function sendMark(ok) {
     if (!SH.open) return;
     var text = ATT.join('sheet', $('s-text').value);         // a picture or file he attached to the markup goes with his words
