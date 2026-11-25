@@ -249,6 +249,10 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .filt .n { margin-left: auto; background: var(--ink); color: var(--on-ink); font-family: var(--sans); font-size: .64rem; letter-spacing: .08em; padding: 2px 7px 1px; font-variant-numeric: tabular-nums; }
 .filt + h2 { margin-top: 22px; }
 .fintot { margin-top: 16px; padding: 12px 14px; border: 1px solid var(--rule); }
+.adjform { display: grid; gap: 10px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--ink); }
+.adjform label { display: grid; gap: 4px; font-family: var(--sans); font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.adjform select, .adjform input { font: inherit; font-size: 16px; letter-spacing: 0; text-transform: none; padding: 8px 9px; border: 1px solid var(--rule); border-radius: 0; background: transparent; color: var(--ink); width: 100%; box-sizing: border-box; text-align: left; }
+.item.adj .body button.text { margin-left: 8px; }
 .row.fin .rtags .ph { order: 0; margin-right: 0; }
 .row.fin .rhead { background: var(--bar); }      /* the grey title bar, as on the Projects rows (Lance, 24 Nov 2026) */
 .row.fin .rtags .bal { order: 1; margin-left: auto; font-weight: 500; font-variant-numeric: tabular-nums; }
@@ -260,6 +264,8 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .sec h3.tooled { position: relative; }
 .sec h3 .sectool { position: absolute; right: 34px; top: 50%; transform: translateY(-50%); margin: 0; gap: 6px; flex-wrap: nowrap; }
 .sec h3 .sectool button.go { font-size: .64rem; padding: 6px 12px 5px 13px; min-height: 0; }
+/* a long heading with Save and Cancel: the two buttons sit on their own line under it, at the right, never over the words */
+.sec h3.tooled.under .sectool { position: static; transform: none; display: flex; justify-content: flex-end; margin: 8px 0 0; }
 .kv.money { align-items: center; }
 .kv.money .k.krow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .kv input.amt { width: 6.4em; text-align: right; font: inherit; font-size: 16px; padding: 5px 7px; border: 1px solid var(--ink); border-radius: 0; background: transparent; color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -497,7 +503,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-180911";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-191926";</script>
 </head>
 <body>
 
@@ -544,7 +550,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   var CFG = window.OFFICE || null;                 // set on the web build: { url, key }
   var TOKEN_KEY = 'plansman_office_token';
   var DATA = null, P = [], BY = {}, SAID = [], token = null;
-  var state = { view: 'projects', pf: 'queue', ff: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', loose: {}, mailQ: '', openMail: null, mailBody: {}, editPerson: null, personForm: {}, personMsg: '', personAsk: null, needReply: null, needText: {}, jobAll: {}, chatAll: false, chatPending: false, chatLast: '', lastList: 'queue', decWrong: null, decText: {}, decMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null, editScope: null, scopeText: '', scopeMsg: '', editMoney: null, moneyForm: null, moneyMsg: '', itemsOpen: {}, allEdits: false };
+  var state = { view: 'projects', pf: 'queue', ff: 'queue', no: null, q: '', allTimeline: false, draft: {}, sending: false, tellMsg: '', ans: {}, ruleMsg: '', loose: {}, mailQ: '', openMail: null, mailBody: {}, editPerson: null, personForm: {}, personMsg: '', personAsk: null, needReply: null, needText: {}, jobAll: {}, chatAll: false, chatPending: false, chatLast: '', lastList: 'queue', decWrong: null, decText: {}, decMsg: '', editRule: null, ruleText: {}, editDraft: null, draftText: {}, draftMsg: '', draftMsgId: null, editScope: null, scopeText: '', scopeMsg: '', editMoney: null, moneyForm: null, moneyMsg: '', itemsOpen: {}, allEdits: false, adjust: null, adjForm: null, adjMsg: '' };
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var usd = function (n) { return n == null ? '' : (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 }); };
@@ -770,6 +776,21 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   }
   // ACTS: changes Jake has proposed to the schedule. One is written only after Lance taps Yes (db/012).
   var ACTS = [];
+  // ADJUSTMENTS (db/084; Lance, 24 Nov 2026): a named amount on a job, with a note, that changes what is owed without
+  // touching the contract or the payments: the 5% cash discount, an overpayment held as a credit, an agreed credit, a
+  // write-off. They live in P4 only, for every year; the sheets are not told. `amount` is what the balance goes DOWN
+  // by (an overpayment is negative: it brings a minus balance up to nothing).
+  var ADJ = [];
+  var ADJ_KIND = { discount: 'Cash discount', overpayment: 'Overpaid, credit held', credit: 'Agreed credit', writeoff: 'Written off', other: 'Adjustment' };
+  function loadAdj() {
+    if (!CFG || !token) return;
+    rpc('office_adjustments', { p_token: token }).then(function (d) {
+      if (!d || !d.ok) return;
+      var before = JSON.stringify(ADJ), typing = document.activeElement && /^(TEXTAREA|INPUT|SELECT)$/.test(document.activeElement.tagName);
+      ADJ = d.rows || [];
+      if (JSON.stringify(ADJ) !== before && !typing) render();
+    }).catch(function () {});
+  }
   // DRAFTS: emails Jake has drafted (db/015). One goes out only after Lance taps Send on it; he can edit
   // the wording first, or drop it. A draft answering an email that waits on him is shown on that email.
   var DRAFTS = [], PUSHED = null, WAITING = null;      // WAITING: what Drew and Cora have waiting on him, read live with the drafts
@@ -905,6 +926,13 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       f.total = nt;
     }
     if (m) m.items = m.items.filter(function (i) { return i.amount || i.desc; });
+    if (m) {
+      // the balance is the sheet's (value less payments) less the job's adjustments; `sheet_due` keeps the sheet's own
+      m.adjust = ADJ.filter(function (a) { return a.proj_no === p.no; });
+      m.sheet_due = m.due; m.less = 0; m.credit = 0;
+      m.adjust.forEach(function (a) { var n = +a.amount || 0; if (n > 0) m.less += n; else m.credit -= n; });
+      if (m.due != null) m.due = Math.round((m.due - m.less + m.credit) * 100) / 100;
+    }
     return { fees: f, money: m, scope: scope, inc: inc };
   }
   function openMoney(p, focus) {
@@ -949,6 +977,20 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     if (bad) { state.moneyMsg = 'An amount is not a number. Use digits, like 2500 or 2500.50.'; render(); return; }
     sendEdit(p, ch, function () { state.editMoney = null; state.moneyForm = null; }, function (m) { state.moneyMsg = m; });
   }
+  function saveAdjust(p) {
+    var F = state.adjForm, m = edited(p).money || {}, ch = {}, amt = num(F.amount), today = new Date(), iso = today.getFullYear() + '-' + ('0' + (today.getMonth() + 1)).slice(-2) + '-' + ('0' + today.getDate()).slice(-2);
+    if (amt === null) { state.adjMsg = 'The amount is not a number. Use digits, like 200 or 112.50.'; render(); return; }
+    (m.adjust || []).forEach(function (x) { if (F.gone[x.id]) ch['adj.' + x.id] = { from: { kind: x.kind, amount: x.amount, note: x.note, date: x.date }, to: null }; });
+    // an overpayment brings a minus balance UP, so it is kept as a minus amount; every other reason takes the balance down
+    if (amt) ch['adj.new0'] = { from: null, to: { kind: F.kind, amount: F.kind === 'overpayment' ? -amt : amt, note: (F.note || '').trim(), date: iso } };
+    if (!Object.keys(ch).length) { state.adjust = null; state.adjForm = null; state.adjMsg = ''; render(); return; }
+    state.adjMsg = 'Saving…'; render();
+    rpc('office_job_adjust', { p_token: token, p_proj: p.no, p_change: ch }).then(function (d) {
+      if (d && d.ok && d.saved) { state.adjust = null; state.adjForm = null; state.adjMsg = ''; loadAdj(); loadActs(); }
+      else state.adjMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and sign in.';
+      render();
+    }).catch(function (e) { state.adjMsg = 'Not saved (' + e.message + '). Tap Save again.'; render(); });
+  }
   function saveScope(p) {
     var E = edited(p), to = (state.scopeText || '').replace(/\s+/g, ' ').trim();
     sendEdit(p, to === (E.scope || '').replace(/\s+/g, ' ').trim() ? {} : { scope: { from: E.scope || '', to: to } }, function () { state.editScope = null; }, function (m) { state.scopeMsg = m; });
@@ -988,6 +1030,14 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     });
     return out.join('');
   }
+  // One change to a job's adjustments, as lines: put on, or taken off.
+  function adjOne(x) { return (ADJ_KIND[x.kind] || 'Adjustment') + ' ' + usd2(Math.abs(+x.amount || 0)) + (x.note ? ' · ' + x.note : ''); }
+  function adjWords(a) {
+    return Object.keys(a.change || {}).map(function (k) {
+      var v = a.change[k];
+      return '<div class="body">' + (v.to ? '<b>Put on:</b> ' + esc(adjOne(v.to)) : '<b>Taken off:</b> ' + esc(adjOne(v.from || {}))) + '</div>';
+    }).join('');
+  }
   // An edit can be undone only while nothing later has changed the same thing: otherwise Undo would wipe that later
   // correction. The older one still shows what it was, so it can be typed back.
   function overtaken(a) {
@@ -1000,10 +1050,10 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   // Every change to the job's record, one item each, in History: his own edits, Jake's schedule changes, and recorded
   // payments (kind 'payment', core/payments.py). Undo writes the same cells back.
   function actItem(a) {
-    var pay = a.kind === 'payment', edit = a.kind === 'edit', back = /^Undo: /.test(a.summary || ''), who = a.by_who === 'lance' ? 'You' : 'Jake';
-    var title = edit ? (back ? 'You changed it back' : who + ' edited the job') : pay ? (back ? 'Payment taken back off the sheet' : 'Payment recorded') : 'Change to the schedule';
+    var pay = a.kind === 'payment', edit = a.kind === 'edit', adj = a.kind === 'adjust', back = /^Undo: /.test(a.summary || ''), who = a.by_who === 'lance' ? 'You' : 'Jake';
+    var title = adj ? who + ' adjusted the balance' : edit ? (back ? 'You changed it back' : who + ' edited the job') : pay ? (back ? 'Payment taken back off the sheet' : 'Payment recorded') : 'Change to the schedule';
     var h = '<div class="item act"><div class="head"><b>' + title + '</b><span>' + esc(stamp(a.proposed_at)) + '</span></div>' +
-      (pay ? '<div class="body">' + esc((a.summary || '').replace(/^Undo: /, '')) + '</div>' : edit ? editLines(a) : actLines(a));
+      (pay ? '<div class="body">' + esc((a.summary || '').replace(/^Undo: /, '')) + '</div>' : adj ? adjWords(a) : edit ? editLines(a) : actLines(a));
     var undo = CFG && !(pay && back) && !(edit && overtaken(a));
     if (a.state === 'proposed') h += actRow(a);
     else if (a.state === 'approved') h += '<div class="body note">' + esc(a.result || (edit ? 'Saving…' : pay ? 'Writing it to the Financial sheet…' : 'Writing it to the schedule…')) + '</div>';
@@ -1245,18 +1295,18 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     // Total Add Ser, Total Income, Total Due): until 24 Nov 2026 they were only the listed jobs', so the value and the
     // received read far too low beside the sheet. Received is the payments themselves, added up, as the sheet does.
     // The LIST under them is the jobs that carry a balance.
-    var f = state.ff, tv = 0, ta = 0, tr = 0, td = 0;
+    var f = state.ff, tv = 0, ta = 0, tr = 0, td = 0, tl = 0, tc = 0;
     var pool = (q ? P.filter(function (p) { return matches(p, q); }) : P.filter(function (p) { return inFilter(p, f); }))
       .map(function (p) { return [p, edited(p).money]; }).filter(function (x) { return x[1]; });
     pool.forEach(function (x) {
       var m = x[1];
-      tv += m.value || 0; ta += m.add_services || 0; td += m.due || 0;
+      tv += m.value || 0; ta += m.add_services || 0; td += m.due || 0; tl += m.less || 0; tc += m.credit || 0;
       (m.invoices || []).forEach(function (i) { tr += i.amount || 0; });
       (m.pays || []).forEach(function (i) { tr += i.amount || 0; });
     });
     var list = pool.filter(function (x) { return Math.abs(x[1].due || 0) > 0.005; }).sort(function (x, y) { return byNewest(x[0], y[0]); });
     var whole = function (n) { return usd(Math.round(Math.round(n * 100) / 100 + 1e-9)) || '$0'; };      // to the cent first, then the dollar, as the sheet rounds
-    var lines = [['Total value', whole(tv)]].concat(ta ? [['Added services, in that', whole(ta)]] : [], [['Received', whole(tr)], ['Balance due', whole(td), ' total']]);
+    var lines = [['Total value', whole(tv)]].concat(ta ? [['Added services, in that', whole(ta)]] : [], [['Received', whole(tr)]], tl ? [['Adjustments', '-' + whole(tl)]] : [], tc ? [['Overpaid, held as credit', whole(tc)]] : [], [['Balance due', whole(td), ' total']]);
     return (q ? '' : filterBar('ff', list.length)) +
       '<div class="fintot">' + kv(lines) + '<p class="note" style="margin:10px 0 0">All ' + pool.length + (pool.length === 1 ? ' job' : ' jobs') +
         (q ? ' found' : f === 'queue' ? ' being worked' : ' of ' + f) + '. ' + list.length + (list.length === 1 ? ' carries' : ' carry') + ' a balance, listed below.</p></div>' +
@@ -1304,7 +1354,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   function sec(title, html, cls, tool) {
     if (!html) return '';
     var c0 = closedSecs(), shut = c0[title] === undefined ? !!SHUT_AT_FIRST[title] : !!c0[title];
-    return '<div class="sec' + (cls ? ' ' + cls : '') + (shut ? ' shut' : '') + '"><h3' + (tool && !shut ? ' class="tooled"' : '') + '><button type="button" class="sectog" data-sec="' + esc(title) + '" aria-expanded="' + (shut ? 'false' : 'true') + '">' +
+    return '<div class="sec' + (cls ? ' ' + cls : '') + (shut ? ' shut' : '') + '"><h3' + (tool && !shut ? ' class="tooled' + (tool.indexOf('-save"') > 0 && title.length > 12 ? ' under' : '') + '"' : '') + '><button type="button" class="sectog" data-sec="' + esc(title) + '" aria-expanded="' + (shut ? 'false' : 'true') + '">' +
       '<span>' + esc(title) + '</span><i aria-hidden="true">' + (shut ? '+' : '&minus;') + '</i></button>' + (tool && !shut ? '<span class="marks slim sectool">' + tool + '</span>' : '') + '</h3>' + (shut ? '' : html) + '</div>';
   }
   function taskItem(t, showWho) {
@@ -1567,16 +1617,30 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     }
     h += sec('Financial', fin, '', !CFG || !f ? '' : edm ? saveCancel('money') : '<button class="text quiet" type="button" id="money-edit">Edit</button>');
     if (m) {
-      // what was invoiced, then what is still owed, together (Lance, 24 Nov 2026: "combine")
-      var got = m.value != null && m.due != null ? m.value - m.due : null;
-      h += sec('Invoices and balance', m.invoices.map(function (i) {
+      // what was invoiced, then any adjustment, then what is still owed, together (Lance, 24 Nov 2026: "combine")
+      var got = m.value != null && m.sheet_due != null ? m.value - m.sheet_due : null, adjOn = CFG && state.adjust === p.no && state.adjForm, AF = state.adjForm;
+      var bodyHtml = m.invoices.map(function (i) {
         return '<div class="item"><div class="head"><b>Invoice ' + esc(i.no) + '</b><span' + (i.paid ? '' : ' class="late"') + '>' + esc(i.paid ? 'paid ' + i.paid : 'not marked paid') + '</span></div>' +
           '<div class="body">sent ' + esc(i.sent || '?') + (i.amount != null ? ' · ' + usd(i.amount) + ' received' : '') + '</div></div>';
       }).join('') + (m.pays || []).map(function (x) {
         return '<div class="item"><div class="head"><b>Payment ' + esc(x.n) + '</b><span>' + esc(x.date || '') + '</span></div>' +
           '<div class="body">' + usd2(x.amount) + ' received' + (x.method ? ' · ' + esc(x.method) : '') + '</div></div>';
-      }).join('') + (m.due != null ? '<div style="margin-top:' + (m.invoices.length || (m.pays || []).length ? '12' : '0') + 'px">' +
-        kv([['Total value', usd2(m.value)], ['Received', got != null ? usd2(got) : '']].filter(function (x) { return x[1]; }).concat([['Balance due', usd2(m.due) || '$0', ' total']])) + '</div>' : ''));
+      }).join('') + m.adjust.map(function (x) {
+        var gone = adjOn && AF.gone[x.id];
+        return '<div class="item adj"' + (gone ? ' style="opacity:.45"' : '') + '><div class="head"><b>' + esc(ADJ_KIND[x.kind] || 'Adjustment') + '</b><span>' + esc(day(x.date)) + '</span></div>' +
+          '<div class="body">' + esc(usd2(Math.abs(+x.amount || 0))) + (x.note ? ' · ' + esc(x.note) : '') +
+          (adjOn ? ' <button type="button" class="text quiet" data-adj-del="' + x.id + '">' + (gone ? 'Keep it' : 'Take off') + '</button>' : '') + '</div></div>';
+      }).join('');
+      // the form for a new one: the reason, the amount (already what would bring the balance to nothing), a note
+      var form = adjOn ? '<div class="adjform"><label>Reason<select id="adj-kind">' + Object.keys(ADJ_KIND).map(function (k) {
+          return '<option value="' + k + '"' + (AF.kind === k ? ' selected' : '') + '>' + esc(ADJ_KIND[k]) + '</option>'; }).join('') + '</select></label>' +
+        '<label>Amount<input class="amt" type="text" inputmode="decimal" id="adj-amt" value="' + esc(AF.amount) + '" aria-label="Amount of the adjustment"></label>' +
+        '<label>Note<input type="text" id="adj-note" value="' + esc(AF.note) + '" placeholder="Why" autocomplete="off"></label></div>' : '';
+      var totals = m.due == null ? '' : '<div style="margin-top:' + (bodyHtml ? '12' : '0') + 'px">' +
+        kv([['Total value', usd2(m.value)], ['Received', got != null ? usd2(got) : ''], ['Adjustments', m.less ? '-' + usd2(m.less) : ''], ['Overpaid, held as credit', m.credit ? usd2(m.credit) : '']]
+          .filter(function (x) { return x[1]; }).concat([['Balance due', usd2(m.due) || '$0', ' total']])) + '</div>';
+      h += sec('Invoices and balance', (state.adjMsg ? '<p class="note" style="margin:0 0 8px">' + esc(state.adjMsg) + '</p>' : '') + form + bodyHtml + totals, '',
+        !CFG || m.due == null ? '' : adjOn ? saveCancel('adj') : '<button class="text quiet" type="button" id="adj-open">Adjust</button>');
     }
     if (p.permit) {
       var pm = p.permit;
@@ -1753,6 +1817,20 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       on('items-tog', function () { if (state.editMoney === p.no) return; state.itemsOpen[p.no] = !state.itemsOpen[p.no]; render(); });
       on('item-add', function () { state.moneyForm.items.push({ row: null, desc: '', amount: '', orig: null }); render(); var d = $('detail').querySelectorAll('[data-item-desc]'); if (d.length) d[d.length - 1].focus(); });
       on('more-edits', function () { state.allEdits = true; render(); });
+      // an adjustment to the balance: Adjust opens the form with the amount that would bring the balance to nothing
+      on('adj-open', function () {
+        var bal = (edited(p).money || {}).due || 0;
+        state.adjust = p.no; state.adjMsg = '';
+        state.adjForm = { kind: bal < 0 ? 'overpayment' : 'discount', amount: bal ? String(Math.abs(bal)) : '', note: '', gone: {} };
+        render(); var el = document.getElementById('adj-amt'); if (el) { el.focus(); el.select(); }
+      });
+      on('adj-cancel', function () { state.adjust = null; state.adjForm = null; state.adjMsg = ''; render(); });
+      on('adj-save', function () { saveAdjust(p); });
+      ['adj-kind', 'adj-amt', 'adj-note'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener(id === 'adj-kind' ? 'change' : 'input', function () { state.adjForm[id.slice(4) === 'amt' ? 'amount' : id.slice(4)] = el.value; });
+      });
+      each('[data-adj-del]', 'click', function (el) { var id = el.getAttribute('data-adj-del'); state.adjForm.gone[id] = !state.adjForm.gone[id]; render(); });
       each('[data-fee]', 'input', function (el) { state.moneyForm.fee[el.getAttribute('data-fee')] = el.value; });
       each('[data-flag]', 'click', function (el) { var k = el.getAttribute('data-flag'); state.moneyForm.flag[k] = !state.moneyForm.flag[k]; render(); });
       each('[data-item-desc]', 'input', function (el) { state.moneyForm.items[+el.getAttribute('data-item-desc')].desc = el.value; });
@@ -1918,7 +1996,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     }
     if (state.no) { try { localStorage.setItem('p4_last_job', state.no); } catch (e) {} }
     if (state.no && !prev && state.routed) keepPlace();     // leaving the list for a job: remember where the list was
-    if (state.no !== prev) { state.mailQ = ''; state.openMail = null; state.allTimeline = false; state.allEdits = false; state.editScope = null; state.editMoney = null; state.moneyForm = null; state.moneyMsg = ''; state.scopeMsg = ''; state.allSaid = false; state.jobAll = {}; state.tellMsg = ''; state.pick = null; state.markMsg = ''; }
+    if (state.no !== prev) { state.mailQ = ''; state.openMail = null; state.allTimeline = false; state.allEdits = false; state.editScope = null; state.editMoney = null; state.moneyForm = null; state.moneyMsg = ''; state.scopeMsg = ''; state.adjust = null; state.adjForm = null; state.adjMsg = ''; state.allSaid = false; state.jobAll = {}; state.tellMsg = ''; state.pick = null; state.markMsg = ''; }
     render();
     if (state.no && state.no !== prev) { window.scrollTo(0, 0); $('detail').scrollTop = 0; }
     if (!state.no && state.view !== 'chat' && (prev || !state.routed || moved)) backToPlace();      // back on the list (or the page just opened on it): where he left it
@@ -2182,7 +2260,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       ASKS = { questions: d.questions || [], rules: d.rules || [] };
       if (JSON.stringify(ASKS) !== before && !typing) render();
     }).catch(function () {});
-    loadActs();
+    loadActs(); loadAdj();
   }
   function loadActs() {
     if (!CFG || !token) return;
@@ -2327,7 +2405,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
           quiet(a.proj_no, decision === 'approve' ? 'You said yes to Jake' : 'You said no', a.summary || 'Change to the schedule', decision === 'approve' ? { act: id } : null);
           if (state.needReply === 'action:' + id) state.needReply = null;
         });
-        if (decision === 'undo') { ACTS.forEach(function (a) { if (a.id === id) a.undone_by = -1; }); loadActs(); }
+        if (decision === 'undo') { ACTS.forEach(function (a) { if (a.id === id) a.undone_by = -1; }); loadActs(); loadAdj(); }
         if (decision !== 'cancel' && !actWatch) {
           var until = Date.now() + 4 * 60 * 1000;
           actWatch = setInterval(function () {
