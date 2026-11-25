@@ -521,7 +521,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261125-015320";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261125-022423";</script>
 </head>
 <body>
 
@@ -1320,9 +1320,12 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     // The standard's box: the label line says who texted or left a voicemail and when; Handled is the black button;
     // Reply opens the box that tells Jake what to do with it (it was always open before). Handled leaves its quiet
     // line here, with Undo, while the page is open.
+    // AN EMAIL ON NO PROJECT IS HERE TOO (Lance, 25 Nov 2026: "Jake missed an email on Corrine. It had a weird subject but
+    // it was from the same client and he skipped it"): Jake reads every email a person sends that the filing rules put
+    // on no job and files it; one he could not place, or that is about no job and needs Lance, shows here like a text.
     var looseOpen = 0;
-    var loose = (DATA.loose_texts || []).map(function (t) {
-      var tk = 'text:' + t.id, rk = 'loose:' + t.id, mk = MARKS[tk], name = t.who + (t.channel === 'voicemail' ? ' left a voicemail' : ' texted');
+    var loose = looseAll().sort(function (x, y) { return x.when < y.when ? 1 : x.when > y.when ? -1 : 0; }).map(function (t) {
+      var mail = t.channel === 'email', tk = looseKey(t.id), rk = 'loose:' + t.id, mk = MARKS[tk], name = t.who + (mail ? ' emailed' : t.channel === 'voicemail' ? ' left a voicemail' : ' texted');
       var d = DRAFTS.filter(function (x) { return x.item_key === tk && x.state !== 'sent'; }).slice(-1)[0];
       if (mk) return sinceOpen(ms(mk.marked_at)) ? '<div class="cleared">' + quietLine('Handled', mk.marked_at, name, CFG ? undoBtn('data-loose-open="' + esc(t.id) + '"') : '') + '</div>' + quietOn(tk) : '';      // he marked it Handled
       var dropped = quietOn(tk);                                  // a draft on it that he dropped just now
@@ -1330,16 +1333,17 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       if (d || t.needs_lance) looseOpen++;
       var n = { kind: 'text', days: t.days };
       // what he told Jake about this text, and Jake's answer, on the text itself
-      var talk = itemThread(SAID.filter(function (x) { return x.proj_no === 'office' && (x.body || '').indexOf('[text:' + t.id + ']') >= 0; }));
+      var talk = itemThread(SAID.filter(function (x) { return x.proj_no === 'office' && (x.body || '').indexOf('[' + tk + ']') >= 0; }));
       var act = !CFG ? '' : state.needReply === rk
         ? replyBox(rk, 'Tell Jake what to do', 'data-loose="' + esc(t.id) + '"', state.loose[t.id], 'data-loose-send="' + esc(t.id) + '"')
         : btnRow([btn('go', 'Handled', 'data-loose-done="' + esc(t.id) + '"'), replyBtn(rk)]);
       return '<div class="item s' + sev(n) + '">' + labLine(name, t.when, bub(n, 'Reply ' + dtext(t.days))) +
-        (textWords(tk) || (t.summary ? '<div class="body">' + esc(t.summary) + '</div>' : '')) +
+        (mail ? '<div class="body"><b>' + esc(t.subject || '') + '</b>' + (t.summary ? '<br>' + esc(t.summary) : '') + '</div>'
+              : (textWords(tk) || (t.summary ? '<div class="body">' + esc(t.summary) + '</div>' : ''))) +
         (t.phone ? '<div class="reach">' + phoneLinks(t.phone) + '</div>' : '') +
         (t.jake && !(d && d.note) ? '<div class="body"><b>Jake: </b>' + esc(t.jake) + '</div>' : '') + (d ? draftBlock(d, true) : '') + dropped + talk + act + '</div>';
     }).filter(Boolean);
-    var looseSec = loose.length ? '<h2>Texts not on a project <span class="n">' + looseOpen + '</span><small>Jake could not tie these to a job.</small></h2><div class="sec need loose">' + loose.join('') + '</div>' : '';
+    var looseSec = loose.length ? '<h2>Not on a project <span class="n">' + looseOpen + '</span><small>Texts and emails Jake could not tie to a job.</small></h2><div class="sec need loose">' + loose.join('') + '</div>' : '';
     return looseSec + section('Needs you', '', needRows, dist) +
       (cleared.length ? section('Nothing open for you', 'In our court. You marked everything handled or not yours.', cleared) : '') +
       section('Waiting on the client', '', group('client')) +
@@ -2042,10 +2046,10 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       b.addEventListener('click', function () { looseTell(b.getAttribute('data-loose-send')); });
     });
     Array.prototype.forEach.call(document.querySelectorAll('[data-loose-done]'), function (b) {
-      b.addEventListener('click', function () { mark('office', 'text:' + b.getAttribute('data-loose-done'), 'handled'); });
+      b.addEventListener('click', function () { mark('office', looseKey(b.getAttribute('data-loose-done')), 'handled'); });
     });
     Array.prototype.forEach.call(document.querySelectorAll('[data-loose-open]'), function (b) {      // Undo on a text he marked Handled
-      b.addEventListener('click', function () { mark('office', 'text:' + b.getAttribute('data-loose-open'), 'open'); });
+      b.addEventListener('click', function () { mark('office', looseKey(b.getAttribute('data-loose-open')), 'open'); });
     });
     Array.prototype.forEach.call(document.querySelectorAll('[data-dec]'), function (b) {
       b.addEventListener('click', function () { decideDec(b.getAttribute('data-id'), b.getAttribute('data-dec')); });
@@ -2539,7 +2543,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     if (what === 'approve') { d.state = 'approved'; d.result = null; if (text) d.body = text; }
     else {
       // Dropped: its quiet line stays where it was (inside the email or text it sat on, else in the thread)
-      var onLoose = !!d.item_key && (DATA.loose_texts || []).some(function (t) { return 'text:' + t.id === d.item_key; });
+      var onLoose = !!d.item_key && looseAll().some(function (t) { return looseKey(t.id) === d.item_key; });
       var onNeed = !!d.item_key && !!BY[d.proj_no] && (BY[d.proj_no].needs || []).some(function (n) { return n.key === d.item_key && isMsg(n) && !MARKS[n.key]; });
       DRAFTS = DRAFTS.filter(function (x) { return x.id !== id; });
       gone = quiet(d.proj_no, 'Dropped', draftTitle(d) + (d.channel === 'email' && d.subject ? ': ' + d.subject : ''), { item: onLoose || onNeed ? d.item_key : null, inst: d.instruction_id });
@@ -2790,7 +2794,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   function mark(no, key, what, who) {
     var before = MARKS[key];
     if (what === 'open') delete MARKS[key]; else MARKS[key] = { mark: what, waiting_on: who || null, marked_at: new Date().toISOString() };
-    if (state.needReply === key || state.needReply === key.replace(/^text:/, 'loose:')) state.needReply = null;
+    if (state.needReply === key || state.needReply === key.replace(/^(text|email):/, 'loose:')) state.needReply = null;
     state.pick = null; state.markMsg = ''; render();
     rpc('office_mark', { p_token: token, p_proj: no, p_key: key, p_mark: what, p_who: who || null }).then(function (d) {
       if (d && d.ok && d.saved) return;
@@ -2920,11 +2924,15 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     }).catch(function (e) { state.markMsg = 'Not sent (' + e.message + '). Your reply is still here.'; render(); });
   }
   // A text not on a project: what he tells Jake about it goes to Jake with the text named, and the answer shows on it
+  // Everything that is on no project: texts, voicemails and emails. A text's key is text:<id>, an email's is email:<id>.
+  function looseAll() { return (DATA.loose_texts || []).concat(DATA.loose_mail || []); }
+  function looseKey(id) { return ((DATA.loose_mail || []).some(function (x) { return String(x.id) === String(id); }) ? 'email:' : 'text:') + id; }
   function looseTell(id) {
     var text = ATT.join('r:loose:' + id, state.loose[id]);
-    var t = (DATA.loose_texts || []).filter(function (x) { return String(x.id) === String(id); })[0];
+    var t = looseAll().filter(function (x) { return String(x.id) === String(id); })[0];
     if (!text || !t) return;
-    var body = 'About the ' + (t.channel === 'voicemail' ? 'voicemail' : 'text') + ' from ' + t.who + ' that is not on a project [text:' + t.id + ']' +
+    var body = 'About the ' + (t.channel === 'email' ? 'email' : t.channel === 'voicemail' ? 'voicemail' : 'text') + ' from ' + t.who +
+      (t.channel === 'email' && t.subject ? ' ("' + t.subject + '", message_id ' + t.id + ')' : '') + ' that is not on a project [' + looseKey(t.id) + ']' +
       (t.summary ? ' (' + t.summary + ')' : '') + '.\n\nLance: ' + text;
     rpc('office_tell', { p_token: token, p_proj: 'office', p_text: body }).then(function (d) {
       if (d && d.ok && d.saved) { SAID.unshift(d.instruction); delete state.loose[id]; ATT.clear('r:loose:' + id); if (state.needReply === 'loose:' + id) state.needReply = null; watchReplies(); }
