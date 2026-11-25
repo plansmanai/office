@@ -266,6 +266,8 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .adjform.two { grid-template-columns: 1fr 1fr; padding: 12px 10px; }
 .adjform.two > * { min-width: 0; }
 .adjform .wide { grid-column: 1 / -1; }
+.exbtn { display: flex; gap: 18px; margin-top: 6px; }
+.exsub { font-family: var(--sans); font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; }
 .adjform .pehead { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-family: var(--serif, inherit); }
 .adjform .pehead b { font-weight: 600; }
 .adjform input[type="date"] { -webkit-appearance: none; appearance: none; min-height: 38px; min-width: 0; padding-left: 6px; padding-right: 4px; }
@@ -521,7 +523,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261125-140747";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261125-153111";</script>
 </head>
 <body>
 
@@ -829,6 +831,138 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   // touching the contract or the payments: the 5% cash discount, an overpayment held as a credit, an agreed credit, a
   // write-off. They live in P4 only, for every year; the sheets are not told. `amount` is what the balance goes DOWN
   // by (an overpayment is negative: it brings a minus balance up to nothing).
+  // WHAT A JOB COSTS (db/089). Lance, 25 Nov 2026: "we just show incoming ... occasionally I pay for prints, pay
+  // consultants ... In the balance section there should be a new area below that talks about expenses and should list
+  // each agents spend, then have options for fees paid, prints paid for, consultants paid, things like that." Asked the
+  // details: on any job, the old ones too; the kinds are fees, prints, consultants, and "other is manually typed"; he
+  // adds one here or through Jake; one that is passed on to the client still counts here (it comes back as an added
+  // service); "I like the totals as they are, then below in the spend section we'd get a net number for
+  // profitability"; and spending on no job goes into the Financials totals "to show profit as well".
+  // Two things are spent on a job: the team's own cost (`p.spend`, from the record of every run, in the export) and
+  // what he paid out (EXP, read from the record and saved at once). 'office' is general spending, on no job. P4 only:
+  // nothing here is on a sheet, and nothing here changes a balance.
+  var EXP = [], EXP_GONE = {}, EXP_KIND = { fees: 'Fees', prints: 'Prints', consultants: 'Consultant', other: 'Other' }, TEAM_NAME = { jake: 'Jake', drew: 'Drew', cora: 'Cora' };
+  function loadExp() {
+    if (!CFG || !token) return;
+    rpc('office_expenses', { p_token: token }).then(function (d) {
+      if (!d || !d.ok) return;
+      var before = JSON.stringify(EXP), typing = document.activeElement && /^(TEXTAREA|INPUT|SELECT)$/.test(document.activeElement.tagName);
+      EXP = d.expenses || [];
+      if (JSON.stringify(EXP) !== before && !typing) render();
+    }).catch(function () {});
+  }
+  function expOf(no) { return EXP.filter(function (x) { return x.proj_no === no; }); }
+  function expName(x) { return x.kind === 'other' ? (x.label || 'Other') : EXP_KIND[x.kind] || x.kind; }
+  function teamRows(sp) { return ['jake', 'drew', 'cora'].map(function (a) { return [a, sp && +sp[a] || 0]; }).filter(function (x) { return x[1] > 0.004; }); }
+  function sumOf(list, f) { var t = 0; list.forEach(function (x) { t += f(x); }); return t; }
+  function spentOn(p) { return sumOf(teamRows(p.spend), function (x) { return x[1]; }) + sumOf(expOf(p.no), function (x) { return +x.amount || 0; }); }
+  function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function signed(n) { return (n < -0.004 ? '-' : '') + (usd2(Math.abs(Math.round(n * 100) / 100)) || '$0'); }
+  // one expense as it is listed, with Edit and Take off; one just taken off as a quiet line with Undo
+  function expItems(no) {
+    return expOf(no).map(function (x) {
+      return '<div class="item"><div class="head"><b>' + esc(expName(x)) + '</b><span>' + esc(day(x.paid_on)) + '</span></div>' +
+        '<div class="body">' + esc([usd2(+x.amount), x.paid_to ? 'paid to ' + x.paid_to : '', x.note, x.by_who === 'jake' ? 'recorded by Jake' : ''].filter(Boolean).join(' · ')) + '</div>' +
+        (CFG ? '<div class="exbtn"><button type="button" class="text quiet" data-exp-edit="' + x.id + '">Edit</button><button type="button" class="text quiet" data-exp-drop="' + x.id + '">Take off</button></div>' : '') + '</div>';
+    }).join('') + Object.keys(EXP_GONE).map(function (k) { return EXP_GONE[k]; }).filter(function (x) { return x.proj_no === no; }).map(function (x) {
+      return '<div class="quiet"><span>Taken off: ' + esc(expName(x) + ' ' + usd2(+x.amount)) + '</span>' + undoBtn('data-exp-undo="' + x.id + '"') + '</div>';
+    }).join('');
+  }
+  function expForm(no) {
+    var F = state.expForm;
+    if (!CFG) return '';
+    if (!F || F.no !== no) return '<button class="add pe" type="button" data-exp-add="' + esc(no) + '">+ Expense</button>';
+    var inp = function (label, f, attrs, wide) {
+      return '<label' + (wide ? ' class="wide"' : '') + '>' + label + '<input ' + attrs + ' data-exp-f="' + f + '" value="' + esc(F[f] || '') + '" autocomplete="off"></label>';
+    };
+    return (state.expMsg ? '<p class="note" style="margin:0 0 8px">' + esc(state.expMsg) + '</p>' : '') +
+      '<div class="adjform two"><label class="wide">What it was<select data-exp-f="kind">' + Object.keys(EXP_KIND).map(function (k) {
+        return '<option value="' + k + '"' + (F.kind === k ? ' selected' : '') + '>' + esc(k === 'fees' ? 'Fees paid' : k === 'prints' ? 'Prints' : k === 'consultants' ? 'Consultant paid' : 'Other') + '</option>'; }).join('') + '</select></label>' +
+      (F.kind === 'other' ? inp('What for', 'label', 'type="text" placeholder="In your words"', true) : '') +
+      inp('Amount', 'amount', 'class="amt" type="text" inputmode="decimal"') + inp('Paid on', 'date', 'type="date"') +
+      inp('Paid to', 'to', 'type="text"', true) + inp('Note', 'note', 'type="text" placeholder="Optional"', true) + '</div>' +
+      btnRow([btn('go', state.expBusy ? 'Saving…' : 'Save', 'data-exp-save=""'), btn('dim', 'Cancel', 'data-exp-cancel=""')]);
+  }
+  // the area on a job, under "Invoices and balance": the team's cost, what was paid out, and the net
+  function expSec(p, m, got) {
+    var team = teamRows(p.spend), mine = expOf(p.no), spent = spentOn(p), gone = Object.keys(EXP_GONE).some(function (k) { return EXP_GONE[k].proj_no === p.no; });
+    if (!CFG && !team.length && !mine.length) return '';
+    var h = '';
+    if (team.length) h += '<div class="exsub" style="margin-top:0">The team</div>' + kv(team.map(function (x) { return [TEAM_NAME[x[0]], usd2(Math.round(x[1] * 100) / 100)]; }));
+    if (mine.length || gone) h += '<div class="exsub"' + (team.length ? '' : ' style="margin-top:0"') + '>Paid out</div>' + expItems(p.no);
+    h += expForm(p.no);
+    var lines = [['Spent', signed(spent), ' total']];
+    if (m && m.value != null) {
+      if (got != null) lines.push(['Net so far (received less spent)', signed(got - spent)]);
+      lines.push(['Net at full value', signed(m.value - (m.less || 0) - spent)]);
+    }
+    h += '<div style="margin-top:12px">' + kv(lines) + '</div>' +
+      '<p class="note" style="margin-top:8px">Kept in P4 only, not on the sheets.' + (DATA && DATA.spend_since ? ' The team\'s cost is counted from ' + esc(day(DATA.spend_since)) + '.' : '') + '</p>';
+    return sec('Expenses', h);
+  }
+  // Financials: what the jobs shown have cost, the spending on no job for that year, and what is left of the money received
+  function spendYear(f) { return /^\d{4}$/.test(f) ? f : String(new Date().getFullYear()); }
+  function generalSpend(year) {
+    var team = teamRows((DATA && DATA.spend_general || {})[year]);
+    var paid = expOf('office').filter(function (x) { return String(x.paid_on || '').slice(0, 4) === year; });
+    return { team: team, paid: paid, total: sumOf(team, function (x) { return x[1]; }) + sumOf(paid, function (x) { return +x.amount || 0; }) };
+  }
+  function generalBlock(year) {
+    var g = generalSpend(year);
+    if (!CFG && !g.total) return '';
+    return '<div class="fintot" style="margin-top:18px"><div class="exsub" style="margin-top:0">General spending · ' + esc(year) + ' · on no job</div>' +
+      (g.team.length ? kv(g.team.map(function (x) { return [TEAM_NAME[x[0]], usd2(Math.round(x[1] * 100) / 100)]; })) : '') +
+      (expOf('office').length || Object.keys(EXP_GONE).length ? '<div style="margin-top:10px">' + expItems('office') + '</div>' : '') + expForm('office') + '</div>';
+  }
+  function saveExp() {
+    var F = state.expForm;
+    if (!F || state.expBusy) return;
+    var amt = num(F.amount);
+    if (!amt || amt <= 0) { state.expMsg = 'Type the amount paid.'; render(); return; }
+    if (F.kind === 'other' && !String(F.label || '').trim()) { state.expMsg = 'Say what it was for.'; render(); return; }
+    state.expBusy = true; state.expMsg = ''; render();
+    rpc('office_expense_set', { p_token: token, p_id: F.id || null, p_proj: F.no === 'office' ? '' : F.no, p_kind: F.kind, p_label: F.kind === 'other' ? F.label : '',
+                                p_amount: String(amt), p_date: F.date || '', p_to: F.to || '', p_note: F.note || '' }).then(function (d) {
+      state.expBusy = false;
+      if (!d || !d.ok) { state.expMsg = 'Signed out. Sign in again and save.'; render(); return; }
+      if (!d.saved) { state.expMsg = d.why || 'Not saved.'; render(); return; }
+      EXP = EXP.filter(function (x) { return x.id !== d.expense.id; }); EXP.unshift(d.expense);
+      EXP.sort(function (a, b) { return a.paid_on < b.paid_on ? 1 : a.paid_on > b.paid_on ? -1 : b.id - a.id; });
+      state.expForm = null; render();
+    }).catch(function (e) { state.expBusy = false; state.expMsg = 'Not saved (' + e.message + ').'; render(); });
+  }
+  function dropExp(id, undo) {
+    var x = undo ? EXP_GONE[id] : EXP.filter(function (e) { return e.id === id; })[0];
+    if (!x) return;
+    rpc('office_expense_drop', { p_token: token, p_id: id, p_undo: !!undo }).then(function (d) {
+      if (!d || !d.ok || !d.saved) { state.expMsg = (d && d.why) || 'Not changed.'; loadExp(); render(); return; }
+      if (undo) { delete EXP_GONE[id]; EXP.unshift(x); } else { EXP_GONE[id] = x; EXP = EXP.filter(function (e) { return e.id !== id; }); }
+      render();
+    }).catch(function () {});
+  }
+  // one listener for the Expenses buttons and boxes, wherever they are drawn (a job's page, Financials)
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest ? e.target.closest('[data-exp-add],[data-exp-edit],[data-exp-drop],[data-exp-undo],[data-exp-save],[data-exp-cancel]') : null;
+    if (!t) return;
+    if (t.hasAttribute('data-exp-add')) { state.expForm = { no: t.getAttribute('data-exp-add'), id: null, kind: 'prints', label: '', amount: '', date: today(), to: '', note: '' }; state.expMsg = ''; render(); }
+    else if (t.hasAttribute('data-exp-edit')) {
+      var x = EXP.filter(function (v) { return v.id === +t.getAttribute('data-exp-edit'); })[0];
+      if (x) { state.expForm = { no: x.proj_no, id: x.id, kind: x.kind, label: x.label, amount: String(x.amount), date: x.paid_on, to: x.paid_to, note: x.note }; state.expMsg = ''; render(); }
+    }
+    else if (t.hasAttribute('data-exp-drop')) dropExp(+t.getAttribute('data-exp-drop'), false);
+    else if (t.hasAttribute('data-exp-undo')) dropExp(+t.getAttribute('data-exp-undo'), true);
+    else if (t.hasAttribute('data-exp-save')) saveExp();
+    else { state.expForm = null; state.expMsg = ''; render(); }
+  });
+  ['input', 'change'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) {
+      var f = e.target.getAttribute && e.target.getAttribute('data-exp-f');
+      if (!f || !state.expForm) return;
+      var was = state.expForm[f];
+      state.expForm[f] = e.target.value;
+      if (f === 'kind' && ev === 'change' && was !== e.target.value) render();      // "Other" opens its own box
+    });
+  });
   var ADJ = [];
   var ADJ_KIND = { discount: 'Cash discount', overpayment: 'Overpaid, credit held', credit: 'Agreed credit', abandoned: 'Abandoned', writeoff: 'Written off', other: 'Adjustment' };
   function loadAdj() {
@@ -1420,10 +1554,17 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     var list = pool.filter(function (x) { return Math.abs(x[1].due || 0) > 0.005; }).sort(function (x, y) { return byNewest(x[0], y[0]); });
     var whole = function (n) { return usd(Math.round(Math.round(n * 100) / 100 + 1e-9)) || '$0'; };      // to the cent first, then the dollar, as the sheet rounds
     var lines = [['Total value', whole(tv)]].concat(ta ? [['Added services, in that', whole(ta)]] : [], [['Received', whole(tr)]], tl ? [['Adjustments', '-' + whole(tl)]] : [], tc ? [['Overpaid, held as credit', whole(tc)]] : [], [['Balance due', whole(td), ' total']]);
+    // SPENDING AND PROFIT (Lance, 25 Nov 2026: general spending "can be added to the financials total at the top to
+    // show profit as well"): what these jobs have cost (the team, and what he paid out on them), the spending that is
+    // on no job for that year, and what is left of the money received. A search shows the found jobs' own only.
+    var ts = sumOf(pool, function (x) { return spentOn(x[0]); }), yr = spendYear(f), tg = q ? 0 : generalSpend(yr).total, cut = function (n) { return (n < -0.5 ? '-' : '') + whole(Math.abs(n)); };
+    if (ts || tg) lines = lines.concat([['Spent on these jobs', whole(ts)]], q ? [] : [['General spending, ' + yr, whole(tg)]], [['Profit: received less spending', cut(tr - ts - tg), ' total']]);
     return (q ? '' : filterBar('ff', list.length)) +
       '<div class="fintot">' + kv(lines) + '<p class="note" style="margin:10px 0 0">All ' + pool.length + (pool.length === 1 ? ' job' : ' jobs') +
-        (q ? ' found' : f === 'queue' ? ' being worked' : ' of ' + f) + '. ' + list.length + (list.length === 1 ? ' carries' : ' carry') + ' a balance, listed below.</p></div>' +
-      '<div class="rows">' + (list.map(function (x) { return finRow(x[0], x[1]); }).join('') || '<div class="empty">No job here carries a balance.</div>') + '</div>';
+        (q ? ' found' : f === 'queue' ? ' being worked' : ' of ' + f) + '. ' + list.length + (list.length === 1 ? ' carries' : ' carry') + ' a balance, listed below.' +
+        ((ts || tg) && DATA.spend_since ? ' Spending is counted from ' + esc(day(DATA.spend_since)) + ' on; what was spent before that is not in the profit.' : '') + '</p></div>' +
+      '<div class="rows">' + (list.map(function (x) { return finRow(x[0], x[1]); }).join('') || '<div class="empty">No job here carries a balance.</div>') + '</div>' +
+      (q ? '' : generalBlock(yr));
   }
   function matches(p, q) {
     var hay = [p.no, p.address, p.contact, p.company, p.type, p.phase].concat(p.people.map(function (x) { return x.name + ' ' + x.company; })).join(' ').toLowerCase();
@@ -1779,6 +1920,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
         (adjOn ? '<p class="note" style="margin-top:8px">The totals follow when you save.</p>' : savingEdit(p) ? '<p class="note" style="margin-top:8px">Saving your edit…</p>' : ''), '',
         !CFG || m.due == null ? '' : adjOn ? saveCancel('adj') : '<button class="text quiet" type="button" id="adj-open">Edit</button>');
     }
+    h += expSec(p, m, m && m.value != null && m.sheet_due != null ? m.value - m.sheet_due : null);
     if (p.permit) {
       var pm = p.permit;
       h += sec('Permit', kv([['City', pm.city], ['Record', pm.record || 'none yet'], ['Stage', [pm.stage, pm.round ? 'round ' + pm.round : ''].filter(Boolean).join(', ')],
@@ -2476,7 +2618,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       ASKS = { questions: d.questions || [], rules: d.rules || [] };
       if (JSON.stringify(ASKS) !== before && !typing) render();
     }).catch(function () {});
-    loadActs(); loadAdj();
+    loadActs(); loadAdj(); loadExp();
   }
   // A SCHEDULE CHANGE SHOWS AT ONCE (Lance, 25 Nov 2026, minutes after Jake moved 26-84 to In Design: "Jake drafted the
   // invoice but didn't change the phase. Seems half done"). Jake had changed it; the page still showed the last read of
