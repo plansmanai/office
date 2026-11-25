@@ -521,7 +521,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261125-092209";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261125-092601";</script>
 </head>
 <body>
 
@@ -702,7 +702,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   function chatSeen() { try { return localStorage.getItem(SEEN_KEY) || ''; } catch (e) { return ''; } }
   // what he wrote about a text that is on no project reads as he wrote it, without the reference the page added
   function tidy(body) {
-    var m = /^About the (text|voicemail) from (.+?) that is not on a project \[text:[^\]]+\][\s\S]*?\n\nLance: ([\s\S]*)$/.exec(body || '');
+    var m = /^About the (text|voicemail|email) from (.+?)(?: \("[\s\S]*?", message_id [^)]*\))? that is not on a project \[(?:text|email):[^\]]+\][\s\S]*?\n\nLance: ([\s\S]*)$/.exec(body || '');
     if (m) return 'About the ' + m[1] + ' from ' + m[2] + ': ' + m[3];
     m = /^About the rule waiting for my OK \[need:[^\]]+\][\s\S]*?\n\nLance: ([\s\S]*)$/.exec(body || '');
     if (m) return 'About the rule waiting for your OK: ' + m[1];
@@ -730,17 +730,45 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       'data-need-send="' + esc(key) + '" data-proj="' + esc(proj) + '"');
     return h + btnRow([black, replyBtn(key), gray, edit]);
   }
+  // WHAT IS ON NO PROJECT IS IN CHAT, UNDER PENDING (Lance, 25 Nov 2026, of the Queue's "Not on a project" box: "This
+  // should be on the general chat, not here, and it should show up under pending"). A text, a voicemail or an email
+  // that Jake could not tie to a job (a new caller, the State's notice to the firm) is about no job, so it belongs to
+  // the general conversation: a box in the thread at the time Jake put it to him, counted by the Pending button and the
+  // number on the Chat tab, with the same buttons it had (Handled, Reply, and Send on a draft). One is shown only while
+  // it needs him or has a draft waiting; Handled leaves its quiet line, with Undo, while the page is open.
+  function looseDraft(t) { var tk = looseKey(t.id); return DRAFTS.filter(function (x) { return x.item_key === tk && x.state !== 'sent'; }).slice(-1)[0] || null; }
+  function looseWaits(t) { return !MARKS[looseKey(t.id)] && !!(looseDraft(t) || t.needs_lance); }
+  function looseShown() {
+    return looseAll().filter(function (t) { var tk = looseKey(t.id), mk = MARKS[tk]; return mk ? sinceOpen(ms(mk.marked_at)) : !!(looseDraft(t) || t.needs_lance || quietOn(tk)); });
+  }
+  function looseBox(t) {
+    var mail = t.channel === 'email', tk = looseKey(t.id), rk = 'loose:' + t.id, mk = MARKS[tk], name = t.who + (mail ? ' emailed' : t.channel === 'voicemail' ? ' left a voicemail' : ' texted');
+    if (mk) return '<div class="msg jake"><div class="cleared">' + quietLine('Handled', mk.marked_at, name, CFG ? undoBtn('data-loose-open="' + esc(t.id) + '"') : '') + '</div>' + quietOn(tk) + '</div>';
+    var d = looseDraft(t);
+    // what he told Jake about it, and Jake's answer, on the box itself
+    var talk = itemThread(SAID.filter(function (x) { return x.proj_no === 'office' && (x.body || '').indexOf('[' + tk + ']') >= 0; }));
+    var act = !CFG ? '' : state.needReply === rk
+      ? replyBox(rk, 'Tell Jake what to do', 'data-loose="' + esc(t.id) + '"', state.loose[t.id], 'data-loose-send="' + esc(t.id) + '"')
+      : btnRow([btn('go', 'Handled', 'data-loose-done="' + esc(t.id) + '"'), replyBtn(rk)]);
+    return '<div class="msg jake' + (looseWaits(t) ? ' pend' : '') + '"><div class="lbl">' + esc(name) + ' · ' + esc(stamp(t.when)) + ' · not on a project</div><div class="item">' +
+      (mail ? '<div class="head"><b>' + esc(t.subject || '(no subject)') + '</b></div>' + (t.summary ? '<div class="body">' + esc(t.summary) + '</div>' : '')
+            : (textWords(tk) || (t.summary ? '<div class="body">' + esc(t.summary) + '</div>' : ''))) +
+      (t.phone ? '<div class="reach">' + phoneLinks(t.phone) + '</div>' : '') +
+      (t.jake && !(d && d.note) ? '<div class="body"><b>Jake: </b>' + esc(t.jake) + '</div>' : '') + (d ? draftBlock(d, true) : '') + quietOn(tk) + talk + act + '</div></div>';
+  }
   function chatItems() {
     var noProj = function (d) { return !d.proj_no || !BY[d.proj_no]; };
-    var openDec = {};
+    var openDec = {}, loose = looseShown();
     DEC.open.forEach(function (d) { openDec['decision:' + d.id] = 1; });
     ASKS.rules.forEach(function (r) { openDec['rule:' + r.id] = 1; });
-    var onDec = function (x) { var m = /\[need:([^\]]+)\]/.exec(x.body || ''); return !!m && openDec[m[1]]; };
+    loose.forEach(function (t) { openDec[looseKey(t.id)] = 1; });      // what he said about one is shown on its box, not as a line of its own
+    var onDec = function (x) { var m = /\[(?:need:)?((?:decision|rule|text|email):[^\]]+)\]/.exec(x.body || ''); return !!m && openDec[m[1]]; };
     var items = SAID.filter(function (x) { return x.proj_no === 'office' && !onDec(x); }).map(function (x) { return { at: x.created_at, said: x }; })
       .concat(NOTES.map(function (n) { return { at: n.created_at, note: n }; }))
       .concat(DEC.open.filter(noProj).map(function (d) { return { at: d.created_at, dec: d }; }))
       .concat(DEC.recent.filter(noProj).map(function (d) { return { at: d.decided_at, done: d }; }))
       .concat(ASKS.rules.filter(noProj).map(function (r) { return { at: r.created_at, rule: r }; }))      // a rule waiting for his OK (one from a job is in that job's thread)
+      .concat(loose.map(function (t) { var mk = MARKS[looseKey(t.id)]; return { at: mk ? mk.marked_at : t.raised || t.when, loose: t }; }))      // a text or an email on no project
       .concat(QUIET.filter(function (q) { return !q.proj && !q.item && !underSaid(q); }).map(function (q) { return { at: q.at, quiet: q }; }));      // the quiet line where a box of this thread was
     items.sort(function (a, b) { return new Date(a.at) - new Date(b.at); });
     return items;
@@ -749,6 +777,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   // checked, a draft with Send on it). It stops being pending the moment he deals with it.
   function chatPending(it) {
     if (it.dec || it.rule) return true;
+    if (it.loose) return looseWaits(it.loose);
     if (it.said) return DRAFTS.some(function (d) { return d.instruction_id === it.said.id && (d.state === 'draft' || d.state === 'stale' || d.state === 'failed'); });
     return false;
   }
@@ -757,13 +786,14 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     SAID.forEach(function (x) { if (x.proj_no === 'office' && x.replied_at && x.replied_at > t) t = x.replied_at; });
     NOTES.forEach(function (n) { if (n.created_at > t) t = n.created_at; });
     DEC.open.forEach(function (d) { if ((!d.proj_no || !BY[d.proj_no]) && d.created_at > t) t = d.created_at; });
+    looseAll().forEach(function (x) { if (looseWaits(x) && (x.raised || x.when) > t) t = x.raised || x.when; });
     ASKS.rules.forEach(function (r) { if ((!r.proj_no || !BY[r.proj_no]) && r.created_at > t) t = r.created_at; });
     return t;
   }
   function chat() {
     var items = chatItems();
     // Pending also keeps the quiet line of what he has just settled, so a box never vanishes under his thumb
-    if (state.chatPending) items = items.filter(function (it) { return chatPending(it) || it.quiet || (it.done && sinceOpen(ms(it.done.decided_at))) || (it.said && QUIET.some(function (q) { return q.inst === it.said.id; })); });
+    if (state.chatPending) items = items.filter(function (it) { return chatPending(it) || it.quiet || it.loose || (it.done && sinceOpen(ms(it.done.decided_at))) || (it.said && QUIET.some(function (q) { return q.inst === it.said.id; })); });
     var KEEP = 40, earlier = state.chatAll || state.chatPending ? 0 : Math.max(0, items.length - KEEP);
     if (!items.length) return '<p class="empty">' + (state.chatPending ? 'Nothing is pending.' : 'Nothing here yet. Write to Jake below; his news shows here too.') + '</p>';
     return (earlier ? '<button class="text more" id="more-chat" type="button">Show ' + earlier + ' earlier</button>' : '') + items.slice(earlier).map(function (it) {
@@ -773,6 +803,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
         return '<div class="msg jake pend"><div class="lbl">' + esc(askName(d)) + (d.state === 'asked' ? ' asks' : ' did this') + ' · ' + esc(stamp(d.created_at)) + '</div>' +
           (d.state === 'asked' ? '<div class="item"><div class="head"><b>' + esc(d.what) + '</b></div>' + decAsk(d) + '</div>' : decShown(d)) + '</div>';
       }
+      if (it.loose) return looseBox(it.loose);
       if (it.rule) return '<div class="msg jake pend"><div class="lbl">' + esc(ruleLabel(it.rule)) + ' · ' + esc(stamp(it.rule.created_at)) + '</div>' + ruleItem(it.rule, true) + '</div>';
       if (it.done) return '<div class="msg jake">' + decRecent(it.done) + '</div>';      // the quiet line says who and when
       if (it.quiet) return '<div class="msg jake"><div class="cleared">' + quietHtml(it.quiet) + '</div></div>';
@@ -1315,36 +1346,10 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       });
     }
     var cleared = group('ours');
-    // Texts and voicemails that are about no project (a new caller, a question Jake could not place): shown only
-    // when one needs him or has a draft waiting, with the text in its own words and what Jake asks.
-    // The standard's box: the label line says who texted or left a voicemail and when; Handled is the black button;
-    // Reply opens the box that tells Jake what to do with it (it was always open before). Handled leaves its quiet
-    // line here, with Undo, while the page is open.
-    // AN EMAIL ON NO PROJECT IS HERE TOO (Lance, 25 Nov 2026: "Jake missed an email on Corrine. It had a weird subject but
-    // it was from the same client and he skipped it"): Jake reads every email a person sends that the filing rules put
-    // on no job and files it; one he could not place, or that is about no job and needs Lance, shows here like a text.
-    var looseOpen = 0;
-    var loose = looseAll().sort(function (x, y) { return x.when < y.when ? 1 : x.when > y.when ? -1 : 0; }).map(function (t) {
-      var mail = t.channel === 'email', tk = looseKey(t.id), rk = 'loose:' + t.id, mk = MARKS[tk], name = t.who + (mail ? ' emailed' : t.channel === 'voicemail' ? ' left a voicemail' : ' texted');
-      var d = DRAFTS.filter(function (x) { return x.item_key === tk && x.state !== 'sent'; }).slice(-1)[0];
-      if (mk) return sinceOpen(ms(mk.marked_at)) ? '<div class="cleared">' + quietLine('Handled', mk.marked_at, name, CFG ? undoBtn('data-loose-open="' + esc(t.id) + '"') : '') + '</div>' + quietOn(tk) : '';      // he marked it Handled
-      var dropped = quietOn(tk);                                  // a draft on it that he dropped just now
-      if (!d && !t.needs_lance && !dropped) return '';
-      if (d || t.needs_lance) looseOpen++;
-      var n = { kind: 'text', days: t.days };
-      // what he told Jake about this text, and Jake's answer, on the text itself
-      var talk = itemThread(SAID.filter(function (x) { return x.proj_no === 'office' && (x.body || '').indexOf('[' + tk + ']') >= 0; }));
-      var act = !CFG ? '' : state.needReply === rk
-        ? replyBox(rk, 'Tell Jake what to do', 'data-loose="' + esc(t.id) + '"', state.loose[t.id], 'data-loose-send="' + esc(t.id) + '"')
-        : btnRow([btn('go', 'Handled', 'data-loose-done="' + esc(t.id) + '"'), replyBtn(rk)]);
-      return '<div class="item s' + sev(n) + '">' + labLine(name, t.when, bub(n, 'Reply ' + dtext(t.days))) +
-        (mail ? '<div class="body"><b>' + esc(t.subject || '') + '</b>' + (t.summary ? '<br>' + esc(t.summary) : '') + '</div>'
-              : (textWords(tk) || (t.summary ? '<div class="body">' + esc(t.summary) + '</div>' : ''))) +
-        (t.phone ? '<div class="reach">' + phoneLinks(t.phone) + '</div>' : '') +
-        (t.jake && !(d && d.note) ? '<div class="body"><b>Jake: </b>' + esc(t.jake) + '</div>' : '') + (d ? draftBlock(d, true) : '') + dropped + talk + act + '</div>';
-    }).filter(Boolean);
-    var looseSec = loose.length ? '<h2>Not on a project <span class="n">' + looseOpen + '</span><small>Texts and emails Jake could not tie to a job.</small></h2><div class="sec need loose">' + loose.join('') + '</div>' : '';
-    return looseSec + section('Needs you', '', needRows, dist) +
+    // WHAT IS ON NO PROJECT IS NOT HERE: the Queue is the jobs. A text, voicemail or email Jake could not tie to a job is
+    // a box in Chat, counted by its Pending button (Lance, 25 Nov 2026, circling it here: "This should be on the general
+    // chat, not here, and it should show up under pending"). See looseBox.
+    return section('Needs you', '', needRows, dist) +
       (cleared.length ? section('Nothing open for you', 'In our court. You marked everything handled or not yours.', cleared) : '') +
       section('Waiting on the client', '', group('client')) +
       section('At the city', '', group('city')) +
