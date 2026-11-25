@@ -253,14 +253,22 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .adjform label { display: grid; gap: 4px; font-family: var(--sans); font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
 .adjform select, .adjform input { font: inherit; font-size: 16px; letter-spacing: 0; text-transform: none; padding: 8px 9px; border: 1px solid var(--rule); border-radius: 0; background: transparent; color: var(--ink); width: 100%; box-sizing: border-box; text-align: left; }
 .item.adj .body button.text { margin-left: 8px; }
+.adjform.two { grid-template-columns: 1fr 1fr; padding: 12px 10px; }
+.adjform.two > * { min-width: 0; }
+.adjform .wide { grid-column: 1 / -1; }
+.adjform .pehead { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-family: var(--serif, inherit); }
+.adjform .pehead b { font-weight: 600; }
+.adjform input[type="date"] { -webkit-appearance: none; appearance: none; min-height: 38px; min-width: 0; padding-left: 6px; padding-right: 4px; }
+.adjform.gone { opacity: .5; border-color: var(--rule); }
+button.add.pe { display: block; background: none; border: 0; padding: 4px 0 14px; font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .62rem; color: var(--ink); cursor: pointer; }
 .row.fin .rtags .ph { order: 0; margin-right: 0; }
 .row.fin .rhead { background: var(--bar); }      /* the grey title bar, as on the Projects rows (Lance, 24 Nov 2026) */
 .row.fin .rtags .bal { order: 1; margin-left: auto; font-weight: 500; font-variant-numeric: tabular-nums; }
 .row.fin .rtags .bal.late { color: var(--red, #9a3b34); }
-#totop { position: fixed; right: max(14px, env(safe-area-inset-right, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); z-index: 60; width: 46px; height: 46px; padding: 0;
+#totop { position: fixed; right: env(safe-area-inset-right, 0px); bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); z-index: 60; width: 26px; height: 46px; padding: 0; border-right: 0; opacity: .9;
   border: 1px solid var(--ink); border-radius: 0; background: var(--bg); color: var(--ink); cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 8px rgba(27, 27, 25, .14); }
 #totop[hidden] { display: none; }
-#totop svg { width: 18px; height: 18px; }
+#totop svg { width: 15px; height: 15px; }
 .sec h3.tooled { position: relative; }
 .sec h3 .sectool { position: absolute; right: 34px; top: 50%; transform: translateY(-50%); margin: 0; gap: 6px; flex-wrap: nowrap; }
 .sec h3 .sectool button.go { font-size: .64rem; padding: 6px 12px 5px 13px; min-height: 0; }
@@ -503,7 +511,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-192410";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-193802";</script>
 </head>
 <body>
 
@@ -913,6 +921,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
             return;
           }
           if (!m) return;
+          if (k.indexOf('slot.') === 0) { slotSet(m, p, k.split('.')[1], k.split('.')[2], to == null ? '' : String(to)); return; }
           var z = k.split('.'), row = z[1], w = z[2], it = m.items.filter(function (i) { return String(i.row) === row; })[0];
           if (!it) { it = { row: row, date: '', hours: '', desc: '', billed: '', amount: 0 }; m.items.push(it); }
           if (w === 'amount') { var o = it.amount || 0, n = num(to) || 0; it.amount = n; m.add_services = (m.add_services || 0) + n - o; bump(n - o); }
@@ -927,6 +936,11 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     }
     if (m) m.items = m.items.filter(function (i) { return i.amount || i.desc; });
     if (m) {
+      m.invoices = (m.invoices || []).filter(function (i) { return i.sent || i.paid || i.amount; }).sort(function (x, y) { return slotNo(x.no) - slotNo(y.no); });
+      if (m.pays) m.pays = m.pays.filter(function (x) { return x.amount; }).sort(function (x, y) { return x.n - y.n; });
+      if (m.due != null) m.due = Math.round(m.due * 100) / 100;
+    }
+    if (m) {
       // the balance is the sheet's (value less payments) less the job's adjustments; `sheet_due` keeps the sheet's own
       m.adjust = ADJ.filter(function (a) { return a.proj_no === p.no; });
       m.sheet_due = m.due; m.less = 0; m.credit = 0;
@@ -934,6 +948,53 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       if (m.due != null) m.due = Math.round((m.due - m.less + m.credit) * 100) / 100;
     }
     return { fees: f, money: m, scope: scope, inc: inc };
+  }
+  // One cell of an invoice (2026: sent, billed, paid_on, paid) or of a payment (2025, 2024: paid, paid_on, method),
+  // laid over what the last read showed. Money received takes the balance down by the same amount.
+  function slotNo(no) { return +String(no).split('.').pop() || 0; }
+  function slotSet(m, p, n, w, to) {
+    var got = function (o, nv) { if (m.due != null) m.due -= nv - o; };
+    if (m.pays !== undefined) {
+      var x = m.pays.filter(function (i) { return String(i.n) === n; })[0];
+      if (!x) { x = { n: +n, amount: 0, date: '', method: '' }; m.pays.push(x); }
+      if (w === 'paid') { var nv = num(to) || 0; got(x.amount || 0, nv); x.amount = nv; }
+      else if (w === 'paid_on') x.date = to;
+      else if (w === 'method') x.method = to;
+      return;
+    }
+    var no = p.no + '.' + n, i = m.invoices.filter(function (v) { return v.no === no; })[0];
+    if (!i) { i = { no: no, sent: '', billed: null, paid: '', amount: null }; m.invoices.push(i); }
+    if (w === 'sent') i.sent = to;
+    else if (w === 'paid_on') i.paid = to;
+    else if (w === 'billed') i.billed = num(to) || null;
+    else if (w === 'paid') { var nw = num(to) || 0; got(i.amount || 0, nw); i.amount = nw || null; }
+  }
+  // dates: the sheet shows 9/24/26; a date box holds 2026-09-24
+  function toIso(t) { var z = /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2}|\d{4})$/.exec(String(t || '').trim()); return z ? (z[3].length === 2 ? '20' + z[3] : z[3]) + '-' + ('0' + z[1]).slice(-2) + '-' + ('0' + z[2]).slice(-2) : null; }
+  function fromIso(t) { var z = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(t || '').trim()); return z ? (+z[2]) + '/' + (+z[3]) + '/' + z[1].slice(2) : String(t || '').trim(); }
+  // Edit on Invoices and balance: every invoice or payment and every adjustment, each detail in a box
+  var PAY_FIELDS = { invoices: [['sent', 'Sent', 'date'], ['billed', 'Billed', 'num'], ['paid_on', 'Paid on', 'date'], ['paid', 'Received', 'num']],
+                     pays: [['paid', 'Amount', 'num'], ['paid_on', 'Date', 'date'], ['method', 'Method', 'text']] };
+  var PAY_MAX = { invoices: 10, pays: 5 };
+  function payLayout(m) { return m && m.pays !== undefined ? 'pays' : 'invoices'; }
+  function adjRow(x) { return { id: x.id, kind: x.kind, amount: plain(Math.abs(+x.amount || 0)), note: x.note || '', orig: x, gone: false }; }
+  function openBalance(p) {
+    if (savingEdit(p)) { state.adjMsg = 'Still saving your last edit. Try again in a few seconds.'; render(); return; }
+    var m = edited(p).money || {}, lay = payLayout(m);
+    var slots = lay === 'pays'
+      ? (m.pays || []).map(function (x) { return { n: x.n, v: { paid: x.amount ? plain(x.amount) : '', paid_on: x.date || '', method: x.method || '' } }; })
+      : (m.invoices || []).map(function (i) { return { n: slotNo(i.no), v: { sent: i.sent || '', billed: i.billed ? plain(i.billed) : '', paid_on: i.paid || '', paid: i.amount ? plain(i.amount) : '' } }; });
+    slots.forEach(function (sl) {
+      sl.orig = JSON.parse(JSON.stringify(sl.v)); sl.gone = false; sl.text = {};
+      PAY_FIELDS[lay].forEach(function (f) {          // a date the sheet holds as words stays a plain box
+        if (f[2] !== 'date') return;
+        var iso = toIso(sl.v[f[0]]);
+        if (sl.v[f[0]] && !iso) sl.text[f[0]] = true; else sl.v[f[0]] = iso || '';
+      });
+    });
+    state.adjust = p.no; state.adjMsg = '';
+    state.adjForm = { layout: lay, slots: slots, adjs: (m.adjust || []).map(adjRow) };
+    render();
   }
   function openMoney(p, focus) {
     if (savingEdit(p)) { state.moneyMsg = 'Still saving your last edit. Try again in a few seconds.'; render(); return; }
@@ -978,17 +1039,42 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     sendEdit(p, ch, function () { state.editMoney = null; state.moneyForm = null; }, function (m) { state.moneyMsg = m; });
   }
   function saveAdjust(p) {
-    var F = state.adjForm, m = edited(p).money || {}, ch = {}, amt = num(F.amount), today = new Date(), iso = today.getFullYear() + '-' + ('0' + (today.getMonth() + 1)).slice(-2) + '-' + ('0' + today.getDate()).slice(-2);
-    if (amt === null) { state.adjMsg = 'The amount is not a number. Use digits, like 200 or 112.50.'; render(); return; }
-    (m.adjust || []).forEach(function (x) { if (F.gone[x.id]) ch['adj.' + x.id] = { from: { kind: x.kind, amount: x.amount, note: x.note, date: x.date }, to: null }; });
-    // an overpayment brings a minus balance UP, so it is kept as a minus amount; every other reason takes the balance down
-    if (amt) ch['adj.new0'] = { from: null, to: { kind: F.kind, amount: F.kind === 'overpayment' ? -amt : amt, note: (F.note || '').trim(), date: iso } };
-    if (!Object.keys(ch).length) { state.adjust = null; state.adjForm = null; state.adjMsg = ''; render(); return; }
+    var F = state.adjForm, lay = F.layout, ch = {}, ach = {}, bad = '', fresh = 0, today = new Date(), iso = today.getFullYear() + '-' + ('0' + (today.getMonth() + 1)).slice(-2) + '-' + ('0' + today.getDate()).slice(-2);
+    F.slots.forEach(function (sl) {
+      PAY_FIELDS[lay].forEach(function (f) {
+        var k = f[0], was = sl.orig ? sl.orig[k] || '' : '', now = sl.gone ? '' : String(sl.v[k] == null ? '' : sl.v[k]).trim(), same;
+        if (f[2] === 'num') {
+          var nv = num(now);
+          if (nv === null) { bad = 'An amount is not a number. Use digits, like 2500 or 2500.50.'; return; }
+          now = nv ? String(nv) : ''; same = (num(was) || 0) === nv;
+        } else if (f[2] === 'date' && !sl.text[k]) { same = (toIso(was) || '') === now; now = fromIso(now); }
+        else same = was === now;
+        if (!same) ch['slot.' + sl.n + '.' + k] = { from: was, to: now };
+      });
+    });
+    F.adjs.forEach(function (a) {
+      var o = a.orig, amt = num(a.amount), was = o ? { kind: o.kind, amount: o.amount, note: o.note, date: o.date } : null;
+      if (a.gone) { if (o) ach['adj.' + o.id] = { from: was, to: null }; return; }
+      if (amt === null) { bad = 'The amount of an adjustment is not a number. Use digits, like 200 or 112.50.'; return; }
+      if (!amt) { if (o) bad = 'An adjustment needs an amount. To remove it, tap Take off.'; return; }
+      // an overpayment brings a minus balance UP, so it is kept as a minus amount; every other reason takes the balance down
+      var to = { kind: a.kind, amount: a.kind === 'overpayment' ? -amt : amt, note: (a.note || '').trim(), date: o ? o.date : iso };
+      if (!o) ach['adj.new' + (fresh++)] = { from: null, to: to };
+      else if (to.kind !== o.kind || to.amount !== (+o.amount || 0) || to.note !== (o.note || '')) ach['adj.' + o.id] = { from: was, to: to };
+    });
+    if (bad) { state.adjMsg = bad; render(); return; }
+    var shut = function () { state.adjust = null; state.adjForm = null; state.adjMsg = ''; };
+    var sheet = function () { sendEdit(p, ch, shut, function (t) { state.adjMsg = t; }); };
+    if (!Object.keys(ach).length) { sheet(); return; }
     state.adjMsg = 'Saving…'; render();
-    rpc('office_job_adjust', { p_token: token, p_proj: p.no, p_change: ch }).then(function (d) {
-      if (d && d.ok && d.saved) { state.adjust = null; state.adjForm = null; state.adjMsg = ''; loadAdj(); loadActs(); }
-      else state.adjMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and sign in.';
-      render();
+    rpc('office_job_adjust', { p_token: token, p_proj: p.no, p_change: ach }).then(function (d) {
+      if (!(d && d.ok && d.saved)) { state.adjMsg = d && d.ok ? 'Not saved: ' + (d.why || 'try again') + '.' : 'Signed out. Reload and sign in.'; render(); return; }
+      // saved: the form now holds the adjustments as they stand, so a second Save cannot put one on twice
+      return rpc('office_adjustments', { p_token: token }).then(function (r) {
+        if (r && r.ok) ADJ = r.rows || [];
+        if (state.adjForm) state.adjForm.adjs = ADJ.filter(function (x) { return x.proj_no === p.no; }).map(adjRow);
+        if (Object.keys(ch).length) sheet(); else { shut(); loadActs(); render(); }
+      });
     }).catch(function (e) { state.adjMsg = 'Not saved (' + e.message + '). Tap Save again.'; render(); });
   }
   function saveScope(p) {
@@ -1016,6 +1102,13 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       if (k === 'scope') out.push(line('Scope', v.from, v.to));
       else if (k.indexOf('flag.') === 0) out.push(line(k === 'flag.consult' ? 'Consult' : 'Permitting', v.from ? 'quoted only' : 'in the total', v.to ? 'quoted only' : 'in the total'));
       else if (k.indexOf('fee.') === 0) out.push(line(FEE_LABEL[k.slice(4)] || k, usd2(num(v.from) || 0), usd2(num(v.to) || 0)));
+      else if (k.indexOf('slot.') === 0) {
+        var sz = k.split('.'), w = sz[2], pj = BY[a.proj_no], old = pj && pj.money ? pj.money.pays !== undefined : !/^26-/.test(a.proj_no);
+        var name = old ? 'Payment ' + sz[1] + ' ' + ({ paid: 'amount', paid_on: 'date', method: 'method' }[w] || w)
+                       : 'Invoice ' + a.proj_no + '.' + sz[1] + ' ' + ({ sent: 'sent', billed: 'billed', paid_on: 'paid on', paid: 'received' }[w] || w);
+        var mny = w === 'billed' || w === 'paid', sh = function (t) { return mny ? (num(t) ? usd2(num(t)) : '') : t; };
+        out.push(line(name, sh(v.from), sh(v.to)));
+      }
       else { var z = k.split('.'); (items[z[1]] = items[z[1]] || {})[z[2]] = v; }
     });
     Object.keys(items).forEach(function (r) {
@@ -1035,6 +1128,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   function adjWords(a) {
     return Object.keys(a.change || {}).map(function (k) {
       var v = a.change[k];
+      if (v.to && v.from) return '<div class="body"><b>Changed:</b> ' + esc(adjOne(v.from)) + ' <span class="arrow">to</span> <b>' + esc(adjOne(v.to)) + '</b></div>';
       return '<div class="body">' + (v.to ? '<b>Put on:</b> ' + esc(adjOne(v.to)) : '<b>Taken off:</b> ' + esc(adjOne(v.from || {}))) + '</div>';
     }).join('');
   }
@@ -1619,28 +1713,46 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     if (m) {
       // what was invoiced, then any adjustment, then what is still owed, together (Lance, 24 Nov 2026: "combine")
       var got = m.value != null && m.sheet_due != null ? m.value - m.sheet_due : null, adjOn = CFG && state.adjust === p.no && state.adjForm, AF = state.adjForm;
-      var bodyHtml = m.invoices.map(function (i) {
-        return '<div class="item"><div class="head"><b>Invoice ' + esc(i.no) + '</b><span' + (i.paid ? '' : ' class="late"') + '>' + esc(i.paid ? 'paid ' + i.paid : 'not marked paid') + '</span></div>' +
-          '<div class="body">sent ' + esc(i.sent || '?') + (i.amount != null ? ' · ' + usd(i.amount) + ' received' : '') + '</div></div>';
-      }).join('') + (m.pays || []).map(function (x) {
-        return '<div class="item"><div class="head"><b>Payment ' + esc(x.n) + '</b><span>' + esc(x.date || '') + '</span></div>' +
-          '<div class="body">' + usd2(x.amount) + ' received' + (x.method ? ' · ' + esc(x.method) : '') + '</div></div>';
-      }).join('') + m.adjust.map(function (x) {
-        var gone = adjOn && AF.gone[x.id];
-        return '<div class="item adj"' + (gone ? ' style="opacity:.45"' : '') + '><div class="head"><b>' + esc(ADJ_KIND[x.kind] || 'Adjustment') + '</b><span>' + esc(day(x.date)) + '</span></div>' +
-          '<div class="body">' + esc(usd2(Math.abs(+x.amount || 0))) + (x.note ? ' · ' + esc(x.note) : '') +
-          (adjOn ? ' <button type="button" class="text quiet" data-adj-del="' + x.id + '">' + (gone ? 'Keep it' : 'Take off') + '</button>' : '') + '</div></div>';
-      }).join('');
-      // the form for a new one: the reason, the amount (already what would bring the balance to nothing), a note
-      var form = adjOn ? '<div class="adjform"><label>Reason<select id="adj-kind">' + Object.keys(ADJ_KIND).map(function (k) {
-          return '<option value="' + k + '"' + (AF.kind === k ? ' selected' : '') + '>' + esc(ADJ_KIND[k]) + '</option>'; }).join('') + '</select></label>' +
-        '<label>Amount<input class="amt" type="text" inputmode="decimal" id="adj-amt" value="' + esc(AF.amount) + '" aria-label="Amount of the adjustment"></label>' +
-        '<label>Note<input type="text" id="adj-note" value="' + esc(AF.note) + '" placeholder="Why" autocomplete="off"></label></div>' : '';
+      var bodyHtml = '', form = '';
+      if (adjOn) {
+        // every detail in a box: each invoice or payment, then each adjustment; + adds the next one
+        var lay = AF.layout, PF = PAY_FIELDS[lay], word = lay === 'pays' ? 'Payment ' : 'Invoice ' + p.no + '.';
+        form = AF.slots.map(function (sl, i) {
+          return '<div class="adjform two' + (sl.gone ? ' gone' : '') + '"><div class="pehead"><b>' + esc(word + sl.n) + '</b>' +
+            '<button type="button" class="text quiet" data-slot-del="' + i + '">' + (sl.gone ? 'Keep it' : 'Take off') + '</button></div>' +
+            (sl.gone ? '' : PF.map(function (f) {
+              var isDate = f[2] === 'date' && !sl.text[f[0]];
+              return '<label' + (f[0] === 'method' ? ' class="wide"' : '') + '>' + f[1] + '<input' + (f[2] === 'num' ? ' class="amt" inputmode="decimal"' : '') + ' type="' + (isDate ? 'date' : 'text') +
+                '" data-slot="' + i + '" data-f="' + f[0] + '" value="' + esc(sl.v[f[0]] || '') + '" aria-label="' + esc(word + sl.n + ' ' + f[1]) + '" autocomplete="off"></label>';
+            }).join('')) + '</div>';
+        }).join('') +
+        (AF.slots.length < PAY_MAX[lay] ? '<button class="add pe" type="button" id="slot-add">' + (lay === 'pays' ? '+ Payment' : '+ Invoice or payment') + '</button>' : '') +
+        AF.adjs.map(function (x, i) {
+          return '<div class="adjform two' + (x.gone ? ' gone' : '') + '"><div class="pehead"><b>' + (x.gone ? esc(ADJ_KIND[x.kind] || 'Adjustment') : 'Adjustment') + '</b>' +
+            '<button type="button" class="text quiet" data-adj-del="' + i + '">' + (x.gone ? 'Keep it' : 'Take off') + '</button></div>' +
+            (x.gone ? '' : '<label class="wide">Reason<select data-adj="' + i + '" data-f="kind">' + Object.keys(ADJ_KIND).map(function (k) {
+                return '<option value="' + k + '"' + (x.kind === k ? ' selected' : '') + '>' + esc(ADJ_KIND[k]) + '</option>'; }).join('') + '</select></label>' +
+              '<label>Amount<input class="amt" type="text" inputmode="decimal" data-adj="' + i + '" data-f="amount" value="' + esc(x.amount) + '" aria-label="Amount of the adjustment"></label>' +
+              '<label>Note<input type="text" data-adj="' + i + '" data-f="note" value="' + esc(x.note) + '" placeholder="Why" autocomplete="off"></label>') + '</div>';
+        }).join('') + '<button class="add pe" type="button" id="adj-add">+ Adjustment</button>';
+      } else {
+        bodyHtml = m.invoices.map(function (i) {
+          return '<div class="item"><div class="head"><b>Invoice ' + esc(i.no) + '</b><span' + (i.paid ? '' : ' class="late"') + '>' + esc(i.paid ? 'paid ' + i.paid : 'not marked paid') + '</span></div>' +
+            '<div class="body">' + [i.sent ? 'sent ' + esc(i.sent) : '', i.billed ? 'billed ' + usd2(i.billed) : '', i.amount != null ? usd2(i.amount) + ' received' : ''].filter(Boolean).join(' · ') + '</div></div>';
+        }).join('') + (m.pays || []).map(function (x) {
+          return '<div class="item"><div class="head"><b>Payment ' + esc(x.n) + '</b><span>' + esc(x.date || '') + '</span></div>' +
+            '<div class="body">' + usd2(x.amount) + ' received' + (x.method ? ' · ' + esc(x.method) : '') + '</div></div>';
+        }).join('') + m.adjust.map(function (x) {
+          return '<div class="item adj"><div class="head"><b>' + esc(ADJ_KIND[x.kind] || 'Adjustment') + '</b><span>' + esc(day(x.date)) + '</span></div>' +
+            '<div class="body">' + esc(usd2(Math.abs(+x.amount || 0))) + (x.note ? ' · ' + esc(x.note) : '') + '</div></div>';
+        }).join('');
+      }
       var totals = m.due == null ? '' : '<div style="margin-top:' + (bodyHtml ? '12' : '0') + 'px">' +
         kv([['Total value', usd2(m.value)], ['Received', got != null ? usd2(got) : ''], ['Adjustments', m.less ? '-' + usd2(m.less) : ''], ['Overpaid, held as credit', m.credit ? usd2(m.credit) : '']]
           .filter(function (x) { return x[1]; }).concat([['Balance due', usd2(m.due) || '$0', ' total']])) + '</div>';
-      h += sec('Invoices and balance', (state.adjMsg ? '<p class="note" style="margin:0 0 8px">' + esc(state.adjMsg) + '</p>' : '') + form + bodyHtml + totals, '',
-        !CFG || m.due == null ? '' : adjOn ? saveCancel('adj') : '<button class="text quiet" type="button" id="adj-open">Adjust</button>');
+      h += sec('Invoices and balance', (state.adjMsg ? '<p class="note" style="margin:0 0 8px">' + esc(state.adjMsg) + '</p>' : '') + form + bodyHtml + totals +
+        (adjOn ? '<p class="note" style="margin-top:8px">The totals follow when you save.</p>' : savingEdit(p) ? '<p class="note" style="margin-top:8px">Saving your edit…</p>' : ''), '',
+        !CFG || m.due == null ? '' : adjOn ? saveCancel('adj') : '<button class="text quiet" type="button" id="adj-open">Edit</button>');
     }
     if (p.permit) {
       var pm = p.permit;
@@ -1817,20 +1929,36 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       on('items-tog', function () { if (state.editMoney === p.no) return; state.itemsOpen[p.no] = !state.itemsOpen[p.no]; render(); });
       on('item-add', function () { state.moneyForm.items.push({ row: null, desc: '', amount: '', orig: null }); render(); var d = $('detail').querySelectorAll('[data-item-desc]'); if (d.length) d[d.length - 1].focus(); });
       on('more-edits', function () { state.allEdits = true; render(); });
-      // an adjustment to the balance: Adjust opens the form with the amount that would bring the balance to nothing
-      on('adj-open', function () {
-        var bal = (edited(p).money || {}).due || 0;
-        state.adjust = p.no; state.adjMsg = '';
-        state.adjForm = { kind: bal < 0 ? 'overpayment' : p.phase === 'Abandoned' ? 'abandoned' : 'discount', amount: bal ? String(Math.abs(bal)) : '', note: '', gone: {} };
-        render(); var el = document.getElementById('adj-amt'); if (el) { el.focus(); el.select(); }
-      });
+      // Invoices and balance: Edit opens every invoice or payment and every adjustment
+      on('adj-open', function () { openBalance(p); });
       on('adj-cancel', function () { state.adjust = null; state.adjForm = null; state.adjMsg = ''; render(); });
       on('adj-save', function () { saveAdjust(p); });
-      ['adj-kind', 'adj-amt', 'adj-note'].forEach(function (id) {
-        var el = document.getElementById(id);
-        if (el) el.addEventListener(id === 'adj-kind' ? 'change' : 'input', function () { state.adjForm[id.slice(4) === 'amt' ? 'amount' : id.slice(4)] = el.value; });
+      on('slot-add', function () {
+        var F = state.adjForm, n = 1;
+        while (F.slots.some(function (x) { return x.n === n; })) n++;
+        F.slots.push({ n: n, v: {}, orig: null, gone: false, text: {} });
+        render(); var el = $('detail').querySelectorAll('[data-slot="' + (F.slots.length - 1) + '"]'); if (el.length) el[0].focus();
       });
-      each('[data-adj-del]', 'click', function (el) { var id = el.getAttribute('data-adj-del'); state.adjForm.gone[id] = !state.adjForm.gone[id]; render(); });
+      on('adj-add', function () {
+        // a new adjustment starts as the amount that would bring the balance to nothing
+        var bal = (edited(p).money || {}).due || 0, F = state.adjForm;
+        F.adjs.push({ id: null, kind: bal < 0 ? 'overpayment' : p.phase === 'Abandoned' ? 'abandoned' : 'discount', amount: bal ? plain(Math.abs(bal)) : '', note: '', orig: null, gone: false });
+        render(); var el = $('detail').querySelector('[data-adj="' + (F.adjs.length - 1) + '"][data-f="amount"]'); if (el) { el.focus(); el.select(); }
+      });
+      ['input', 'change'].forEach(function (ev) {
+        each('[data-slot]', ev, function (el) { state.adjForm.slots[+el.getAttribute('data-slot')].v[el.getAttribute('data-f')] = el.value; });
+        each('[data-adj]', ev, function (el) { state.adjForm.adjs[+el.getAttribute('data-adj')][el.getAttribute('data-f')] = el.value; });
+      });
+      each('[data-slot-del]', 'click', function (el) {
+        var F = state.adjForm, i = +el.getAttribute('data-slot-del');
+        if (F.slots[i].orig) F.slots[i].gone = !F.slots[i].gone; else F.slots.splice(i, 1);
+        render();
+      });
+      each('[data-adj-del]', 'click', function (el) {
+        var F = state.adjForm, i = +el.getAttribute('data-adj-del');
+        if (F.adjs[i].orig) F.adjs[i].gone = !F.adjs[i].gone; else F.adjs.splice(i, 1);
+        render();
+      });
       each('[data-fee]', 'input', function (el) { state.moneyForm.fee[el.getAttribute('data-fee')] = el.value; });
       each('[data-flag]', 'click', function (el) { var k = el.getAttribute('data-flag'); state.moneyForm.flag[k] = !state.moneyForm.flag[k]; render(); });
       each('[data-item-desc]', 'input', function (el) { state.moneyForm.items[+el.getAttribute('data-item-desc')].desc = el.value; });
