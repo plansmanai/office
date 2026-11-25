@@ -521,7 +521,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261125-132422";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261125-134657";</script>
 </head>
 <body>
 
@@ -1786,6 +1786,22 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
         .filter(function (x) { return x[1]; })) + '<p class="note" style="margin-top:8px">From Cora\'s permit ledger.</p>');
     } else if (p.permitting === 'not bought' && p.signed) {
       h += sec('Permit', '<p class="note">Permitting not bought: the builder or client submits. No permit record.</p>');
+    }
+    // THE TITLE 24 ON THIS JOB, AS WORK (Lance, 25 Nov 2026: "I just want all the finances out of P4 but I want all the
+    // processes inside P4"). Where it stands, step by step; the invoice is Title24.Today's, in its own Stripe, so it is
+    // shown as a pointer and a paid / not paid, never added to this job's balance.
+    if (p.t24) {
+      var tq = p.t24;
+      h += sec('Title 24', kv([['Offered', day(tq.offered)], ['Ordered', day(tq.ordered) + (tq.ordered && tq.quoted != null ? ' · ' + usd2(tq.quoted) : '')],
+        ['Report', tq.report ? 'made ' + day(tq.report) : tq.ordered ? 'not made yet' : ''],
+        ['Registered (CHEERS)', tq.registered ? day(tq.registered) + (tq.registration_no ? ' · no. ' + tq.registration_no : '') : tq.report ? 'not yet' : ''],
+        ['On the plans', tq.on_plans === 'registered' ? 'registered copy' : tq.on_plans === 'unregistered' ? 'unregistered, review only' : tq.report ? 'not yet' : ''],
+        ['Invoice', tq.invoice_no ? tq.invoice_no + ' · made ' + day(tq.invoiced) : tq.report ? 'not made yet' : ''],
+        ['Sent to the client', tq.invoice_no ? (tq.forwarded ? day(tq.forwarded) : 'not yet') : ''],
+        ['Paid', tq.invoice_no ? (tq.paid ? day(tq.paid) : tq.invoice_state === 'void' ? 'voided' : 'not yet' + (tq.due ? ' · due ' + day(tq.due) : '')) : '']]
+        .filter(function (x) { return x[1]; })) +
+        (tq.invoice_url && !tq.paid ? '<p style="margin-top:8px"><a href="' + esc(tq.invoice_url) + '" target="_blank" rel="noopener">Open the invoice</a></p>' : '') +
+        '<p class="note" style="margin-top:8px">Billed by Title24.Today in its own Stripe. Not part of this job\'s balance.</p>');
     }
     h += sec('People', p.people.map(function (x) {
       if (CFG && state.editPerson === x.id) {
