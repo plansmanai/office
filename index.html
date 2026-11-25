@@ -203,7 +203,17 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .sec.lead h3 { color: var(--ink); }
 .tl .gist { color: var(--ink); font-size: 14px; margin-top: 2px; }
 .tl.tap { cursor: pointer; }
-#mail-q { width: 100%; padding: 10px 11px; margin-bottom: 6px; font-size: 16px; }
+#hist-q { width: 100%; padding: 10px 11px; margin-bottom: 6px; font-size: 16px; }
+.tl .d small { display: block; margin-top: 3px; font-family: var(--sans); font-size: .5rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); line-height: 1.35; }
+.tl .clip { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tl .n.pre { white-space: pre-wrap; color: var(--ink); }
+.tl .at { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+.tl.ev .edits { margin-top: 2px; }
+.tl.ev .edits .item { padding-top: 0; border-top: 0; }
+.hf { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 8px; }
+.hf button { font: inherit; font-size: 12.5px; padding: 5px 9px; border: 1px solid var(--rule); border-radius: 0; background: transparent; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.hf button[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); }
+.hf button i { font-style: normal; font-variant-numeric: tabular-nums; opacity: .7; margin-left: 2px; }
 .mailbody { margin-top: 10px; padding: 12px 14px; border: 1px solid var(--rule); background: var(--soft); font-size: 14.5px; line-height: 1.5; overflow-wrap: anywhere; cursor: text; }
 .mailbody a.open, .reach a { font-family: var(--sans); text-transform: uppercase; letter-spacing: .16em; font-size: .6rem; border: 1px solid var(--ink); padding: 6px 10px 5px 11px; display: inline-block; }
 .reach { margin-top: 8px; display: grid; gap: 8px; }
@@ -511,7 +521,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-193802";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261124-211449";</script>
 </head>
 <body>
 
@@ -1442,7 +1452,13 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     return t.split('\n').filter(function (l) { return l.trim().charAt(0) !== '>'; }).join('\n').trim();
   }
   var CLOSED_KEY = 'plansman_closed';
-  var SHUT_AT_FIRST = { 'Team log': 1, 'Your answers to Jake': 1 };                  // there when he wants it, out of the way until then
+  // the phone system's notes of a call, without its greeting and its footer
+  function callWords(t) {
+    t = String(t || '').replace(/^[\s\S]*?Here's the notes of your call[^\n]*\n/, '').split(/\n[^\n]*View transcript/)[0];
+    return t.replace(/^[ \t]+/gm, '').replace(/\n{3,}/g, '\n\n').trim();
+  }
+  function dayT(ms) { var d = new Date(ms); return isNaN(d) ? '' : d.getDate() + ' ' + MONTHS[d.getMonth()] + (d.getFullYear() === 2026 ? '' : ' ' + String(d.getFullYear()).slice(2)); }
+  var SHUT_AT_FIRST = { 'Your answers to Jake': 1 };                  // there when he wants it, out of the way until then
   function closedSecs() { try { return JSON.parse(localStorage.getItem(CLOSED_KEY) || '{}') || {}; } catch (e) { return {}; } }
   // `tool`: one small button for the heading row, beside the toggle (the section's Edit), shown while the section is open
   function sec(title, html, cls, tool) {
@@ -1816,35 +1832,68 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     var noteUp = (p.needs || []).some(function (n) { return n.jake || n.kind === 'note'; });
     if (p.latest && !noteUp) now += '<div class="tl"><span class="d"></span><span><span class="p">Latest note</span><div class="n">' + esc(p.latest) + '</div></span></div>';
     if (p.remarks) now += '<div class="tl"><span class="d"></span><span><span class="p">Your remarks</span><div class="n">' + esc(p.remarks) + '</div></span></div>';
-    var tl = p.timeline.filter(function (e) { return e !== at; }), shown = state.allTimeline ? tl : tl.slice(0, 12);
-    // The job's shared log: who is holding what right now, and what the team did and he said lately (db/046).
-    if (p.team && ((p.team.holding || []).length || (p.team.log || []).length)) {
-      h += sec('Team log', ((p.team.holding || []).length ? '<p class="note" style="margin:0 0 6px">Who is holding what right now</p>' +
-          p.team.holding.map(function (x) { return '<div class="item"><div class="body" style="color:var(--ink)">' + esc(x) + '</div></div>'; }).join('') : '') +
-        ((p.team.log || []).length ? '<p class="note" style="margin:14px 0 6px">Lately, newest first</p>' + p.team.log.map(function (e) {
-          return '<div class="tl"><span class="d">' + esc(e.when) + '</span><span><span class="p">' + esc(e.who.charAt(0).toUpperCase() + e.who.slice(1)) + '</span><div class="n">' + esc(e.line) + '</div></span></div>';
-        }).join('') : ''));
-    }
+    var tl = p.timeline.filter(function (e) { return e !== at; });
+    // who is holding what right now: where the job stands with the team, beside its status
+    ((p.team && p.team.holding) || []).forEach(function (x, i) {
+      now += '<div class="tl"><span class="d"></span><span>' + (i ? '' : '<span class="p">With the team now</span>') + '<div class="n" style="color:var(--ink)">' + esc(x) + '</div></span></div>';
+    });
+    // HISTORY IS EVERY EVENT OF THE JOB (Lance, 24 Nov 2026: "History should include all events over the life of the
+    // project. Including phone call transcripts. I like how emails are saved where a little descriptor is shown and then
+    // selecting it can open up the full email"). One list, newest first: every email, text, voicemail and phone call
+    // (the phone system's notes of it), every change to the record (with its Undo), the team's own log, and the
+    // schedule's history. Each is one short line; tapping it opens it in full. Filters narrow it to one kind.
+    var evs = [], T = function (iso) { var t = Date.parse(iso); return isNaN(t) ? 0 : t; };
+    (p.mail || []).forEach(function (m) {
+      evs.push({ k: 'm:' + m.id, f: m.call ? 'call' : 'mail', t: T(m.when), tag: m.call ? 'Call' : m.dir === 'out' ? 'Email out' : 'Email', who: m.who,
+        n: m.subject + (m.files ? ' · ' + m.files + (m.files === 1 ? ' file' : ' files') : ''), gist: m.gist || '', mail: m.id, call: !!m.call });
+    });
+    (p.phone || []).forEach(function (x) {
+      evs.push({ k: 't:' + x.id, f: 'text', t: T(x.when), tag: x.voicemail ? 'Voicemail' : x.out ? 'Text out' : 'Text', who: x.out ? 'You to ' + x.who : x.who,
+        n: x.body || '(a picture or a file, no words)', pre: true });
+    });
     var hacts = ACTS.filter(function (a) { return a.proj_no === p.no && a.state !== 'proposed' && a.state !== 'cancelled'; });
-    var hist = (state.actMsg ? '<p class="note">' + esc(state.actMsg) + '</p>' : '') +
-      hacts.slice(0, state.allEdits ? 999 : 6).map(actItem).join('') +
-      (hacts.length > 6 && !state.allEdits ? '<button class="text more" id="more-edits" type="button">Show all ' + hacts.length + ' changes</button>' : '');
-    var histSec = sec('History', (hist ? '<div class="edits">' + hist + '</div>' : '') + now + shown.map(function (e) {
-      return '<div class="tl"><span class="d">' + esc(day(e.when)) + '</span><span>' + (e.phase ? '<span class="p">' + esc(e.phase) + '</span>' : '') +
-        (e.note ? '<div class="n">' + esc(e.note) + '</div>' : '') + '</span></div>';
-    }).join('') + (tl.length > shown.length ? '<button class="text more" id="more" type="button">Show all ' + tl.length + ' entries</button>' : ''));
-    // Mail, last and out of the way (Lance, 20 Nov 2026): each email with a one-line summary so a thing can be found
-    h += sec('Mail', ((p.mail || []).length > 8 ? '<input type="search" id="mail-q" placeholder="Find in this job&#39;s mail" autocomplete="off" aria-label="Find in mail" value="' + esc(state.mailQ || '') + '">' : '') + (p.mail || []).map(function (m) {
-      var open = state.openMail === m.id, full = open && state.mailBody[m.id];
-      return '<div class="tl' + (CFG && m.id ? ' tap' : '') + '"' + (CFG && m.id ? ' data-mail="' + esc(m.id) + '"' : '') + ' data-hay="' + esc((m.who + ' ' + m.subject + ' ' + (m.gist || '')).toLowerCase()) + '"><span class="d">' + esc(day(m.when)) + '</span><span><span class="p">' + esc(m.who) + '</span>' +
-        '<div class="n">' + esc(m.subject) + (m.files ? ' · ' + m.files + (m.files === 1 ? ' file' : ' files') : '') + '</div>' +
-        (m.gist ? '<div class="gist">' + esc(m.gist) + '</div>' : '') +
-        (open ? '<div class="mailbody">' + (full ? para(ownWords(full.body) || '(no text)') +
+    hacts.forEach(function (a) {
+      var html = actItem(a), tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      var head = tmp.querySelector('.head b'), lines = Array.prototype.map.call(tmp.querySelectorAll('.body'), function (x) { return x.textContent.replace(/\s*Undo\s*$/, '').trim(); }).filter(Boolean);
+      evs.push({ k: 'a:' + a.id, f: 'change', t: T(a.proposed_at), tag: 'Change', who: head ? head.textContent : 'Change', n: lines.join(' · '), html: html, late: a.state === 'failed' });
+    });
+    ((p.team && p.team.log) || []).forEach(function (e) {
+      var t = T(e.at);
+      if (e.kind === 'sent') return;                   // the email or text itself is in the list
+      if (e.kind === 'phase' && hacts.some(function (a) { return a.kind === 'schedule' && Math.abs(T(a.finished_at || a.proposed_at) - t) < 180000; })) return;   // that change is in the list, with its Undo
+      evs.push({ k: 'l:' + e.at, f: 'team', t: t, tag: e.who === 'schedule' ? 'Schedule' : 'Team', who: e.who === 'schedule' ? 'The schedule' : cap(e.who), n: e.line, pre: true });
+    });
+    tl.forEach(function (e, i) {
+      evs.push({ k: 's:' + e.when + ':' + i, f: 'sched', t: T(e.when + 'T23:59:00'), noTime: true, tag: e.phase ? 'Phase' : 'Note', who: e.phase || 'Schedule note', n: e.note || '', pre: true });
+    });
+    evs.sort(function (x, y) { return y.t - x.t; });
+    var counts = {}, HF = [['all', 'All'], ['mail', 'Mail'], ['text', 'Texts'], ['call', 'Calls'], ['change', 'Changes'], ['team', 'Team'], ['sched', 'Schedule']];
+    evs.forEach(function (e) { counts[e.f] = (counts[e.f] || 0) + 1; });
+    var hf = counts[state.histF] ? state.histF : 'all', CAP = 40;
+    var chips = evs.length ? '<div class="hf" role="group" aria-label="Show in History">' + HF.filter(function (x) { return x[0] === 'all' || counts[x[0]]; }).map(function (x) {
+      return '<button type="button" data-hf="' + x[0] + '" aria-pressed="' + (hf === x[0] ? 'true' : 'false') + '">' + x[1] + '<i>' + (x[0] === 'all' ? evs.length : counts[x[0]]) + '</i></button>';
+    }).join('') + '</div>' : '';
+    var list = evs.filter(function (e) { return hf === 'all' || e.f === hf; });
+    var rows = list.map(function (e, i) {
+      var open = state.openEv === e.k, full = open && e.mail && state.mailBody[e.mail];
+      var inner = open && e.html ? '<div class="edits">' + e.html + '</div>'
+        : '<span class="p">' + esc(e.who) + '</span>' +
+          (e.n ? '<div class="n' + (open ? (e.pre ? ' pre' : '') : ' clip') + (e.late ? ' late' : '') + '">' + esc(e.n) + '</div>' : '') +
+          (e.gist ? '<div class="gist' + (open ? '' : ' clip') + '">' + esc(e.gist) + '</div>' : '') +
+          (open && !e.noTime && e.t ? '<div class="at">' + esc(stamp(new Date(e.t).toISOString())) + '</div>' : '') +
+          (open && e.mail ? '<div class="mailbody">' + (full ? para((e.call ? callWords(full.body) : ownWords(full.body)) || '(no text)') +
             ((full.files || []).length ? '<div class="note" style="margin-top:8px">Files: ' + esc(full.files.join(', ')) + '</div>' : '') +
             (full.thread ? '<div style="margin-top:10px"><a class="open" target="_blank" rel="noopener" href="https://mail.google.com/mail/?authuser=' + encodeURIComponent(full.mailbox || '') + '#all/' + encodeURIComponent(full.thread) + '">Open in Gmail</a></div>' : '')
-            : '<span class="note">Opening…</span>') + '</div>' : '') + '</span></div>';
-    }).join('') + ((p.mail || []).length ? '<p class="note" style="margin-top:8px">' + (p.mail.length === 1 ? 'The one email' : 'All ' + p.mail.length + ' emails') + ' on this job since 21 Aug. Tap one to read it.</p>' : ''));
-    h += histSec;                                      // History is the very last thing on the card (Lance, 24 Nov 2026)
+            : '<span class="note">Opening…</span>') + '</div>' : '');
+      return '<div class="tl tap ev" data-ev="' + esc(e.k) + '"' + (e.mail && CFG ? ' data-mail="' + esc(e.mail) + '"' : '') +
+        ' data-hay="' + esc((e.tag + ' ' + e.who + ' ' + e.n + ' ' + (e.gist || '')).toLowerCase()) + '"' + (i >= CAP && !state.allTimeline ? ' data-late hidden' : '') + '>' +
+        '<span class="d">' + esc(dayT(e.t)) + '<small>' + esc(e.tag) + '</small></span><span>' + inner + '</span></div>';
+    }).join('');
+    h += sec('History', (state.actMsg ? '<p class="note">' + esc(state.actMsg) + '</p>' : '') + now + chips +
+      (evs.length > 8 ? '<input type="search" id="hist-q" placeholder="Find in this job&#39;s history" autocomplete="off" aria-label="Find in history" value="' + esc(state.mailQ || '') + '">' : '') + rows +
+      (list.length > CAP && !state.allTimeline ? '<button class="text more" id="more" type="button">Show all ' + list.length + '</button>' : '') +
+      (evs.length ? '<p class="note" style="margin-top:8px">Everything on this job, newest first. Tap a line to open it. Mail is kept since 21 Aug; texts, voicemails and calls since 21 Oct.</p>' : ''));
     return h + '</div>';
   }
 
@@ -2042,24 +2091,30 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     if (moreSaid) moreSaid.addEventListener('click', function () { state.allSaid = true; render(); });
     var more = $('more');
     if (more) more.addEventListener('click', function () { state.allTimeline = true; render(); });
-    var mq = $('mail-q');
+    var mq = $('hist-q');
     if (mq) {
       var sift = function () {
         var words = mq.value.toLowerCase().split(/\s+/).filter(Boolean);
         state.mailQ = mq.value;
-        Array.prototype.forEach.call($('detail').querySelectorAll('[data-hay]'), function (r) {
-          var hay = r.getAttribute('data-hay'); r.hidden = !words.every(function (w) { return hay.indexOf(w) >= 0; });
+        Array.prototype.forEach.call($('detail').querySelectorAll('[data-ev]'), function (r) {
+          var hay = r.getAttribute('data-hay');
+          r.hidden = words.length ? !words.every(function (w) { return hay.indexOf(w) >= 0; }) : r.hasAttribute('data-late');
         });
+        var m2 = $('more'); if (m2) m2.hidden = !!words.length;
       };
       mq.addEventListener('input', sift); if (state.mailQ) sift();
     }
-    Array.prototype.forEach.call($('detail').querySelectorAll('[data-mail]'), function (r) {
+    Array.prototype.forEach.call($('detail').querySelectorAll('[data-hf]'), function (b) {
+      b.addEventListener('click', function () { state.histF = b.getAttribute('data-hf'); state.allTimeline = false; state.openEv = null; render(); });
+    });
+    // a line of History opens in full, and closes again; an email's or a call's words are fetched when it opens
+    Array.prototype.forEach.call($('detail').querySelectorAll('[data-ev]'), function (r) {
       r.addEventListener('click', function (e) {
-        if (e.target.closest && e.target.closest('a')) return;
-        var id = r.getAttribute('data-mail');
-        if (state.openMail === id) { if (window.getSelection && String(window.getSelection())) return; state.openMail = null; render(); return; }
-        state.openMail = id; render();
-        if (!state.mailBody[id]) rpc('office_message', { p_token: token, p_id: id }).then(function (d) { if (d && d.ok) { state.mailBody[id] = d; render(); } }).catch(function () {});
+        if (e.target.closest && e.target.closest('a, button, .mailbody')) return;
+        var k = r.getAttribute('data-ev'), id = r.getAttribute('data-mail');
+        if (state.openEv === k) { if (window.getSelection && String(window.getSelection())) return; state.openEv = null; render(); return; }
+        state.openEv = k; render();
+        if (id && !state.mailBody[id]) rpc('office_message', { p_token: token, p_id: id }).then(function (d) { if (d && d.ok) { state.mailBody[id] = d; render(); } }).catch(function () {});
       });
     });
     Array.prototype.forEach.call($('detail').querySelectorAll('[data-person]'), function (b) {
@@ -2124,7 +2179,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     }
     if (state.no) { try { localStorage.setItem('p4_last_job', state.no); } catch (e) {} }
     if (state.no && !prev && state.routed) keepPlace();     // leaving the list for a job: remember where the list was
-    if (state.no !== prev) { state.mailQ = ''; state.openMail = null; state.allTimeline = false; state.allEdits = false; state.editScope = null; state.editMoney = null; state.moneyForm = null; state.moneyMsg = ''; state.scopeMsg = ''; state.adjust = null; state.adjForm = null; state.adjMsg = ''; state.allSaid = false; state.jobAll = {}; state.tellMsg = ''; state.pick = null; state.markMsg = ''; }
+    if (state.no !== prev) { state.mailQ = ''; state.openEv = null; state.histF = 'all'; state.allTimeline = false; state.allEdits = false; state.editScope = null; state.editMoney = null; state.moneyForm = null; state.moneyMsg = ''; state.scopeMsg = ''; state.adjust = null; state.adjForm = null; state.adjMsg = ''; state.allSaid = false; state.jobAll = {}; state.tellMsg = ''; state.pick = null; state.markMsg = ''; }
     render();
     if (state.no && state.no !== prev) { window.scrollTo(0, 0); $('detail').scrollTop = 0; }
     if (!state.no && state.view !== 'chat' && (prev || !state.routed || moved)) backToPlace();      // back on the list (or the page just opened on it): where he left it
