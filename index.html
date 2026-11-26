@@ -544,7 +544,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261126-150428";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261126-150954";</script>
 </head>
 <body>
 
@@ -2501,12 +2501,34 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     if (state.no && !prev && state.routed) keepPlace();     // leaving the list for a job: remember where the list was
     if (state.no !== prev) { state.mailQ = ''; state.openEv = null; state.histF = 'all'; state.allTimeline = false; state.allEdits = false; state.editScope = null; state.editMoney = null; state.moneyForm = null; state.moneyMsg = ''; state.scopeMsg = ''; state.adjust = null; state.adjForm = null; state.adjMsg = ''; state.allSaid = false; state.jobAll = {}; state.tellMsg = ''; state.pick = null; state.markMsg = ''; }
     render();
-    if (state.no && state.no !== prev) { window.scrollTo(0, 0); $('detail').scrollTop = 0; }
+    if (state.no && state.no !== prev) {
+      // Coming back to a job from Drew's or Cora's window (the page is loaded again), he is put back where he was on it:
+      // how far down, which line of its history was open, which filter (Lance, 26 Nov 2026: "When switching between bots
+      // I'd like it to stay what I was on"). Opening a job from the list starts at its top, as before.
+      var at = !state.routed ? jobPlace(state.no) : null;
+      if (at) {
+        if (at.ev) state.openEv = at.ev; if (at.hf) state.histF = at.hf; if (at.all) state.allTimeline = true;
+        if (at.ev || at.hf || at.all) render();
+        var back = function () { window.scrollTo(0, at.y || 0); $('detail').scrollTop = at.dy || 0; };
+        back(); setTimeout(back, 80); setTimeout(back, 400); setTimeout(back, 1200);
+      } else { window.scrollTo(0, 0); $('detail').scrollTop = 0; }
+    }
     if (!state.no && state.view !== 'chat' && (prev || !state.routed || moved)) backToPlace();      // back on the list (or the page just opened on it): where he left it
     state.routed = true;
   }
   // The list's place, per list, kept for the session: the page's own scroll on a phone, the list's on a PC.
   function lastJob() { try { return localStorage.getItem('p4_last_job') || ''; } catch (e) { return ''; } }
+  // His place on a job's page, written down when the page is left and good for two hours (the same as in Drew's and Cora's windows)
+  function jobPlace(no) {
+    try { var p = JSON.parse(localStorage.getItem('p4_at:jake:' + no) || 'null'); return p && p.t && Date.now() - p.t < 2 * 3600000 ? p : null; } catch (e) { return null; }
+  }
+  function jobPlaceSave() {
+    if (!state.no) return;
+    try { localStorage.setItem('p4_at:jake:' + state.no, JSON.stringify({ t: Date.now(), y: window.scrollY || 0, dy: $('detail').scrollTop || 0, ev: state.openEv || null,
+      hf: state.histF !== 'all' ? state.histF : null, all: !!state.allTimeline })); } catch (e) {}
+  }
+  window.addEventListener('pagehide', jobPlaceSave);
+  document.addEventListener('visibilitychange', function () { if (document.hidden) jobPlaceSave(); });
   function listBox() { return $(window.innerWidth >= 1500 ? 'listview' : 'list'); }      // what scrolls the list on a PC
   function placeOf(v) { return v + ':' + (v === 'financials' ? state.ff : state.pf); }      // each tab, under each filter, keeps its own place
   function keepPlace(which) {

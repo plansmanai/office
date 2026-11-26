@@ -336,7 +336,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261126-150428";</script>
+<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261126-150954";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -1629,6 +1629,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   function setZoom(z) { SH.zoom = Math.max(1, Math.min(6, z)); fit(); }
   // one entry of the history: that picture as it was, with his marks on it, to look at (nothing to send from here)
   function openSheet(id) {
+    SH.cid = +id;                                               // which check-in is open, for his place (placeSave)
     showSheets(); $('sheet-list').hidden = true; $('sheet-open').hidden = false; $('s-title').textContent = 'Opening…'; $('s-msg').textContent = '';
     rpc('office_drew_checkin', { p_token: token, p_id: +id }).then(function (d) {
       if (!d || !d.ok) return;
@@ -1750,6 +1751,79 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   loadSheets();
   loop();
   live();
+
+  // WHERE HE WAS IS KEPT, FOR THIS WINDOW ON THIS JOB (Lance, 26 Nov 2026: "When switching between bots I'd like it to stay
+  // what I was on. When reviewing responses onto city comments I got the sheets on Drew to see the change and then go
+  // back and I have to renavigate to where I was as I switch back and forth"). Going between Jake, Drew and Cora
+  // replaces the page, so everything on it was lost. Now, when the page is left, it writes down its place: the tab, the
+  // sheet or document or calc that is open with its zoom and where it is scrolled to, where the lists and the
+  // conversation are scrolled to, which folders are open, the marks he has drawn and not sent, and what he has typed
+  // and not sent. When the window opens again on the same job within two hours, it goes back there. What a
+  // notification opened (the sheet in the link) wins over it. It is kept on this phone or PC only.
+  var PKEY = 'p4_at:' + WHO + ':' + NO, RESTORING = false;
+  function placeSave() {
+    if (RESTORING) return;                                      // still on its way back to the last place: that place stands
+    try {
+      var sc = $('s-scroll'), ds = $('d-scroll'), said = $('said'), sw = document.querySelector('.switch [aria-current]');
+      localStorage.setItem(PKEY, JSON.stringify({ t: Date.now(),
+        tab: $('main').getAttribute('data-show'), stage: sw ? sw.getAttribute('data-stage') : null,
+        sheet: SH.open && SH.open.current && !SH.open.waiting ? SH.open.current : null, checkin: SH.open && SH.open.history ? SH.cid : null,
+        sz: SH.zoom, sx: sc.scrollLeft, sy: sc.scrollTop, so: $('sheet-open').scrollTop, strokes: SH.open && SH.open.current ? SH.strokes : [], stext: $('s-text').value,
+        doc: DOC.open ? { id: DOC.open.id, engr: DOC.open.engr || null } : null, dz: DOC.zoom, dx: ds.scrollLeft, dy: ds.scrollTop, dtext: $('d-text').value,
+        list: $('stage-sheets').scrollTop, elist: $('stage-engr').scrollTop, folders: DOC.openFolders, groups: SH.openGroups,
+        said: said.scrollHeight - said.scrollTop - said.clientHeight < 80 ? null : said.scrollTop, text: $('text').value }));
+    } catch (e) {}
+  }
+  function placeBack() {
+    var p = null;
+    try { p = JSON.parse(localStorage.getItem(PKEY) || 'null'); } catch (e) {}
+    if (!p || OPEN || !p.t || Date.now() - p.t > 2 * 3600000) return;
+    RESTORING = true; setTimeout(function () { RESTORING = false; }, 12000);
+    var done = function () { RESTORING = false; };
+    var until = function (ok, then, n) { n = n || 0; if (ok()) then(); else if (n < 70) setTimeout(function () { until(ok, then, n + 1); }, 150); else done(); };
+    var wide = window.innerWidth > 860;
+    var tabBack = function () {                                 // the tab he was on, last: opening a sheet or a document brings its own tab forward
+      SH.staying = true;
+      var b = wide ? (p.stage && document.querySelector('.switch [data-stage="' + p.stage + '"]')) : (p.tab && document.querySelector('.tabs [data-show="' + p.tab + '"]'));
+      if (b && !b.hidden && !b.hasAttribute('aria-current')) b.click();
+      SH.staying = false;
+    };
+    if (p.folders) DOC.openFolders = p.folders;
+    if (p.groups) SH.openGroups = p.groups;
+    if (p.text && !$('text').value) $('text').value = p.text;
+    if (p.said != null) until(function () { return MSGS.length && $('said').scrollHeight > $('said').clientHeight; }, function () { $('said').scrollTop = p.said; });
+    var sheetBack = function () {
+      until(function () { return SH.open && !SH.open.waiting && $('s-img').complete && $('s-img').naturalWidth; }, function () {
+        setTimeout(function () {                                // after the picture's own first fit
+          setZoom(p.sz || 1); $('s-scroll').scrollLeft = p.sx || 0; $('s-scroll').scrollTop = p.sy || 0; $('sheet-open').scrollTop = p.so || 0;
+          if (p.strokes && p.strokes.length && SH.open && SH.open.current) { SH.strokes = p.strokes; paint(); }
+          if (p.stext) $('s-text').value = p.stext;
+          done();
+        }, 60);
+      });
+    };
+    var docBack = function () {
+      until(function () { return DOC.open && $('d-wrap').querySelector('.pg'); }, function () {
+        docZoom(p.dz || 1);
+        var go = function () { if (DOC.open) { $('d-scroll').scrollTop = p.dy || 0; $('d-scroll').scrollLeft = p.dx || 0; } };
+        go(); setTimeout(go, 250); setTimeout(function () { go(); done(); }, 900);
+      });
+    };
+    if (p.sheet) { openCurrent(p.sheet); sheetBack(); tabBack(); }
+    else if (p.checkin) { openSheet(p.checkin); sheetBack(); tabBack(); }
+    else if (p.doc && p.doc.engr && WHO === 'drew') {
+      Promise.resolve(loadEngr()).then(function () { if (EN.byId[p.doc.id]) { openCalc(p.doc.id); if (p.dtext) $('d-text').value = p.dtext; docBack(); } else done(); tabBack(); }).catch(done);
+    } else if (p.doc && WHO === 'cora') {
+      Promise.resolve(loadDocs()).then(function () { if (DOC.list.some(function (x) { return x.id === p.doc.id; })) { openDoc(p.doc.id); if (p.dtext) $('d-text').value = p.dtext; docBack(); } else done(); tabBack(); }).catch(done);      // what he had typed is back at once, the pages when they come
+    } else {
+      tabBack();
+      var lists = function () { if (!SH.open && !DOC.open) { $('stage-sheets').scrollTop = p.list || 0; $('stage-engr').scrollTop = p.elist || 0; } };
+      setTimeout(lists, 500); setTimeout(lists, 1500); setTimeout(function () { lists(); done(); }, 3000);
+    }
+  }
+  window.addEventListener('pagehide', placeSave);
+  document.addEventListener('visibilitychange', function () { if (document.hidden) placeSave(); });
+  placeBack();
 })();
 </script>
 
