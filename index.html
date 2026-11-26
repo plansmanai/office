@@ -63,6 +63,11 @@ button.go:disabled { opacity: .45; cursor: default; }
 a.go.drafting { display: inline-block; font-family: var(--sans); text-transform: uppercase; letter-spacing: .18em; font-size: .7rem; color: var(--ink);
   border: 1px solid var(--ink); padding: 12px 20px; }
 @media (hover: hover) { a.go.drafting:hover { background: var(--ink); color: var(--on-ink); } }
+.later { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.later span { color: var(--muted); font-size: 13.5px; margin-right: 2px; }
+.later button { font-family: var(--sans); text-transform: uppercase; letter-spacing: .14em; font-size: .6rem; padding: 9px 12px 8px; border: 1px solid var(--ink); background: none; color: var(--ink); cursor: pointer; border-radius: 0; }
+.later button.dim { border-color: var(--rule); color: var(--muted); }
+.later input { font: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--rule); background: transparent; color: var(--ink); border-radius: 0; min-width: 0; }
 a.flink { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; overflow-wrap: anywhere; cursor: pointer; }
 button.text { background: none; border: 0; padding: 0; font: inherit; color: var(--ink); cursor: pointer; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
 input, textarea { font: inherit; color: var(--ink); background: transparent; border: 1px solid var(--rule); }
@@ -539,7 +544,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261126-140035";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261126-150428";</script>
 </head>
 <body>
 
@@ -605,6 +610,46 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
         encodeURIComponent(s.preview) + '" target="_blank" rel="noopener">' + (s.state === 'stamped' ? 'See the signed document' : 'See what they will see') + '</a></div>';
     }).join('');
   }
+  // SEND LATER (db/096; Lance, 26 Nov 2026, after "Send this tomorrow" got "P4 doesn't have a timed send": "Yes I should be
+  // able to delay send anything"). Any draft can be given a time: an email, a text, anything held for his OK. His tap is
+  // still what sends it: Send later approves it WITH a time, and the office PC sends it when the time comes, with every
+  // check it makes at the moment of sending. A draft the team put a time on (`suggest_at`) offers that time as its first
+  // button. One that is waiting for its time says when it goes, with Send now and Cancel. The same in both pages.
+  var LATER = { open: null };                               // the draft whose "when" row is open
+  function laterWhen(iso) {
+    var d = new Date(iso); if (isNaN(d)) return '';
+    var h = d.getHours(), m = d.getMinutes();
+    return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ', ' + (h % 12 || 12) + ':' + (m < 10 ? '0' : '') + m + ' ' + (h < 12 ? 'AM' : 'PM');
+  }
+  function laterWaiting(d) { return d.state === 'approved' && d.send_at && new Date(d.send_at).getTime() > Date.now(); }
+  function laterOffered(d) { return d.suggest_at && new Date(d.suggest_at).getTime() > Date.now() + 60000 ? d.suggest_at : null; }
+  function laterAt(days, hour) { var d = new Date(); d.setDate(d.getDate() + days); d.setHours(hour, 0, 0, 0); return d; }
+  function laterChoices() {                                 // this afternoon while there is one, tomorrow morning, and Monday morning when the weekend is next
+    var out = [], t = laterAt(1, 8), w;
+    if (new Date().getHours() < 12) out.push(['Today 1 PM', laterAt(0, 13)]);
+    out.push(['Tomorrow 8 AM', t]);
+    if (t.getDay() === 6 || t.getDay() === 0 || t.getDay() === 5) { w = laterAt(2, 8); while (w.getDay() !== 1) w.setDate(w.getDate() + 1); out.push(['Monday 8 AM', w]); }
+    return out;
+  }
+  function laterLocal(d) { var p = function (n) { return (n < 10 ? '0' : '') + n; }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()); }
+  function laterRow(id) {
+    return '<div class="later"><span>Send it</span>' + laterChoices().map(function (c) {
+      return '<button type="button" class="sec" data-later-at="' + c[1].toISOString() + '" data-id="' + id + '">' + c[0] + '</button>'; }).join('') +
+      '<input type="datetime-local" data-later-pick="' + id + '" min="' + laterLocal(new Date(Date.now() + 120000)) + '" value="' + laterLocal(laterAt(1, 8)) + '" aria-label="Another day and time">' +
+      '<button type="button" class="sec" data-later-set="' + id + '">Set</button><button type="button" class="dim" data-later-x="' + id + '">Cancel</button></div>';
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target && e.target.closest ? e.target.closest('[data-later-open], [data-later-at], [data-later-set], [data-later-x]') : null;
+    if (!t || t.disabled) return;
+    var id;
+    if (t.hasAttribute('data-later-open')) { id = +t.getAttribute('data-later-open'); LATER.open = LATER.open === id ? null : id; render(); return; }
+    if (t.hasAttribute('data-later-x')) { LATER.open = null; render(); return; }
+    if (t.hasAttribute('data-later-at')) { decideDraft(+t.getAttribute('data-id'), 'approve', t.getAttribute('data-later-at')); return; }
+    id = +t.getAttribute('data-later-set');
+    var inp = document.querySelector('[data-later-pick="' + id + '"]'), d = inp && inp.value ? new Date(inp.value) : null;
+    if (!d || isNaN(d) || d.getTime() < Date.now() + 60000) { if (inp) inp.focus(); return; }      // a time that has passed: he is left in the box
+    decideDraft(id, 'approve', d.toISOString());
+  });
   function fileName(a) {
     return a.drive ? '<a class="flink" href="https://drive.google.com/file/d/' + encodeURIComponent(a.drive) + '/view" target="_blank" rel="noopener">' + esc(a.name) + '</a>'
       : a.upload ? '<a class="flink" href="#" data-att-see="' + (+a.upload) + '">' + esc(a.name) + '</a>' : esc(a.name);
@@ -1072,6 +1117,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     if (files.length && d.state !== 'sent') h += fileLine('Attached:', files.filter(function (a) { return !a.link; })) + fileLine('Too large to attach, sent as a Google Drive link:', files.filter(function (a) { return a.link; }));
     h += signLine(d, 'body');
     if (d.state === 'failed' || d.state === 'stale') h += '<div class="body late">' + esc(d.result || 'Not sent.') + '</div>';
+    else if (laterWaiting(d)) h += '<div class="body note"><b>Goes out ' + esc(laterWhen(d.send_at)) + '</b> by itself. It is checked against the thread at that moment, as always.</div>';
     else if (d.state === 'approved' || d.state === 'sending') h += '<div class="body note">' + esc(d.result || (d.channel === 'action' ? 'Doing it…' : 'Sending…')) + '</div>';
     else if (d.state === 'sent') h += '<div class="body ok">' + esc(d.result || 'Sent.') + '</div>';
     if (open && !editing && blanks.length) h += '<div class="body note">Fill in ' + esc(blanks.join(', ')) + ' before it can go: tap Edit.</div>';
@@ -1082,14 +1128,18 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     if (own) h += itemThread(aboutItem(key));
     // The standard's row: Send, Reply, Drop, Edit. Send keeps its guards (a blank to fill, a file it says is attached).
     // Reply goes to Jake with the draft named, which is how he has Jake change it; a stale draft has Reply and Drop.
-    if (CFG && (open || d.state === 'stale')) {
-      var send = btn('go', 'Send', 'data-draft="approve" data-id="' + d.id + '"');
+    if (CFG && laterWaiting(d)) h += btnRow([btn('go', 'Send now', 'data-draft="approve" data-id="' + d.id + '"'), btn('sec', 'Cancel the timed send', 'data-draft="unschedule" data-id="' + d.id + '"')]);
+    else if (CFG && (open || d.state === 'stale')) {
+      var off = open && !editing && !blanks.length ? laterOffered(d) : null;      // the time the team put on it, for his one tap
+      var send = (off ? btn('go', 'Send ' + laterWhen(off), 'data-later-at="' + esc(off) + '" data-id="' + d.id + '"') : '') +
+        btn(off ? 'sec' : 'go', off ? 'Send now' : 'Send', 'data-draft="approve" data-id="' + d.id + '"');
       if (editing) h += btnRow([send, btn('dim', 'Cancel', 'data-draft="cancel" data-id="' + d.id + '"')]);
       else if (state.needReply === key) h += replyBox(key, 'Tell Jake what to do', 'data-need-text="' + esc(key) + '" data-proj="' + esc(proj) + '"', state.needText[key],
         'data-need-send="' + esc(key) + '" data-proj="' + esc(proj) + '"');
       else h += (open && d.channel === 'action' ? '<div class="body note">To change it, tap Reply and tell Jake.</div>' : '') +
-        btnRow([open && !blanks.length ? send : '', replyBtn(key), btn('dim', 'Drop', 'data-draft="drop" data-id="' + d.id + '"'),
-          open && d.channel !== 'action' ? btn('dim', 'Edit', 'data-draft="edit" data-id="' + d.id + '"') : '', open && d.channel === 'email' ? ATT.clip('d:' + d.id, proj) : '']);
+        btnRow([open && !blanks.length ? send : '', open && !blanks.length ? btn('sec', 'Send later', 'data-later-open="' + d.id + '"') : '', replyBtn(key), btn('dim', 'Drop', 'data-draft="drop" data-id="' + d.id + '"'),
+          open && d.channel !== 'action' ? btn('dim', 'Edit', 'data-draft="edit" data-id="' + d.id + '"') : '', open && d.channel === 'email' ? ATT.clip('d:' + d.id, proj) : '']) +
+        (LATER.open === d.id && open && !blanks.length ? laterRow(d.id) : '');
     }
     if (state.draftMsg && state.draftMsgId === d.id) h += '<p class="note">' + esc(state.draftMsg) + '</p>';
     return h + '</div>';
@@ -2824,10 +2874,18 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   }
   // Send (as written, or as he edited it), Edit, Drop. Shown at once; put right again if the save fails.
   var draftWatch = null;
-  function decideDraft(id, what) {
+  function decideDraft(id, what, at) {
     var d = DRAFTS.filter(function (x) { return x.id === id; })[0];
     if (!d) return;
-    state.draftMsg = ''; state.draftMsgId = id;
+    state.draftMsg = ''; state.draftMsgId = id; LATER.open = null;
+    if (what === 'unschedule') {                            // Cancel the timed send: it is a draft again
+      var held = d.send_at; d.state = 'draft'; d.send_at = null; render();
+      rpc('office_draft', { p_token: token, p_id: id, p_decision: 'unschedule' }).then(function (r) {
+        if (!(r && r.ok && r.saved)) { d.state = 'approved'; d.send_at = held; state.draftMsg = r && r.ok ? 'Not changed: ' + (r.why || 'try again') + '.' : 'Signed out. Reload and sign in.'; render(); }
+        loadDrafts();
+      }).catch(function (e) { d.state = 'approved'; d.send_at = held; state.draftMsg = 'Not changed (' + e.message + ').'; render(); });
+      return;
+    }
     if (what === 'edit') { state.editDraft = id; if (state.draftText[id] == null) state.draftText[id] = d.body; render(); var t = document.querySelector('[data-draft-text="' + id + '"]'); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } return; }
     if (what === 'cancel') { state.editDraft = null; delete state.draftText[id]; render(); return; }
     var editing = state.editDraft === id, text = editing ? (state.draftText[id] || '').trim() : null;
@@ -2837,8 +2895,8 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       if (left.length) { state.draftMsg = 'Fill in ' + left.join(', ') + ' first.'; render(); return; }
     }
     var asIs = what === 'approve' && ATTACH.test(text != null ? text : d.body) && !(d.attachments || []).length;      // he saw the warning on the draft and sends it as it is
-    var was = { state: d.state, body: d.body, result: d.result }, gone = null;
-    if (what === 'approve') { d.state = 'approved'; d.result = null; if (text) d.body = text; }
+    var was = { state: d.state, body: d.body, result: d.result, send_at: d.send_at }, gone = null;
+    if (what === 'approve') { d.state = 'approved'; d.result = null; d.send_at = at || null; if (text) d.body = text; }
     else {
       // Dropped: its quiet line stays where it was (inside the email or text it sat on, else in the thread)
       var onLoose = !!d.item_key && looseAll().some(function (t) { return looseKey(t.id) === d.item_key; });
@@ -2849,17 +2907,17 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     }
     state.editDraft = null; render();
     function back(msg) {
-      d.state = was.state; d.body = was.body; d.result = was.result;
+      d.state = was.state; d.body = was.body; d.result = was.result; d.send_at = was.send_at;
       if (gone) unquiet(gone);
       if (what !== 'approve') DRAFTS.push(d);
       if (text != null) state.editDraft = id;
       state.draftMsg = msg; render();
     }
-    rpc('office_draft', { p_token: token, p_id: id, p_decision: what, p_text: what === 'approve' && text && text !== was.body ? text : null, p_as_is: asIs }).then(function (r) {
+    rpc('office_draft', { p_token: token, p_id: id, p_decision: what, p_text: what === 'approve' && text && text !== was.body ? text : null, p_as_is: asIs, p_at: what === 'approve' && at ? at : null }).then(function (r) {
       if (!r || !r.ok) return back('Signed out. Reload and sign in; your text is still here.');
       if (!r.saved) return back('Not saved: ' + (r.why || 'try again') + '.');
       delete state.draftText[id];
-      if (what === 'approve' && !draftWatch) {
+      if (what === 'approve' && !at && !draftWatch) {
         var until = Date.now() + 3 * 60 * 1000;
         draftWatch = setInterval(function () {
           if (Date.now() > until || !DRAFTS.some(function (x) { return x.state === 'approved' || x.state === 'sending'; })) { clearInterval(draftWatch); draftWatch = null; return; }
