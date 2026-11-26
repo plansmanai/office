@@ -115,6 +115,13 @@ main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1
 .dr.gone { border-color: var(--rule); padding: 8px 12px; color: var(--muted); font-size: 13.5px; }
 .msg .lbl { color: var(--muted); font-size: .6rem; margin-bottom: 3px; }
 .msg .txt { white-space: pre-wrap; overflow-wrap: anywhere; }
+.ls { display: block; white-space: normal; }
+.ls.a { margin-top: 7px; }
+.ls.b { margin-bottom: 7px; }
+.li { display: flex; gap: .45em; margin: 0 0 5px; }
+.li:last-child { margin-bottom: 0; }
+.li > .lin { flex: none; min-width: 1.2em; font-variant-numeric: tabular-nums; }
+.li > span:last-child { min-width: 0; overflow-wrap: anywhere; }
 .msg.me { align-self: flex-end; text-align: left; }
 .msg.me .txt { background: var(--ink); color: var(--on-ink); padding: 9px 12px; }
 .msg.drew .txt { border-left: 1px solid var(--ink); padding: 2px 0 2px 12px; }
@@ -315,7 +322,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261125-215946";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261126-062934";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -835,9 +842,25 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       if (key && BXN[key] && extra.indexOf('<button') >= 0) extra += line(esc(BXN[key]), true);      // why a tap was not saved, while the box still waits
       if (key && RP && RP.key === key && extra.indexOf('data-rp-text') >= 0) cls += ' rpo';
       return '<div class="msg ' + cls + '">' + (m.kind === 'progress' ? '' : '<div class="lbl">' + who + is + ' · ' + esc(stamp(m.created_at)) + '</div>') +
-        '<div class="txt">' + ATT.show(esc(m.body).replace(/\*\*([^*]+?)\*\*/g, '<b>$1</b>')) + '</div>' + (m.files && m.files.checkin && m.who === WHO ? '<a class="open" data-sheet="' + m.files.checkin + '">Open check-in</a>' : '') + extra + '</div>';
+        '<div class="txt">' + ATT.show(listy(esc(m.body).replace(/\*\*([^*]+?)\*\*/g, '<b>$1</b>'), '\n')) + '</div>' + (m.files && m.files.checkin && m.who === WHO ? '<a class="open" data-sheet="' + m.files.checkin + '">Open check-in</a>' : '') + extra + '</div>';
     }).join('') : DR.length ? '' : '<p class="empty">Nothing said here yet. ' + T.empty + '</p>') + draftsHtml();
     if (atEnd || sending) box.scrollTop = box.scrollHeight;
+  }
+  // A line that begins with a number ("1." "2)") or a dash is drawn as a list row with a hanging indent (Lance, 26 Nov
+  // 2026: "humans do better with lists ... rather than large text strings"). h is escaped text; nl joins the other lines.
+  function listy(h, nl) {
+    var L = String(h).split('\n'), parts = [], run = null, m, i, s = '', prev = '';
+    for (i = 0; i < L.length; i++) {
+      m = /^\s*(\d{1,3}[.)]|[-\u2022\u2013])\s+(\S.*)$/.exec(L[i]);
+      if (m) { if (!run) { run = []; parts.push(run); } run.push('<span class="li"><span class="lin">' + (/\d/.test(m[1]) ? m[1] : '\u2013') + '</span><span>' + m[2] + '</span></span>'); }
+      else { run = null; parts.push(L[i]); }
+    }
+    parts.forEach(function (x, k) {
+      if (typeof x !== 'string') { s += '<span class="ls' + (s ? ' a' : '') + (k < parts.length - 1 ? ' b' : '') + '">' + x.join('') + '</span>'; prev = 'list'; return; }
+      if (prev === 'list' && !x.trim()) return;                  // the list's own margin is the gap
+      s += (prev === 'text' ? nl : '') + x; prev = 'text';
+    });
+    return s;
   }
   function status(d) {
     var st = d.state || {};

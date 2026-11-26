@@ -312,9 +312,17 @@ textarea.edit-area { width: 100%; box-sizing: border-box; min-height: 110px; fon
 /* the date and time on every Needs you item (Lance, 22 Nov 2026: "hard to tell what's current or outdated") */
 .item .when { font-family: var(--sans); font-size: .58rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 2px 0 4px; }
 .item .head span { color: var(--muted); font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.item .head b span { color: inherit; font-size: inherit; white-space: normal; }
 .item .head span.bub { font-size: .62rem; }
 .item .head span.bub.g { color: var(--sage); } .item .head span.bub.a { color: var(--oak-ink); } .item .head span.bub.r { color: var(--long); }
 .item .body { color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+.ls { display: block; white-space: normal; }
+.ls.a { margin-top: 7px; }
+.ls.b { margin-bottom: 7px; }
+.li { display: flex; gap: .45em; margin: 0 0 5px; }
+.li:last-child { margin-bottom: 0; }
+.li > .lin { flex: none; min-width: 1.2em; font-variant-numeric: tabular-nums; }
+.li > span:last-child { min-width: 0; overflow-wrap: anywhere; }
 .item .body + .body { margin-top: 5px; }
 .item .body b { font-weight: 500; color: var(--ink); }
 /* the things waiting on him: each in its own thin frame, its wait down the left edge */
@@ -523,7 +531,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261125-215946";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261126-062934";</script>
 </head>
 <body>
 
@@ -756,7 +764,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       (mail ? '<div class="head"><b>' + esc(t.subject || '(no subject)') + '</b></div>' + (t.summary ? '<div class="body">' + esc(t.summary) + '</div>' : '')
             : (textWords(tk) || (t.summary ? '<div class="body">' + esc(t.summary) + '</div>' : ''))) +
       (t.phone ? '<div class="reach">' + phoneLinks(t.phone) + '</div>' : '') +
-      (t.jake && !(d && d.note) ? '<div class="body"><b>Jake: </b>' + esc(t.jake) + '</div>' : '') + (d ? draftBlock(d, true) : '') + quietOn(tk) + talk + act + '</div></div>';
+      (t.jake && !(d && d.note) ? '<div class="body"><b>Jake: </b>' + para(t.jake) + '</div>' : '') + (d ? draftBlock(d, true) : '') + quietOn(tk) + talk + act + '</div></div>';
   }
   function chatItems() {
     var noProj = function (d) { return !d.proj_no || !BY[d.proj_no]; };
@@ -803,7 +811,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
         var d = it.dec;
         // the label line says who and what: "Drew asks", or "Jake did this" for something done and shown to be checked
         return '<div class="msg jake pend"><div class="lbl">' + esc(askName(d)) + (d.state === 'asked' ? ' asks' : ' did this') + ' · ' + esc(stamp(d.created_at)) + '</div>' +
-          (d.state === 'asked' ? '<div class="item"><div class="head"><b>' + esc(d.what) + '</b></div>' + decAsk(d) + '</div>' : decShown(d)) + '</div>';
+          (d.state === 'asked' ? '<div class="item"><div class="head"><b>' + para(d.what) + '</b></div>' + decAsk(d) + '</div>' : decShown(d)) + '</div>';
       }
       if (it.loose) return looseBox(it.loose);
       if (it.rule) return '<div class="msg jake pend"><div class="lbl">' + esc(ruleLabel(it.rule)) + ' · ' + esc(stamp(it.rule.created_at)) + '</div>' + ruleItem(it.rule, true) + '</div>';
@@ -1022,7 +1030,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     var open = d.state === 'draft' || d.state === 'failed', editing = open && state.editDraft === d.id, blanks = blanksIn(d.body), files = d.attachments || [], file = d.channel !== 'action' && ATTACH.test(d.body || '') && !files.length;     // a prepared action attaches its own file when it runs: only a plain draft is held for this
     var key = 'draft:' + d.id, proj = d.proj_no && BY[d.proj_no] ? d.proj_no : 'office';
     // Jake's one line on what he needs from Lance comes first; the subject is not repeated under the email it answers
-    var h = (d.note && d.state !== 'sent' ? '<div class="body"><b>Jake: </b>' + esc(d.note) + '</div>' : '') +
+    var h = (d.note && d.state !== 'sent' ? '<div class="body"><b>Jake: </b>' + para(d.note) + '</div>' : '') +
       '<div class="draft mail">' + (own ? '' : '<div class="lbl">' + esc(draftLabel(d)) + '</div>') +
       (onItem || d.channel !== 'email' ? '' : '<div class="subj">' + esc(d.subject) + '</div>');
     if (editing) h += '<textarea data-draft-text="' + d.id + '" aria-label="The email text">' + esc(state.draftText[d.id] != null ? state.draftText[d.id] : d.body) + '</textarea>';
@@ -1369,8 +1377,8 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   // "You answered Jake: ..." stays in its place.
   function decAsk(d) {
     var h = '', key = 'decision:' + d.id;
-    if (d.why) h += '<div class="body note">' + esc(d.why) + '</div>';
-    if (d.guess) h += '<div class="body"><b>' + (d.agent === 'cora' ? 'Her' : 'His') + ' guess: </b>' + esc(d.guess) + '</div>';
+    if (d.why) h += '<div class="body note">' + para(d.why) + '</div>';
+    if (d.guess) h += '<div class="body"><b>' + (d.agent === 'cora' ? 'Her' : 'His') + ' guess: </b>' + para(d.guess) + '</div>';
     if (!theirsDec(d)) h += itemThread(aboutItem(key));      // what he and Jake said about it before Reply became the answer
     if (!CFG) return h;
     if (state.needReply === key) return h + replyBox(key, 'Your answer to ' + askName(d), 'data-dec-text="' + d.id + '" data-dec-send="answer"', state.decText[d.id], 'data-dec="answer" data-id="' + d.id + '"', null, null, d.proj_no);
@@ -1380,7 +1388,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   // should be instead; Outdated takes it off without counting for or against.
   function decShown(d) {
     var h = '<div class="item"><div class="head"><b>' + esc(d.what) + '</b></div>' +
-      (d.why ? '<div class="body note">' + esc(d.why) + '</div>' : '');
+      (d.why ? '<div class="body note">' + para(d.why) + '</div>' : '');
     if (!CFG) return h + '</div>';
     // What he types is the correction (it is changed to exactly that); left empty, it is put back as it was.
     if (state.decWrong === d.id) h += replyBox('shown:' + d.id, 'Tell ' + askName(d) + ' what to do instead', 'data-dec-text="' + d.id + '" data-dec-send="wrong-send"', state.decText[d.id],
@@ -1636,7 +1644,23 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     return '<div class="item"><div class="head"><b>' + esc((LANE[t.lane] || t.lane) + (showWho ? ': ' + t.who : '')) + '</b><span' + (td.late ? ' class="late"' : '') + '>' +
       esc([t.date, td.t].filter(Boolean).join(' · ')) + '</span></div>' + (t.note ? '<div class="body">' + esc(t.note) + '</div>' : '') + '</div>';
   }
-  function para(t) { return ATT.show(esc(t).replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>')); }      // a picture he sent shows as the picture
+  // A line that begins with a number ("1." "2)") or a dash is drawn as a list row with a hanging indent (Lance, 26 Nov
+  // 2026: "humans do better with lists ... rather than large text strings"). h is escaped text; nl joins the other lines.
+  function listy(h, nl) {
+    var L = String(h).split('\n'), parts = [], run = null, m, i, s = '', prev = '';
+    for (i = 0; i < L.length; i++) {
+      m = /^\s*(\d{1,3}[.)]|[-\u2022\u2013])\s+(\S.*)$/.exec(L[i]);
+      if (m) { if (!run) { run = []; parts.push(run); } run.push('<span class="li"><span class="lin">' + (/\d/.test(m[1]) ? m[1] : '\u2013') + '</span><span>' + m[2] + '</span></span>'); }
+      else { run = null; parts.push(L[i]); }
+    }
+    parts.forEach(function (x, k) {
+      if (typeof x !== 'string') { s += '<span class="ls' + (s ? ' a' : '') + (k < parts.length - 1 ? ' b' : '') + '">' + x.join('') + '</span>'; prev = 'list'; return; }
+      if (prev === 'list' && !x.trim()) return;                  // the list's own margin is the gap
+      s += (prev === 'text' ? nl : '') + x; prev = 'text';
+    });
+    return s;
+  }
+  function para(t) { return ATT.show(listy(esc(t).replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>'), '<br>')); }      // a picture he sent shows as the picture
   function shadowItem(x) {
     var h = '<div class="item"><div class="head"><b>' + esc(x.from || 'Message') + ': ' + esc(x.subject || '') + '</b><span>' + esc(day(x.received)) + '</span></div>';
     h += '<div class="body">' + esc(x.what_happened) + '</div>';
@@ -1701,7 +1725,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       var drHere = isMsg(n) ? draftOn(p, n.key) : null;
       var words = textWords(n.kind === 'draft' ? (n.draft || {}).item_key : n.key);
       h3 += words;
-      if (n.jake && !(drHere && drHere.note)) h3 += '<div class="body"><b>Jake: </b>' + esc(n.jake) + '</div>';
+      if (n.jake && !(drHere && drHere.note)) h3 += '<div class="body"><b>Jake: </b>' + para(n.jake) + '</div>';
       if (n.by) h3 += '<div class="body note">Needed by ' + esc(n.by) + '</div>';
       if (words && n.kind === 'text') { /* the text is there in its own words: no summary of it */ }
       else if (!ask && (n.detail && n.kind !== 'note' || n.kind === 'note')) h3 += '<div class="body' + (n.jake ? ' note' : '') + '">' + esc(n.detail) + (n.snippet ? '<div class="note" style="margin-top:4px">' + esc(n.snippet) + '</div>' : '') + '</div>';
