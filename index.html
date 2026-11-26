@@ -205,6 +205,7 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .tl .gist { color: var(--ink); font-size: 14px; margin-top: 2px; }
 .tl.tap { cursor: pointer; }
 #hist-q { width: 100%; padding: 10px 11px; margin-bottom: 6px; font-size: 16px; }
+.tl .d em { display: block; font-style: normal; font-size: 12px; line-height: 1.3; margin-top: 1px; white-space: nowrap; }
 .tl .d small { display: block; margin-top: 3px; font-family: var(--sans); font-size: .5rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); line-height: 1.35; }
 .tl .clip { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .tl .n.pre { white-space: pre-wrap; color: var(--ink); }
@@ -536,7 +537,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261126-133238";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261126-133902";</script>
 </head>
 <body>
 
@@ -1663,6 +1664,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     t = String(t || '').replace(/^[\s\S]*?Here's the notes of your call[^\n]*\n/, '').split(/\n[^\n]*(?:View transcript|Is the content of this email helpful|You have received this email because)/)[0];
     return t.replace(/^[ \t]+/gm, '').replace(/\n{3,}/g, '\n\n').trim();
   }
+  function clockT(ms) { var d = new Date(ms); if (isNaN(d)) return ''; var h = d.getHours(), m = d.getMinutes(); return (h % 12 || 12) + ':' + (m < 10 ? '0' : '') + m + ' ' + (h < 12 ? 'AM' : 'PM'); }
   function dayT(ms) { var d = new Date(ms); return isNaN(d) ? '' : d.getDate() + ' ' + MONTHS[d.getMonth()] + (d.getFullYear() === 2026 ? '' : ' ' + String(d.getFullYear()).slice(2)); }
   var SHUT_AT_FIRST = { 'Your answers to Jake': 1 };                  // there when he wants it, out of the way until then
   function closedSecs() { try { return JSON.parse(localStorage.getItem(CLOSED_KEY) || '{}') || {}; } catch (e) { return {}; } }
@@ -2073,7 +2075,8 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     var evs = [], T = function (iso) { var t = Date.parse(iso); return isNaN(t) ? 0 : t; };
     (p.mail || []).forEach(function (m) {
       evs.push({ k: 'm:' + m.id, f: m.call ? 'call' : 'mail', t: T(m.when), tag: m.call ? (m.meet ? 'Video call' : 'Call') : m.dir === 'out' ? 'Email out' : 'Email', who: m.who,
-        n: m.subject + (m.files ? ' · ' + m.files + (m.files === 1 ? ' file' : ' files') : ''), gist: m.gist || '', mail: m.id, call: !!m.call });
+        n: m.subject.replace(/^Phone call, \d.*$/, 'Phone call') + (m.files ? ' · ' + m.files + (m.files === 1 ? ' file' : ' files') : ''), gist: m.gist || '', mail: m.id, call: !!m.call,
+        clock: m.at || (/^Phone call, (\d.*)$/.exec(m.subject) || [])[1] || '' });      // a call's own time; the second form is a page that still holds the older data
     });
     (p.phone || []).forEach(function (x) {
       evs.push({ k: 't:' + x.id, f: 'text', t: T(x.when), tag: x.voicemail ? 'Voicemail' : x.out ? 'Text out' : 'Text', who: x.out ? 'You to ' + x.who : x.who,
@@ -2116,14 +2119,15 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
         : '<span class="p">' + esc(e.who) + '</span>' +
           (e.n ? '<div class="n' + (open ? (e.pre ? ' pre' : '') : ' clip') + (e.late ? ' late' : '') + '">' + esc(e.n) + '</div>' : '') +
           (e.gist ? '<div class="gist' + (open ? '' : ' clip') + '">' + esc(e.gist) + '</div>' : '') +
-          (open && !e.noTime && e.t ? '<div class="at">' + esc(stamp(new Date(e.t).toISOString())) + '</div>' : '') +
           (open && e.mail ? '<div class="mailbody">' + (full ? para((e.call ? callWords(full.body) : ownWords(full.body)) || '(no text)') +
             ((full.files || []).length ? '<div class="note" style="margin-top:8px">Files: ' + esc(full.files.join(', ')) + '</div>' : '') +
             (full.thread ? '<div style="margin-top:10px"><a class="open" target="_blank" rel="noopener" href="https://mail.google.com/mail/?authuser=' + encodeURIComponent(full.mailbox || '') + '#all/' + encodeURIComponent(full.thread) + '">Open in Gmail</a></div>' : '')
             : '<span class="note">Opening…</span>') + '</div>' : '');
       return '<div class="tl tap ev" data-ev="' + esc(e.k) + '"' + (e.mail && CFG ? ' data-mail="' + esc(e.mail) + '"' : '') +
         ' data-hay="' + esc((e.tag + ' ' + e.who + ' ' + e.n + ' ' + (e.gist || '')).toLowerCase()) + '"' + (i >= CAP && !state.allTimeline ? ' data-late hidden' : '') + '>' +
-        '<span class="d">' + esc(e.t ? dayT(e.t) : '') + '<small>' + esc(e.tag) + '</small></span><span>' + inner + '</span></div>';
+        // the time of each event is under its date, not in its summary (Lance, 26 Nov 2026: "the time of each message would
+        // be better under the date, not in the summary"); a line of the schedule has a day and no time
+        '<span class="d">' + esc(e.t ? dayT(e.t) : '') + (!e.noTime && e.t ? '<em>' + esc(e.clock || clockT(e.t)) + '</em>' : '') + '<small>' + esc(e.tag) + '</small></span><span>' + inner + '</span></div>';
     }).join('');
     h += sec('History', (state.actMsg ? '<p class="note">' + esc(state.actMsg) + '</p>' : '') + now + chips +
       (evs.length > 8 ? '<input type="search" id="hist-q" placeholder="Find in this job&#39;s history" autocomplete="off" aria-label="Find in history" value="' + esc(state.mailQ || '') + '">' : '') + rows +
