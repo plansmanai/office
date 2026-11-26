@@ -232,19 +232,22 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
 .sscore summary { cursor: pointer; font-family: var(--sans); letter-spacing: .14em; text-transform: uppercase; font-size: .62rem; color: var(--ink); }
 .sscore table { border-collapse: collapse; margin-top: 10px; width: 100%; max-width: 560px; } .sscore td, .sscore th { text-align: left; padding: 4px 14px 4px 0; font-weight: 400; }
 .sscore th { font-size: .58rem; letter-spacing: .14em; text-transform: uppercase; } .sscore td.n { font-variant-numeric: tabular-nums; }
-/* A sheet open for his marks, top to bottom: its buttons, the sheet, what was said about it, his answer (Lance, 23 Nov
+/* A sheet open for his marks, top to bottom: its buttons, the sheet, his answer, what was said about it (Lance, 23 Nov
    2026: "switch the description the image location so that the image is below the buttons. Also the size needs to be
    formatted to the proportions of a 24x36 sheet. The current window crops"). The sheet's window has the shape of a
    24x36 sheet lying down (3 wide to 2 high), and the picture is fitted whole into it when it opens (fit(), below), so
-   nothing is cut off until he zooms in. The description takes what room is left and scrolls in its own place, so the
-   sheet and his buttons do not move. */
-#sheet-open { display: flex; flex-direction: column; height: 100%; } #sheet-open[hidden] { display: none; }
+   nothing is cut off until he zooms in. The description is LAST, under his answer box and its buttons, at its full
+   length with no scrolling window of its own; when it is long the whole page scrolls (Lance, 26 Nov 2026: "move this
+   descriptor down below my response area on the markup pages. Also if it's down there it doesn't need to be enclosed
+   in a scrolling window"). Only with the phone on its side does it scroll in its place, since the sheet has the screen. */
+#sheet-open { display: flex; flex-direction: column; height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; } #sheet-open[hidden] { display: none; }
 .sbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
 .sbar b { font-weight: 500; flex: 1; min-width: 120px; } .sbar .tools { display: flex; gap: 6px; }
 .sbar button { background: none; border: 1px solid var(--ink); color: var(--ink); padding: 8px 11px; cursor: pointer; font-family: var(--sans); text-transform: uppercase; letter-spacing: .14em; font-size: .6rem; }
 .sbar button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); }
-#s-note { flex: 1 1 0; min-height: 66px; overflow: auto; -webkit-overflow-scrolling: touch; padding: 10px 14px; color: var(--muted); font-size: 14px; }
-#s-note:empty { min-height: 0; padding: 0; }
+#s-note { flex: none; padding: 12px 14px 18px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+#s-note:empty { padding: 0; border-top: 0; }
+#sheet-open .sanswer { flex: none; border-top: 0; }
 #s-scroll { flex: none; width: 100%; aspect-ratio: 3 / 2; max-height: max(160px, calc(100vh - 420px)); overflow: auto; background: #d9d6cf; border-bottom: 1px solid var(--rule); -webkit-overflow-scrolling: touch; }
 #s-wrap { position: relative; width: 100%; margin: 0 auto; } #s-img { display: block; width: 100%; height: auto; background: #fff; }
 #s-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: pan-x pan-y; }
@@ -256,14 +259,14 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
    Can you do the same and make it sheet sized when turned, but also preserve what you did in portrait mode"). On a
    screen that is lying down and short, the header and the tabs took a third of it and the sheet's window was 160px
    high. So there a sheet that is open takes the WHOLE screen: its window at the left, the full height of the screen
-   and still 3 wide to 2 high, and beside it one column with the way back to the list, the drawing buttons, what was
-   said about it and his answer. The header and the tabs are under it until he goes back or turns the phone upright.
+   and still 3 wide to 2 high, and beside it one column with the way back to the list, the drawing buttons, his answer
+   and what was said about it. The header and the tabs are under it until he goes back or turns the phone upright.
    A document of Cora's does the same (the document the full height, its box beside it). Upright, and on a PC, none of
    this applies. The same test is TURNED in the code: change one and change the other. */
 #s-back { display: none; }
 @media (orientation: landscape) and (max-height: 560px) {
   #sheet-open, #doc-open { position: fixed; inset: 0; z-index: 200; height: auto; background: var(--bg); display: grid;
-    --sh: calc(100vh - env(safe-area-inset-bottom, 0px)); grid-template-rows: auto minmax(0, 1fr) auto;
+    --sh: calc(100vh - env(safe-area-inset-bottom, 0px)); grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden;
     padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
   @supports (height: 100dvh) { #sheet-open, #doc-open { --sh: calc(100dvh - env(safe-area-inset-bottom, 0px)); } }
   #sheet-open { grid-template-columns: min(calc(var(--sh) * 1.5), calc(100% - 190px)) minmax(0, 1fr); }
@@ -276,8 +279,10 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
   #sheet-open .sbar .tools { flex: 1 1 100%; } #sheet-open .sbar .tools button { flex: 1; padding: 9px 4px; letter-spacing: .1em; }
   #s-back { display: block; }
   #doc-open .sbar b { flex: 1 1 100%; }      /* a document's name is long: under its way back, not beside it */
-  #s-note { grid-column: 2; grid-row: 2; min-height: 0; padding: 8px 10px; font-size: 13px; line-height: 1.4; }
-  #sheet-open .sanswer, #doc-open .sanswer { grid-column: 2; grid-row: 3; padding: 8px 10px; }
+  #sheet-open { grid-template-rows: auto auto minmax(0, 1fr); }
+  #s-note { grid-column: 2; grid-row: 3; min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; padding: 8px 10px; font-size: 13px; line-height: 1.4; }
+  #doc-open .sanswer { grid-column: 2; grid-row: 3; padding: 8px 10px; }
+  #sheet-open .sanswer { grid-column: 2; grid-row: 2; padding: 8px 10px; }
   #sheet-open .sanswer textarea, #doc-open .sanswer textarea { min-height: 44px; max-height: 30vh; }
   #sheet-open .sanswer .bar, #doc-open .sanswer .bar { gap: 6px; margin-top: 6px; }
   #sheet-open .sanswer .bar button, #doc-open .sanswer .bar button { flex: 1 1 auto; padding: 10px 8px; letter-spacing: .12em; font-size: .6rem; }
@@ -322,7 +327,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261126-062934";</script>
+<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261126-065514";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -345,11 +350,11 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
           <span class="tools"><button type="button" id="s-draw" aria-pressed="true">Draw</button><button type="button" id="s-undo">Undo</button><button type="button" id="s-clear">Clear</button>
 </span></div>
         <div id="s-scroll"><div id="s-wrap"><img id="s-img" alt=""><div id="s-canvas"><svg id="s-ink" preserveAspectRatio="none" aria-hidden="true"><g id="s-g" fill="none" stroke="#DC1E1E" stroke-linecap="round" stroke-linejoin="round"></g></svg></div></div></div>
-        <div id="s-note"></div>
         <div class="sanswer"><textarea id="s-text" placeholder="What to change (optional if your marks say it)"></textarea>
           <div class="attrow" data-att-row="sheet"></div>
           <!-- the box standard: the black button takes it (Looks right, when he was asked to look) and comes first; his markup is the reply -->
           <div class="bar"><button class="go" type="button" id="s-ok">Looks right</button><button class="sec" type="button" id="s-send">Send markup</button><span id="sheet-clip"></span><span id="s-msg"></span></div></div>
+        <div id="s-note"></div>
       </div>
       <div id="doc-open" hidden>
         <div class="sbar"><button type="button" id="d-back">Documents</button><b id="d-title"></b></div>
@@ -1497,7 +1502,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     rpc('office_drew_checkin', { p_token: token, p_id: +id }).then(function (d) {
       if (!d || !d.ok) return;
       SH.open = d; SH.open.history = true; SH.strokes = (d.marks || []).slice(); SH.cur = null;
-      $('s-title').textContent = d.title; $('s-note').textContent = (d.note || '') + (d.lance_said ? ' You said: ' + ATT.quiet(d.lance_said) : ''); $('s-text').value = '';
+      $('s-title').textContent = d.title; $('s-note').innerHTML = listy(esc((d.note || '') + (d.lance_said ? ' You said: ' + ATT.quiet(d.lance_said) : '')), '\n'); $('s-text').value = '';
       document.querySelector('#sheet-open .sanswer').hidden = true;
       $('s-img').onload = function () { setZoom(1); };
       $('s-img').src = 'data:' + (d.mime || 'image/png') + ';base64,' + d.image;
@@ -1519,8 +1524,8 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       SH.tries = 0;
       SH.open = { current: sheet }; SH.strokes = []; SH.cur = null;
       $('s-title').textContent = sheet === 'Other' ? 'The latest picture' : sheet + (d.plotted ? ', as last plotted' : '');
-      $('s-note').textContent = (d.says ? T.name + ', ' + stamp(d.says.at) + ': ' + d.says.title + (d.says.note ? '. ' + d.says.note : '') : '') +
-        (d.plotted ? (d.says ? ' ' : '') + '(Plotted ' + stamp(d.plotted) + '.)' : '');
+      $('s-note').innerHTML = listy(esc((d.says ? T.name + ', ' + stamp(d.says.at) + ': ' + d.says.title + (d.says.note ? '. ' + d.says.note : '') : '') +
+        (d.plotted ? (d.says ? ' ' : '') + '(Plotted ' + stamp(d.plotted) + '.)' : '')), '\n');
       $('s-text').value = '';
       document.querySelector('#sheet-open .sanswer').hidden = false; $('s-ok').hidden = !d.says;
       $('s-img').onload = function () { setZoom(1); };
