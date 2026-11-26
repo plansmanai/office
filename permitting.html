@@ -331,7 +331,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261126-124324";</script>
+<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261126-130758";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -422,6 +422,18 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   // the file and it opens it up in my drive app?"). A file on Drive opens in Drive (on his phone, the Drive app; nothing
   // is shared by this, it is his own Drive). One he put on the draft himself opens in the viewer here. A file that is
   // only on the office PC (P4's own folder) has no link: `drive` comes from office_drafts (db/093). The same in both pages.
+  // A draft that asks someone to sign on plansman.com/sign (db/094): who signs, where it stands, and a link that shows Lance
+  // exactly what they will see, with the boxes where the signature goes. That link records nothing and cannot sign.
+  // `d.sign` comes from office_drafts. The same in both pages.
+  function signLine(d, cls) {
+    return (d.sign || []).map(function (s) {
+      var st = s.state === 'stamped' ? 'signed ' + stamp(s.signed_at) + ', and on the file' : s.state === 'signed' ? 'signed ' + stamp(s.signed_at) + ', going onto the file'
+        : s.state === 'failed' ? 'signed ' + stamp(s.signed_at) + ', but NOT on the file (see the conversation)' : s.state === 'void' ? 'link withdrawn' : s.state === 'expired' ? 'the link has ended'
+        : d.state !== 'sent' ? 'not sent yet' : s.opened_at ? 'opened ' + stamp(s.opened_at) + ', not signed yet' : 'not opened yet';
+      return '<div class="' + cls + '"><b>Signs on plansman.com/sign: </b>' + esc(s.signer) + ' · ' + esc(st) + ' · <a class="flink" href="https://www.plansman.com/sign/?t=' +
+        encodeURIComponent(s.preview) + '" target="_blank" rel="noopener">' + (s.state === 'stamped' ? 'See the signed document' : 'See what they will see') + '</a></div>';
+    }).join('');
+  }
   function fileName(a) {
     return a.drive ? '<a class="flink" href="https://drive.google.com/file/d/' + encodeURIComponent(a.drive) + '/view" target="_blank" rel="noopener">' + esc(a.name) + '</a>'
       : a.upload ? '<a class="flink" href="#" data-att-see="' + (+a.upload) + '">' + esc(a.name) + '</a>' : esc(a.name);
@@ -754,6 +766,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
         (a.upload && open ? ' <a class="off" data-dr-off="' + d.id + '" data-upload="' + a.upload + '">Take off</a>' : ''); }).join('; ') + '</div>' : ''; };
       // a file too large to email goes as a link to it on Google Drive, made when he taps Send (anyone with the link can look)
       if (files.length) h += fileLine('Attached:', files.filter(function (a) { return !a.link; })) + fileLine('Too large to attach, sent as a Google Drive link:', files.filter(function (a) { return a.link; }));
+      h += signLine(d, 'note');
       if (d.state === 'failed' || d.state === 'stale') h += '<div class="note bad">' + esc(d.result || 'Not sent.') + '</div>';
       else if (d.state === 'approved' || d.state === 'sending') h += '<div class="note">' + esc(d.result || (d.channel === 'action' ? 'Doing it…' : 'Sending…')) + '</div>';
       // The wording may promise a file and none is on it: he is told, and acts here, the same as on the dashboard. The
