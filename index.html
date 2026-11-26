@@ -523,7 +523,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261125-153111";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261125-215946";</script>
 </head>
 <body>
 
@@ -882,6 +882,20 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       inp('Amount', 'amount', 'class="amt" type="text" inputmode="decimal"') + inp('Paid on', 'date', 'type="date"') +
       inp('Paid to', 'to', 'type="text"', true) + inp('Note', 'note', 'type="text" placeholder="Optional"', true) + '</div>' +
       btnRow([btn('go', state.expBusy ? 'Saving…' : 'Save', 'data-exp-save=""'), btn('dim', 'Cancel', 'data-exp-cancel=""')]);
+  }
+  // TITLE 24'S MONEY, UNDER THE INVOICES (Lance, 25 Nov 2026: "T24 money shows below invoices and isn't part of the balance,
+  // just listed below it"; "I don't want all that calc info showing up on Jake's page"). The Title 24 as WORK (report,
+  // CHEERS, which copy is on the plans) is on Drew's ENGR tab (drafting.html, db/092). Here: what it costs, the
+  // invoice Title24.Today made, sent and paid. It is never added to the balance above it.
+  function t24Money(p) {
+    var t = p.t24;
+    if (!t || (t.quoted == null && !t.invoice_no)) return '';
+    return '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--rule)"><p class="note" style="margin:0 0 6px">Title 24 · billed by Title24.Today, not part of the balance above</p>' +
+      kv([['Price', t.quoted != null ? usd2(t.quoted) : ''], ['Invoice', t.invoice_no ? t.invoice_no + ' · made ' + day(t.invoiced) : 'not made yet'],
+          ['Sent to the client', t.invoice_no ? (t.forwarded ? day(t.forwarded) : 'not yet') : ''],
+          ['Paid', t.invoice_no ? (t.paid ? day(t.paid) : t.invoice_state === 'void' ? 'voided' : 'not yet' + (t.due ? ' · due ' + day(t.due) : '')) : '']]
+        .filter(function (x) { return x[1]; })) +
+      (t.invoice_url && !t.paid ? '<p style="margin-top:8px"><a href="' + esc(t.invoice_url) + '" target="_blank" rel="noopener">Open the invoice</a></p>' : '') + '</div>';
   }
   // the area on a job, under "Invoices and balance": the team's cost, what was paid out, and the net
   function expSec(p, m, got) {
@@ -1916,10 +1930,10 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       var totals = m.due == null ? '' : '<div style="margin-top:' + (bodyHtml ? '12' : '0') + 'px">' +
         kv([['Total value', usd2(m.value)], ['Received', got != null ? usd2(got) : ''], ['Adjustments', m.less ? '-' + usd2(m.less) : ''], ['Overpaid, held as credit', m.credit ? usd2(m.credit) : '']]
           .filter(function (x) { return x[1]; }).concat([['Balance due', usd2(m.due) || '$0', ' total']])) + '</div>';
-      h += sec('Invoices and balance', (state.adjMsg ? '<p class="note" style="margin:0 0 8px">' + esc(state.adjMsg) + '</p>' : '') + form + bodyHtml + totals +
+      h += sec('Invoices and balance', (state.adjMsg ? '<p class="note" style="margin:0 0 8px">' + esc(state.adjMsg) + '</p>' : '') + form + bodyHtml + totals + t24Money(p) +
         (adjOn ? '<p class="note" style="margin-top:8px">The totals follow when you save.</p>' : savingEdit(p) ? '<p class="note" style="margin-top:8px">Saving your edit…</p>' : ''), '',
         !CFG || m.due == null ? '' : adjOn ? saveCancel('adj') : '<button class="text quiet" type="button" id="adj-open">Edit</button>');
-    }
+    } else if (p.t24) h += sec('Title 24', t24Money(p));      // a job with no invoices yet still shows what its Title 24 costs
     h += expSec(p, m, m && m.value != null && m.sheet_due != null ? m.value - m.sheet_due : null);
     if (p.permit) {
       var pm = p.permit;
@@ -1928,22 +1942,6 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
         .filter(function (x) { return x[1]; })) + '<p class="note" style="margin-top:8px">From Cora\'s permit ledger.</p>');
     } else if (p.permitting === 'not bought' && p.signed) {
       h += sec('Permit', '<p class="note">Permitting not bought: the builder or client submits. No permit record.</p>');
-    }
-    // THE TITLE 24 ON THIS JOB, AS WORK (Lance, 25 Nov 2026: "I just want all the finances out of P4 but I want all the
-    // processes inside P4"). Where it stands, step by step; the invoice is Title24.Today's, in its own Stripe, so it is
-    // shown as a pointer and a paid / not paid, never added to this job's balance.
-    if (p.t24) {
-      var tq = p.t24;
-      h += sec('Title 24', kv([['Offered', day(tq.offered)], ['Ordered', day(tq.ordered) + (tq.ordered && tq.quoted != null ? ' · ' + usd2(tq.quoted) : '')],
-        ['Report', tq.report ? 'made ' + day(tq.report) : tq.ordered ? 'not made yet' : ''],
-        ['Registered (CHEERS)', tq.registered ? day(tq.registered) + (tq.registration_no ? ' · no. ' + tq.registration_no : '') : tq.report ? 'not yet' : ''],
-        ['On the plans', tq.on_plans === 'registered' ? 'registered copy' : tq.on_plans === 'unregistered' ? 'unregistered, review only' : tq.report ? 'not yet' : ''],
-        ['Invoice', tq.invoice_no ? tq.invoice_no + ' · made ' + day(tq.invoiced) : tq.report ? 'not made yet' : ''],
-        ['Sent to the client', tq.invoice_no ? (tq.forwarded ? day(tq.forwarded) : 'not yet') : ''],
-        ['Paid', tq.invoice_no ? (tq.paid ? day(tq.paid) : tq.invoice_state === 'void' ? 'voided' : 'not yet' + (tq.due ? ' · due ' + day(tq.due) : '')) : '']]
-        .filter(function (x) { return x[1]; })) +
-        (tq.invoice_url && !tq.paid ? '<p style="margin-top:8px"><a href="' + esc(tq.invoice_url) + '" target="_blank" rel="noopener">Open the invoice</a></p>' : '') +
-        '<p class="note" style="margin-top:8px">Billed by Title24.Today in its own Stripe. Not part of this job\'s balance.</p>');
     }
     h += sec('People', p.people.map(function (x) {
       if (CFG && state.editPerson === x.id) {

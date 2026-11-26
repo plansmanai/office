@@ -149,7 +149,7 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
   main { display: block; position: relative; }
   .stage, .talk { position: absolute; inset: 0; border-right: 0; }
   .stage .switch { display: none; }
-  main[data-show="drew"] .stage, main[data-show="live"] .talk, main[data-show="sheets"] .talk { display: none; }
+  main[data-show="drew"] .stage, main[data-show="live"] .talk, main[data-show="sheets"] .talk, main[data-show="engr"] .talk { display: none; }
   header .status { margin-left: 0; width: 100%; }
 }
 /* the conversation, the way Jake's chat looks: he is on the right on grey, Drew on the left in a thin frame */
@@ -173,7 +173,16 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
 /* Sheets: check-ins at full size, drawn on with a finger, a mouse or a pencil */
 .view.sheets { display: block; padding: 0; text-align: left; background: var(--bg); color: var(--ink); overflow: auto; }
 .view.sheets[hidden] { display: none; }
-#sheet-list .none { color: var(--muted); padding: 28px 18px; margin: 0; max-width: none; }
+#sheet-list .none, #engr-list .none { color: var(--muted); padding: 28px 18px; margin: 0; max-width: none; }
+/* ENGR: the calcs by section, the package, the Title 24 */
+.ehead { margin: 0; padding: 24px 18px 10px; font-family: var(--sans); font-weight: 500; letter-spacing: .22em; text-transform: uppercase; font-size: .68rem; color: var(--muted); border-bottom: 1px solid var(--ink); }
+.esteps { padding: 12px 18px; border-bottom: 1px solid var(--ink); }
+.esteps div { display: flex; gap: 12px; padding: 3px 0; } .esteps div span { color: var(--muted); min-width: 160px; } .esteps div b { font-weight: 500; }
+#d-secs { padding: 10px 14px; border-top: 1px solid var(--rule); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: var(--bg); }
+#d-secs[hidden] { display: none; }
+#d-secs small { width: 100%; color: var(--muted); font-size: 12.5px; }
+#d-secs button { font: inherit; font-size: 12.5px; background: none; border: 1px solid var(--rule); padding: 5px 9px; cursor: pointer; color: var(--ink); }
+#d-secs button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
 .srow { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--rule); padding: 14px 18px; cursor: pointer; font: inherit; color: inherit; }
 .srow b { font-weight: 500; display: block; } .srow span { color: var(--muted); font-size: 13.5px; }
 .srow i { font-style: normal; float: right; font-size: .6rem; letter-spacing: .16em; text-transform: uppercase; border: 1px solid var(--rule); padding: 2px 7px 1px; color: var(--muted); }
@@ -306,7 +315,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261125-153111";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261125-215946";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -317,10 +326,10 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   <span class="phase" id="phase" hidden></span>
   <span class="status"><i class="dot" id="dot"></i><span id="status">Connecting…</span></span></div>
 </div></header>
-<nav class="tabs" id="tabs" hidden><button type="button" data-show="live">Live view</button><button type="button" data-show="sheets">Sheets</button><button type="button" data-show="drew" aria-current="true">Drew</button></nav>
+<nav class="tabs" id="tabs" hidden><button type="button" data-show="live">Live view</button><button type="button" data-show="sheets">Sheets</button><button type="button" data-show="engr">ENGR</button><button type="button" data-show="drew" aria-current="true">Drew</button></nav>
 <main id="main" data-show="drew" hidden>
   <section class="stage">
-    <div class="switch"><button type="button" data-stage="live" aria-current="true">Live view</button><button type="button" data-stage="sheets">Sheets</button></div>
+    <div class="switch"><button type="button" data-stage="live" aria-current="true">Live view</button><button type="button" data-stage="sheets">Sheets</button><button type="button" data-stage="engr">ENGR</button></div>
     <div class="view live" id="stage-live"><img id="live" alt="Drew's AutoCAD" hidden><p id="live-note">Looking for Drew's AutoCAD…</p><div id="live-cap" hidden></div></div>
     <div class="view sheets" id="stage-sheets" hidden>
       <div id="sheet-list"><p class="none">No check-ins on this job yet. Drew posts one when he wants you to look at something.</p></div>
@@ -338,11 +347,14 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       <div id="doc-open" hidden>
         <div class="sbar"><button type="button" id="d-back">Documents</button><b id="d-title"></b></div>
         <div id="d-scroll"><div id="d-wrap"></div></div>
+        <div id="d-secs" hidden></div>
         <div class="sanswer"><textarea id="d-text" placeholder="A correction for this document: the item number and what it should say"></textarea>
           <div class="attrow" data-att-row="doc"></div>
           <div class="bar"><button class="go" type="button" id="d-send">Send</button><span id="doc-clip"></span><span id="d-msg"></span></div></div>
       </div>
     </div>
+    <!-- ENGR (Drew's window): the job's calcs by section, the combined package, and its Title 24 (db/092). An open calc uses the document viewer above, moved in here. -->
+    <div class="view sheets" id="stage-engr" hidden><div id="engr-list"><p class="none">Reading this job’s calcs…</p></div></div>
   </section>
   <div id="split" title="Drag to resize. Double-click to hide or show the chat."></div>
   <section class="talk">
@@ -915,6 +927,8 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   document.querySelector('.tabs [data-show="drew"]').textContent = T.name;
   document.querySelector('.tabs [data-show="sheets"]').textContent = T.sheets;
   document.querySelector('.switch [data-stage="sheets"]').textContent = T.sheets;
+  if (WHO === 'drew') $('stage-engr').appendChild($('doc-open'));      // an open calc is read in the document viewer, inside ENGR
+  else Array.prototype.forEach.call(document.querySelectorAll('[data-show="engr"], [data-stage="engr"]'), function (b) { b.hidden = true; });
   $('text').placeholder = 'Talk to ' + T.name; $('text').setAttribute('aria-label', 'Talk to ' + T.name);
   $('say-clip').outerHTML = ATT.clip('say', NO); $('sheet-clip').outerHTML = ATT.clip('sheet', NO); $('doc-clip').outerHTML = ATT.clip('doc', NO);      // the paperclips of the two boxes that are in the page itself
   $('live').alt = T.screen; $('live-note').textContent = T.looking;
@@ -1006,10 +1020,11 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   $('text').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) send(e); });
   Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function (b) {
     b.addEventListener('click', function () {
-      var was = sheetsShowing();
+      var was = sheetsShowing(), wasE = engrShowing();
       Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function (x) { x.removeAttribute('aria-current'); });
       b.setAttribute('aria-current', 'true'); $('main').setAttribute('data-show', b.getAttribute('data-show'));
-      var s = b.getAttribute('data-show'); if (s !== 'drew') { $('stage-live').hidden = s !== 'live'; $('stage-sheets').hidden = s !== 'sheets'; }
+      var s = b.getAttribute('data-show'); if (s !== 'drew') { $('stage-live').hidden = s !== 'live'; $('stage-sheets').hidden = s !== 'sheets'; $('stage-engr').hidden = s !== 'engr'; }
+      if (s === 'engr') { if (wasE && DOC.open && !SH.staying) closeDoc(); else if (!DOC.open) loadEngr(); }      // already in a calc: back to the list
       if (s === 'sheets' && was && SH.open && !SH.staying) closeSheet();      // already on a sheet: back to the list of sheets
       if (s === 'sheets' && was && DOC.open && !SH.staying) closeDoc();       // already in a document: back to the documents, where he was
       if (s === 'sheets' && SH.open) setTimeout(fit, 0);                      // the screen may have changed while the sheet was out of sight
@@ -1018,9 +1033,10 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   Array.prototype.forEach.call(document.querySelectorAll('.switch button'), function (b) {
     b.addEventListener('click', function () {
       Array.prototype.forEach.call(document.querySelectorAll('.switch button'), function (x) { x.removeAttribute('aria-current'); });
-      var was = sheetsShowing();
+      var was = sheetsShowing(), wasE = engrShowing();
       b.setAttribute('aria-current', 'true'); var s = b.getAttribute('data-stage');
-      $('stage-live').hidden = s !== 'live'; $('stage-sheets').hidden = s !== 'sheets';
+      $('stage-live').hidden = s !== 'live'; $('stage-sheets').hidden = s !== 'sheets'; $('stage-engr').hidden = s !== 'engr';
+      if (s === 'engr') { if (wasE && DOC.open && !SH.staying) closeDoc(); else if (!DOC.open) loadEngr(); }
       if (s === 'sheets' && was && SH.open && !SH.staying) closeSheet();
       if (s === 'sheets' && was && DOC.open && !SH.staying) closeDoc();
       if (s === 'sheets' && SH.open) setTimeout(fit, 0);
@@ -1163,7 +1179,15 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   }
   function closeDoc() {
     clearTimeout(DOC.poll); if (DOC.seen) { DOC.seen.disconnect(); DOC.seen = null; }
+    var wasCalc = DOC.open && DOC.open.engr;
     DOC.open = null; $('doc-open').hidden = true; $('d-wrap').innerHTML = ''; $('sheet-list').hidden = false;
+    if (wasCalc) {                                              // back to the ENGR list, where he was
+      $('d-secs').hidden = true; $('engr-list').hidden = false;
+      var backE = function () { $('stage-engr').scrollTop = EN.at || 0; };
+      backE(); setTimeout(backE, 0);
+      var q = loadEngr(); if (q && q.then) q.then(backE);
+      return;
+    }
     // back where he was before he opened it: the same folders open, the list at the same place (also after the list is read again)
     var back = function () { $('stage-sheets').scrollTop = DOC.at || 0; };
     back(); setTimeout(back, 0);
@@ -1178,7 +1202,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     if (!text) { $('d-msg').textContent = 'Write the correction first.'; return; }
     $('d-msg').textContent = 'Sending\u2026'; $('d-send').disabled = true;
     var o = DOC.open;
-    rpc('office_drew_say', { p_token: token, p_proj: NO, p_who: o.to, p_body: 'About the document "' + o.path + '" in this job\u2019s PERMITTING folder:\n' + text }).then(function (d) {
+    rpc('office_drew_say', { p_token: token, p_proj: NO, p_who: o.to, p_body: (o.engr ? 'About the ' + o.what + ' "' + o.path + '" on this job (the ENGR tab):\n' : 'About the document "' + o.path + '" in this job\u2019s PERMITTING folder:\n') + text }).then(function (d) {
       if (d && d.ok && d.saved) {
         $('d-text').value = ''; ATT.clear('doc');
         $('d-msg').textContent = o.to === WHO ? 'Given to ' + o.toName + '. The answer is under the ' + o.toName + ' tab.' : 'Given to ' + o.toName + '. His answer is in his window: the ' + o.toName + ' button at the top.';
@@ -1189,6 +1213,133 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   }
   $('d-back').addEventListener('click', closeDoc);
   $('d-send').addEventListener('click', sendDoc);
+  // ---- ENGR (Drew's window only; db/092, station/engr.py). Lance, 25 Nov 2026: "We need to add another section between
+  // sheets and Drew for ENGR ... I'd like to be able to see those docs in P4"; "sections appear as calcs are added in
+  // P4. A combined .pdf should still display in its category". The job's calcs (one PDF each, in PLOTS\TEMP CALCS)
+  // under the sections they belong to, the combined package (PLOTS), and below them the Title 24: where it stands as
+  // work, and its files. No money here; nothing here changes a file. A calc opens in the same viewer as a document.
+  var EN = { files: [], byId: {}, t24: null, sig: '', scanned: null, at: 0, open: {} };
+  var CSEC = ['', 'Basis of Design', 'Lateral Force Resistance System', 'Diaphragms', 'Joists, Headers, Beams', 'Walls, Columns', 'Connections', 'Foundations', 'Misc'];
+  function engrShowing() { return WHO === 'drew' && !document.hidden && !$('stage-engr').hidden && (window.innerWidth > 860 || $('main').getAttribute('data-show') === 'engr'); }
+  function showEngr() {
+    var b = window.innerWidth > 860 ? document.querySelector('.switch [data-stage="engr"]') : document.querySelector('.tabs [data-show="engr"]');
+    SH.staying = true; if (b) b.click(); SH.staying = false;
+  }
+  function dday(s) { var m = /^(\d{4})-(\d\d)-(\d\d)/.exec(s || ''); return m ? (+m[2]) + '/' + (+m[3]) + '/' + m[1].slice(2) : ''; }
+  function loadEngr() {
+    if (WHO !== 'drew') return null;
+    return rpc('office_engr', { p_token: token, p_proj: NO }).then(function (d) {
+      if (!d || !d.ok) return;
+      var sig = JSON.stringify([d.scanned_at ? 1 : 0, d.t24, (d.files || []).map(function (x) { return [x.id, x.size, x.modified, x.sections]; })]);
+      EN.files = d.files || []; EN.t24 = d.t24 || null; EN.scanned = d.scanned_at; EN.byId = {};
+      EN.files.forEach(function (x) { x.sections = x.sections || []; EN.byId[x.id] = x; });
+      if (sig !== EN.sig) { EN.sig = sig; drawEngr(); }
+      if (!d.scanned_at) setTimeout(function () { if (engrShowing() && !DOC.open) loadEngr(); }, 1500);      // the PC has not read this job's folders yet
+    }).catch(function () {});
+  }
+  function erow(x, extra) {
+    return '<button class="srow dfile" type="button" data-calc="' + x.id + '"><b>' + esc(x.name) + '</b><span>' + kb(x.size) +
+      (x.modified ? ' · saved ' + esc(stamp(x.modified)) : '') + (extra ? ' · ' + esc(extra) : '') + '</span></button>';
+  }
+  function egroup(key, title, note, rows) {
+    var open = EN.open[key] != null ? EN.open[key] : true;
+    return '<details class="sgroup dgroup" data-egroup="' + key + '"' + (open ? ' open' : '') + '><summary><b>' + esc(title) + '</b><span>' + esc(note) + '</span></summary>' + rows + '</details>';
+  }
+  function drawEngr() {
+    var of = function (a) { return EN.files.filter(function (x) { return x.area === a; }); };
+    var calcs = of('calc'), sets = of('calcset'), tfiles = of('t24'), h = '', n;
+    var count = function (k) { return k + (k === 1 ? ' file' : ' files'); };
+    if (calcs.length || sets.length) {
+      h += '<h3 class="ehead">Calcs</h3>';
+      if (sets.length) h += egroup('set', 'Calc package', count(sets.length) + ' · the combined set, in PLOTS', sets.map(function (x) { return erow(x); }).join(''));
+      for (n = 1; n <= 8; n++) (function (n) {              // a section shows once it holds a calc
+        var files = calcs.filter(function (x) { return x.sections.indexOf(n) >= 0; });
+        if (!files.length) return;
+        h += egroup('s' + n, n + ' · ' + CSEC[n], count(files.length), files.map(function (x) {
+          var also = x.sections.filter(function (m) { return m !== n; }).map(function (m) { return CSEC[m]; });
+          return erow(x, also.length ? 'also under ' + also.join(', ') + ' (one PDF for several calcs)' : '');
+        }).join(''));
+      })(n);
+      var loose = calcs.filter(function (x) { return !x.sections.length; });
+      if (loose.length) h += egroup('loose', 'To sort', count(loose.length) + ' · Drew reads each and puts it under its section', loose.map(function (x) { return erow(x); }).join(''));
+    }
+    if (EN.t24 || tfiles.length) {
+      h += '<h3 class="ehead">Title 24</h3>';
+      if (EN.t24) {
+        var t = EN.t24, steps = [['Offered', dday(t.offered)], ['Ordered', dday(t.ordered)],
+          ['Report', t.report ? 'made ' + dday(t.report) : t.ordered ? 'not made yet' : ''],
+          ['Registered (CHEERS)', t.registered ? dday(t.registered) + (t.registration_no ? ' · no. ' + t.registration_no : '') : t.report ? 'not yet' : ''],
+          ['On the plans', t.on_plans === 'registered' ? 'registered copy' : t.on_plans === 'unregistered' ? 'unregistered, for review only' : t.report ? 'not yet' : '']]
+          .filter(function (x) { return x[1]; });
+        if (steps.length) h += '<div class="esteps">' + steps.map(function (x) { return '<div><span>' + esc(x[0]) + '</span><b>' + esc(x[1]) + '</b></div>'; }).join('') + '</div>';
+      }
+      if (tfiles.length) h += egroup('t24', 'Title 24 files', count(tfiles.length), tfiles.map(function (x) { return erow(x, 'in ' + x.path.split('/')[0]); }).join(''));
+    }
+    $('engr-list').innerHTML = h || '<p class="none">' + (EN.scanned ? 'No calcs or Title 24 on this job yet. A calc saved as a PDF in the job\u2019s PLOTS\\TEMP CALCS folder shows here under its section; the combined package is the CALCS PDF in PLOTS.'
+                                                                      : 'Reading this job\u2019s calcs\u2026') + '</p>';
+  }
+  document.addEventListener('toggle', function (e) {            // which groups he has opened or shut is kept through a refresh
+    var t = e.target; if (t && t.getAttribute && t.getAttribute('data-egroup') != null) EN.open[t.getAttribute('data-egroup')] = t.open;
+  }, true);
+  // The sections a calc is shown under, on the open calc: his tap puts it under one or takes it out, and it is saved at once.
+  function drawSecs(x, all) {
+    var box = $('d-secs');
+    if (!x || x.area !== 'calc') { box.hidden = true; box.innerHTML = ''; return; }
+    box.hidden = false;
+    if (!all && x.sections.length) {                           // one line, so the calc keeps the screen; Change opens the eight
+      box.innerHTML = '<small style="width:auto;flex:1">Shown under: ' + esc(x.sections.map(function (n) { return n + ' ' + CSEC[n]; }).join(', ')) + '</small><button type="button" data-secs-all="1">Change</button>';
+      return;
+    }
+    box.innerHTML = '<small>' + (x.sections.length ? 'Shown under (tap to change):' : 'Not sorted yet. Tap the section it belongs to:') + '</small>' +
+      [1, 2, 3, 4, 5, 6, 7, 8].map(function (n) {
+        return '<button type="button" data-sec="' + n + '" aria-pressed="' + (x.sections.indexOf(n) >= 0) + '">' + n + ' ' + esc(CSEC[n]) + '</button>';
+      }).join('');
+  }
+  $('d-secs').addEventListener('click', function (e) {
+    if (!DOC.open || !DOC.open.engr) return;
+    var x = EN.byId[DOC.open.id]; if (!x) return;
+    if (e.target.closest && e.target.closest('[data-secs-all]')) { drawSecs(x, true); return; }
+    var b = e.target.closest && e.target.closest('[data-sec]');
+    if (!b) return;
+    var n = +b.getAttribute('data-sec'), now = x.sections.slice(), i = now.indexOf(n);
+    if (i >= 0) now.splice(i, 1); else now.push(n);
+    now.sort(); x.sections = now; drawSecs(x, true); EN.sig = '';
+    $('d-msg').textContent = 'Saving\u2026';
+    rpc('office_calc_sort', { p_token: token, p_id: x.id, p_sections: now.join(',') }).then(function (d) {
+      $('d-msg').textContent = d && d.ok && d.saved ? 'Saved.' : (d && d.why) || 'Not saved. Try again.';
+    }).catch(function () { $('d-msg').textContent = 'Not saved. Try again.'; });
+  });
+  function openCalc(id) {
+    var x = EN.byId[id];
+    if (!x) return;
+    var what = x.area === 'calc' ? 'calc' : x.area === 'calcset' ? 'calc package' : 'Title 24 file';
+    EN.at = $('stage-engr').scrollTop;                          // where he was in the list, to come back to
+    DOC.open = { id: id, path: x.path, name: x.name, to: 'drew', toName: 'Drew', engr: x.area, what: what }; clearTimeout(DOC.poll);
+    $('d-text').placeholder = 'A correction for Drew on this ' + what + ': the page or item, and what it should say';
+    $('d-text').setAttribute('aria-label', $('d-text').placeholder);
+    $('d-back').textContent = 'ENGR';
+    showEngr(); $('engr-list').hidden = true; $('doc-open').hidden = false;
+    $('d-title').textContent = x.name; $('d-msg').textContent = ''; $('d-scroll').scrollTop = 0; docZoom(1);
+    drawSecs(x);
+    $('d-wrap').innerHTML = '<p class="st">Opening\u2026</p>';
+    var tries = 0, ask = function () {
+      rpc('office_doc', { p_token: token, p_id: id }).then(function (d) {
+        if (!DOC.open || DOC.open.id !== id) return;
+        if (!d || !d.ok) { $('d-wrap').innerHTML = '<p class="st">Signed out. Open the dashboard and sign in.</p>'; return; }
+        if (!d.found) { $('d-wrap').innerHTML = '<p class="st">It is no longer in the folder.</p>'; return; }
+        if (d.state === 'ready') return docPages(d);
+        if (d.state === 'failed') { $('d-wrap').innerHTML = '<p class="st">' + esc(d.note || 'It could not be opened.') + '</p>'; return; }
+        $('d-wrap').innerHTML = '<p class="st">' + (tries > 20 ? 'Still getting it ready. A long set takes a little while the first time; the office PC has to be on.' : 'Getting it ready\u2026') + '</p>';
+        if (++tries < 120) DOC.poll = setTimeout(ask, 1500);
+      }).catch(function () { if (DOC.open && DOC.open.id === id && ++tries < 120) DOC.poll = setTimeout(ask, 3000); });
+    };
+    ask();
+  }
+  $('engr-list').addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-calc]');
+    if (b) openCalc(+b.getAttribute('data-calc'));
+  });
+  setInterval(function () { if (engrShowing() && !DOC.open) loadEngr(); }, 10000);
   // Two fingers on a document pinch it larger or smaller and move it, the way a phone does everywhere else; one finger
   // scrolls through the pages (Lance, 23 Nov 2026: "make the pdf double finger pinch and zoom and pan. the + - are [not]
   // as helpful"). The point under his fingers stays under them. On a PC: Ctrl and the wheel, or a trackpad's pinch.
@@ -1404,7 +1555,8 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   var wasWide = window.innerWidth > 860;
   window.addEventListener('resize', function () {
     var wide = window.innerWidth > 860;
-    if (wide !== wasWide && (SH.open || DOC.open) && (wide ? $('main').getAttribute('data-show') === 'sheets' : !$('stage-sheets').hidden)) showSheets();
+    if (wide !== wasWide && DOC.open && DOC.open.engr) { if (wide ? $('main').getAttribute('data-show') === 'engr' : !$('stage-engr').hidden) showEngr(); }
+    else if (wide !== wasWide && (SH.open || DOC.open) && (wide ? $('main').getAttribute('data-show') === 'sheets' : !$('stage-sheets').hidden)) showSheets();
     wasWide = wide;
     if (SH.open) fit(); else paint();                    // turned, or the window changed: fitted again
   });
