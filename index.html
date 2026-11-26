@@ -220,6 +220,10 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .reach { margin-top: 8px; display: grid; gap: 8px; }
 .reach .tel { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .reach .tel b { font-weight: 400; font-variant-numeric: tabular-nums; margin-right: 4px; }
+.reach i.kind { font-style: normal; color: var(--muted); font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
+.reach .tel .num { display: grid; margin-right: 4px; } .reach .tel .num b { margin-right: 0; } .reach .tel .num i.kind { line-height: 1.2; }
+.reach .kinded { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.pedit .prow select { flex: none; width: 6.6em; font: inherit; font-size: 13px; color: var(--ink); background: transparent; border: 1px solid var(--rule); padding: 0 4px; border-radius: 0; }
 .reach a.mailto { text-transform: none; letter-spacing: 0; font-size: 14.5px; border: 0; padding: 0; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; overflow-wrap: anywhere; }
 .marks.slim { margin-top: 6px; } .marks.slim button.text { padding: 5px 10px 4px 11px; }
 .pedit { display: grid; gap: 10px; } .pedit label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
@@ -532,7 +536,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261126-130758";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261126-133238";</script>
 </head>
 <body>
 
@@ -1623,22 +1627,30 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   var PHONE = /iPhone|iPad|Android/.test(navigator.userAgent);
   function ten(n) { return String(n || '').replace(/\D/g, '').slice(-10); }
   function pretty(n) { var t = ten(n); return t.length === 10 ? '(' + t.slice(0, 3) + ') ' + t.slice(3, 6) + '-' + t.slice(6) : String(n || ''); }
-  function phoneLinks(n) {
+  // What kind a phone, an email or an address is (work, cell, personal, home), shown after it where it is known and left
+  // blank where it is not (Lance, 26 Nov 2026: "If it's known then we should add it, if we don't know then it can stay
+  // blank"). `labels` is the person's map from the value to the word (db/095); Google Contacts is where it is kept.
+  function kindOf(labels, v) { var l = labels && labels[v]; return l ? '<i class="kind">' + esc(l) + '</i>' : ''; }
+  var KINDS = { phones: ['cell', 'work', 'home', 'main'], emails: ['personal', 'work'], addresses: ['home', 'work'] };
+  function phoneLinks(n, i, all, labels) {
     var t = ten(n); if (t.length !== 10) return esc(n);
     var e = '+1' + t;
-    return '<span class="tel"><b>' + esc(pretty(n)) + '</b>' +
+    var k = kindOf(labels, t);                             // under the number, so Call, Text and Cell stay on its line on a phone
+    return '<span class="tel">' + (k ? '<span class="num"><b>' + esc(pretty(n)) + '</b>' + k + '</span>' : '<b>' + esc(pretty(n)) + '</b>') +
       (PHONE ? '<a href="rcapp://r/call?number=' + e + '">Call</a><a href="rcapp://r/sms?type=new&number=' + e + '">Text</a><a href="tel:' + e + '">Cell</a>'
              : '<a href="tel:' + e + '">Call</a>') + '</span>';
   }
-  function mailLink(a) {
-    return '<a class="mailto" href="' + (PHONE ? 'googlegmail://co?to=' + encodeURIComponent(a) : 'mailto:' + encodeURIComponent(a)) + '">' + esc(a) + '</a>';
+  function mailLink(a, i, all, labels) {
+    var k = kindOf(labels, String(a).toLowerCase());
+    return (k ? '<span class="kinded">' : '') + '<a class="mailto" href="' + (PHONE ? 'googlegmail://co?to=' + encodeURIComponent(a) : 'mailto:' + encodeURIComponent(a)) + '">' + esc(a) + '</a>' + (k ? k + '</span>' : '');
   }
   function webLink(u) {
     var l = String(u).toLowerCase(), h = l.indexOf('http://') === 0 || l.indexOf('https://') === 0 ? u : 'https://' + u;
     return '<a class="mailto" href="' + esc(h) + '" target="_blank" rel="noopener">' + esc(u) + '</a>';
   }
-  function placeLink(a) {
-    return '<a class="mailto" href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(a) + '" target="_blank" rel="noopener">' + esc(a) + '</a>';
+  function placeLink(a, i, all, labels) {
+    var k = kindOf(labels, a);
+    return (k ? '<span class="kinded">' : '') + '<a class="mailto" href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(a) + '" target="_blank" rel="noopener">' + esc(a) + '</a>' + (k ? k + '</span>' : '');
   }
   // the sender's own words, without the quoted thread under them
   function ownWords(t) {
@@ -1999,7 +2011,10 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
         };
         var many = function (label, kind, type, extra) {
           return '<div class="pf"><span>' + label + '</span>' + f[kind].map(function (v, i) {
+            var kinds = KINDS[kind], now = kinds ? ((f.kinds || {})[kind] || [])[i] || '' : '';
             return '<div class="prow"><input type="' + type + '" data-pf="' + kind + '" data-i="' + i + '" value="' + esc(v) + '" autocomplete="off"' + (extra || '') + '>' +
+              (kinds ? '<select data-pk="' + kind + '" data-i="' + i + '" aria-label="What kind of ' + label.toLowerCase() + '"><option value="">kind</option>' +
+                kinds.concat(now && kinds.indexOf(now) < 0 ? [now] : []).map(function (k) { return '<option' + (k === now ? ' selected' : '') + '>' + esc(k) + '</option>'; }).join('') + '</select>' : '') +
               '<button class="x" type="button" data-pf-del="' + kind + '" data-i="' + i + '" aria-label="Remove this ' + label.toLowerCase() + '">&times;</button></div>';
           }).join('') + '<button class="add" type="button" data-pf-add="' + kind + '">+ ' + label + '</button></div>';
         };
@@ -2015,7 +2030,8 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
           '<button class="text" type="button" data-person="remove" data-id="' + esc(x.id) + '">Take off this job</button> ' +
           '<button class="text quiet" type="button" data-person="cancel" data-id="' + esc(x.id) + '">Cancel</button></div></div>';
       }
-      var reach = (x.phones || []).map(phoneLinks).join('') + (x.emails || []).map(mailLink).join('') + (x.websites || []).map(webLink).join('') + (x.addresses || []).map(placeLink).join('');
+      var lab = x.labels || {}, withKind = function (fn) { return function (v, i, all) { return fn(v, i, all, lab); }; };
+      var reach = (x.phones || []).map(withKind(phoneLinks)).join('') + (x.emails || []).map(withKind(mailLink)).join('') + (x.websites || []).map(webLink).join('') + (x.addresses || []).map(withKind(placeLink)).join('');
       // a number or address he just added that another contact already has, under another name: his call
       var ask = state.personAsk && state.personAsk.id === x.id ? state.personAsk.others.map(function (o) {
         return '<div class="pask"><p>' + esc((o.shares || []).map(function (v) { return /^[0-9]{10}$/.test(v) ? pretty(v) : v; }).join(', ')) + ' is also on <b>' + esc(o.name) + '</b> in your contacts. Same person?</p>' +
@@ -2345,12 +2361,20 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
         if (k) f[k] = t.value; else f[t.getAttribute('data-pf')][+t.getAttribute('data-i')] = t.value;
       });
     });
+    Array.prototype.forEach.call($('detail').querySelectorAll('select[data-pk]'), function (t) {
+      t.addEventListener('change', function () {
+        var f = state.personForm, k = t.getAttribute('data-pk');
+        f.kinds = f.kinds || {}; f.kinds[k] = f.kinds[k] || [];
+        f.kinds[k][+t.getAttribute('data-i')] = t.value;
+      });
+    });
     Array.prototype.forEach.call($('detail').querySelectorAll('[data-pf-add], [data-pf-del]'), function (b) {
       b.addEventListener('click', function () {
         var f = state.personForm, add = b.getAttribute('data-pf-add'), del = b.getAttribute('data-pf-del');
+        var kd = f.kinds && f.kinds[add || del];             // the kind of each row moves with its row
         if (add === 'note') f.hasNote = true;
-        else if (add) f[add].push('');
-        else f[del].splice(+b.getAttribute('data-i'), 1);
+        else if (add) { f[add].push(''); if (kd) kd[f[add].length - 1] = ''; }
+        else { f[del].splice(+b.getAttribute('data-i'), 1); if (kd) kd.splice(+b.getAttribute('data-i'), 1); }
         render();
         var t = add === 'note' ? document.querySelector('[data-pf1="note"]') : add ? document.querySelector('[data-pf="' + add + '"][data-i="' + (f[add].length - 1) + '"]') : null;
         if (t) t.focus();
@@ -3086,7 +3110,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   function keepPerson(p, x, gone, joined) {
     KEPT = KEPT.filter(function (k) { return !(k.no === p.no && k.id === x.id); });
     KEPT.push({ no: p.no, id: x.id, gone: gone, joined: joined || [], until: Date.now() + 300000, set: JSON.parse(JSON.stringify(
-      { name: x.name, role: x.role, company: x.company, phones: x.phones, emails: x.emails, websites: x.websites, addresses: x.addresses, note: x.note })) });
+      { name: x.name, role: x.role, company: x.company, phones: x.phones, emails: x.emails, websites: x.websites, addresses: x.addresses, note: x.note, labels: x.labels || {} })) });
   }
   function personDo(p, id, verb, other) {
     var x = p.people.filter(function (y) { return y.id === id; })[0];
@@ -3094,6 +3118,9 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     if (verb === 'edit') {
       var f0 = { name: x.name, company: x.company || '', role: x.role || '', phones: (x.phones || []).map(pretty), emails: (x.emails || []).slice(),
         websites: (x.websites || []).slice(), addresses: (x.addresses || []).slice(), note: x.note || '', hasNote: !!x.note };
+      var L0 = x.labels || {};                              // the kind of each row, beside it: the same order as the rows
+      f0.kinds = { phones: (x.phones || []).map(function (v) { return L0[ten(v)] || ''; }), emails: (x.emails || []).map(function (v) { return L0[String(v).toLowerCase()] || ''; }),
+        addresses: (x.addresses || []).map(function (v) { return L0[v] || ''; }) };
       if (!f0.phones.length) f0.phones.push('');
       if (!f0.emails.length) f0.emails.push('');
       state.editPerson = id; state.personForm = f0; state.personMsg = ''; state.personAsk = null; render(); return;
@@ -3105,7 +3132,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     }
     var took = function (d, first) {                       // what the record now holds for this person, and what it joined
       var n = d.person, j = d.joined || [];
-      if (n) { x.name = n.name; x.company = n.company; x.phones = n.phones; x.emails = n.emails; x.websites = n.websites; x.addresses = n.addresses; x.note = n.note; }
+      if (n) { x.name = n.name; x.company = n.company; x.phones = n.phones; x.emails = n.emails; x.websites = n.websites; x.addresses = n.addresses; x.note = n.note; x.labels = n.labels || {}; }
       if (j.length) p.people = p.people.filter(function (y) { return y === x || j.indexOf(y.name) < 0; });
       state.personAsk = (d.same || []).length ? { id: id, others: d.same } : null;
       state.personMsg = (first + (j.length ? ' Connected with ' + j.join(' and ') + ', already in your contacts. They are one contact now.' : '')).trim();
@@ -3129,11 +3156,19 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       if (badP.length) { state.personMsg = 'A phone number needs 10 digits: ' + badP.join(', ') + '.'; render(); return; }
       if (badE.length) { state.personMsg = 'That is not an email address: ' + badE.join(', ') + '.'; render(); return; }
       contact = { company: (f.company || '').trim(), phones: phones.map(ten), emails: emails, websites: list('websites'), addresses: list('addresses'), note: f.hasNote ? (f.note || '').trim() : '' };
+      // the kind he picked for each row, by its value; "" for one he cleared, so it comes off in Google too
+      contact.labels = {};
+      ['phones', 'emails', 'addresses'].forEach(function (k) {
+        (f[k] || []).forEach(function (v, i) {
+          v = String(v).trim(); if (!v) return;
+          contact.labels[k === 'phones' ? ten(v) : k === 'emails' ? v.toLowerCase() : v] = ((f.kinds || {})[k] || [])[i] || '';
+        });
+      });
     }
     var before = p.people.slice(), was = JSON.parse(JSON.stringify(x));
     var undo = function () { p.people = before; Object.keys(was).forEach(function (k) { x[k] = was[k]; }); if (!gone) state.editPerson = id; };   // his typing is still in the boxes
     if (gone) p.people = p.people.filter(function (y) { return y.id !== id; });
-    else { x.name = name; x.role = role; x.company = contact.company; x.phones = contact.phones; x.emails = contact.emails; x.websites = contact.websites; x.addresses = contact.addresses; x.note = contact.note; }
+    else { x.name = name; x.role = role; x.company = contact.company; x.phones = contact.phones; x.emails = contact.emails; x.websites = contact.websites; x.addresses = contact.addresses; x.note = contact.note; x.labels = contact.labels; }
     state.editPerson = null; state.personMsg = ''; state.personAsk = null; render();
     rpc('office_person', { p_token: token, p_proj: p.no, p_person: id, p_name: gone ? null : name, p_role: gone ? null : (role || null), p_remove: gone, p_contact: contact }).then(function (d) {
       if (d && d.ok && d.saved) { if (gone) state.personMsg = 'Taken off this job.'; else took(d, 'Saved.'); keepPerson(p, x, gone, d.joined); render(); return; }
