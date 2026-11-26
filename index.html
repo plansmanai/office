@@ -221,9 +221,11 @@ h2 small { flex-basis: 100%; font-weight: 400; letter-spacing: 0; text-transform
 .reach { margin-top: 8px; display: grid; gap: 8px; }
 .reach .tel { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .reach .tel b { font-weight: 400; font-variant-numeric: tabular-nums; margin-right: 4px; }
-.reach i.kind { font-style: normal; color: var(--muted); font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
-.reach .tel .num { display: grid; margin-right: 4px; } .reach .tel .num b { margin-right: 0; } .reach .tel .num i.kind { line-height: 1.2; }
-.reach .kinded { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.reach i.kind { font-style: normal; color: var(--muted); font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; margin-left: auto; text-align: right; }
+.reach .kinded { display: flex; align-items: baseline; gap: 12px; }
+/* on a phone the number, Call, Text, Cell and the kind share one line: a little less air between them */
+@media (max-width: 480px) { .reach .tel { gap: 6px; } .reach .tel b { margin-right: 2px; } .reach .tel a { padding: 6px 8px 5px 9px; } }
+.reach .kinded a.mailto { min-width: 0; }
 .pedit .prow select { flex: none; width: 6.6em; font: inherit; font-size: 13px; color: var(--ink); background: transparent; border: 1px solid var(--rule); padding: 0 4px; border-radius: 0; }
 .reach a.mailto { text-transform: none; letter-spacing: 0; font-size: 14.5px; border: 0; padding: 0; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; overflow-wrap: anywhere; }
 .marks.slim { margin-top: 6px; } .marks.slim button.text { padding: 5px 10px 4px 11px; }
@@ -537,7 +539,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261126-134401";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261126-140035";</script>
 </head>
 <body>
 
@@ -1656,10 +1658,10 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   function phoneLinks(n, i, all, labels) {
     var t = ten(n); if (t.length !== 10) return esc(n);
     var e = '+1' + t;
-    var k = kindOf(labels, t);                             // under the number, so Call, Text and Cell stay on its line on a phone
-    return '<span class="tel">' + (k ? '<span class="num"><b>' + esc(pretty(n)) + '</b>' + k + '</span>' : '<b>' + esc(pretty(n)) + '</b>') +
+    // its kind is at the right end of its line, one column down the card (Lance, 26 Nov 2026: "List these on the right")
+    return '<span class="tel"><b>' + esc(pretty(n)) + '</b>' +
       (PHONE ? '<a href="rcapp://r/call?number=' + e + '">Call</a><a href="rcapp://r/sms?type=new&number=' + e + '">Text</a><a href="tel:' + e + '">Cell</a>'
-             : '<a href="tel:' + e + '">Call</a>') + '</span>';
+             : '<a href="tel:' + e + '">Call</a>') + kindOf(labels, t) + '</span>';
   }
   function mailLink(a, i, all, labels) {
     var k = kindOf(labels, String(a).toLowerCase());
@@ -2062,7 +2064,8 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       }).join('') : '';
       return '<div class="item person"><div class="head"><b>' + esc(x.name) + '</b>' + (x.role ? '<span class="role">' + esc(x.role) + '</span>' : '') + '</div>' +
         (x.company ? '<div class="body">' + esc(x.company) + '</div>' : '') +
-        '<div class="pfoot"><div class="pleft">' + (reach ? '<div class="reach">' + reach + '</div>' : '') + (x.note ? '<div class="body pnote">' + esc(x.note) + '</div>' : '') + '</div>' +
+        (reach ? '<div class="reach">' + reach + '</div>' : '') +
+        '<div class="pfoot"><div class="pleft">' + (x.note ? '<div class="body pnote">' + esc(x.note) + '</div>' : '') + '</div>' +
         (CFG && x.id ? '<div class="marks slim"><button class="text quiet" type="button" data-person="edit" data-id="' + esc(x.id) + '">Edit</button></div>' : '') + '</div>' + ask + '</div>';
     }).join('') + (state.personMsg ? '<p class="note">' + esc(state.personMsg) + '</p>' : ''));
     if (p.files) {
