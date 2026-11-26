@@ -299,6 +299,7 @@ textarea.rp { display: block; margin-top: 12px; font-size: 16px; border-color: v
 label.clip { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 42px; height: 42px; min-height: 0; padding: 0; margin: 0; border: 1px solid var(--rule); color: var(--ink);
   background: transparent; cursor: pointer; }
 label.clip input { display: none; }
+a.flink { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; overflow-wrap: anywhere; cursor: pointer; }
 .dr a.off { margin-left: 6px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; color: var(--ink); }
 @media (hover: hover) { label.clip:hover { border-color: var(--ink); } }
 .attrow { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; } .attrow:empty { display: none; }
@@ -327,7 +328,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261126-065514";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261126-101816";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -414,6 +415,14 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  // A file on a draft: its name opens the file (Lance, 26 Nov 2026: "can we make them hyperlinked so that I can just tap
+  // the file and it opens it up in my drive app?"). A file on Drive opens in Drive (on his phone, the Drive app; nothing
+  // is shared by this, it is his own Drive). One he put on the draft himself opens in the viewer here. A file that is
+  // only on the office PC (P4's own folder) has no link: `drive` comes from office_drafts (db/093). The same in both pages.
+  function fileName(a) {
+    return a.drive ? '<a class="flink" href="https://drive.google.com/file/d/' + encodeURIComponent(a.drive) + '/view" target="_blank" rel="noopener">' + esc(a.name) + '</a>'
+      : a.upload ? '<a class="flink" href="#" data-att-see="' + (+a.upload) + '">' + esc(a.name) + '</a>' : esc(a.name);
+  }
   // Whose window this is. The same page is Drew's Drafting window and Cora's Permitting window (db/043).
   var WHO = window.WHO || 'drew';
   var T = { drew: { name: 'Drew', win: 'Drafting', screen: 'Drew\'s AutoCAD', none: 'AutoCAD is not open on the AI PC right now.', looking: 'Looking for Drew\'s AutoCAD…',
@@ -572,8 +581,8 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       if (x != null) { var l = list(x), it = l[+t.getAttribute('data-i')]; if (it) it.gone = true; l.splice(+t.getAttribute('data-i'), 1); paint(x); return; }
       var v = document.getElementById('attview');
       if (v && (t === v || (t.getAttribute && t.getAttribute('data-att-close') != null))) { v.parentNode.removeChild(v); return; }
-      var o = t && t.closest ? t.closest('[data-att-open]') : null;
-      if (o) { e.preventDefault(); open(o.getAttribute('data-att-open')); }
+      var o = t && t.closest ? t.closest('[data-att-open], [data-att-see]') : null;      // data-att-see: a file's name on a draft (fileName), which stays a name
+      if (o) { e.preventDefault(); open(o.getAttribute('data-att-open') || o.getAttribute('data-att-see')); }
     });
     // Opening one: a picture, a video or a sound plays here; anything else gets a link he taps (a phone will not open a
     // file a page hands it without a tap). One too large to keep in the record is in the job's folder, and it says so.
@@ -738,7 +747,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       var h = '<div class="dr"><div class="lbl">' + T.name + ' drafted · ' + what + ' · written ' + esc(stamp(d.created_at)) + '</div>' +
         (d.channel === 'email' && d.subject ? '<div class="subj">' + esc(d.subject) + '</div>' : '');
       h += editing ? '<textarea data-dr-text="' + d.id + '" aria-label="The text">' + esc(drText[d.id] != null ? drText[d.id] : d.body) + '</textarea>' : '<div class="txt">' + esc(d.body) + '</div>';
-      var fileLine = function (label, list) { return list.length ? '<div class="note"><b>' + label + ' </b>' + list.map(function (a) { return esc(a.name) + ' (' + esc(a.size_text || a.size || '') + ')' +
+      var fileLine = function (label, list) { return list.length ? '<div class="note"><b>' + label + ' </b>' + list.map(function (a) { return fileName(a) + ' (' + esc(a.size_text || a.size || '') + ')' +
         (a.upload && open ? ' <a class="off" data-dr-off="' + d.id + '" data-upload="' + a.upload + '">Take off</a>' : ''); }).join('; ') + '</div>' : ''; };
       // a file too large to email goes as a link to it on Google Drive, made when he taps Send (anyone with the link can look)
       if (files.length) h += fileLine('Attached:', files.filter(function (a) { return !a.link; })) + fileLine('Too large to attach, sent as a Google Drive link:', files.filter(function (a) { return a.link; }));
