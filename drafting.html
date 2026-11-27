@@ -336,7 +336,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261126-172513";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261126-191637";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -461,10 +461,11 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     return out;
   }
   function laterLocal(d) { var p = function (n) { return (n < 10 ? '0' : '') + n; }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()); }
-  function laterRow(id) {
+  // at: the time it is set to go now, when he is changing it (Edit time): the picker starts there
+  function laterRow(id, at) {
     return '<div class="later"><span>Send it</span>' + laterChoices().map(function (c) {
       return '<button type="button" class="sec" data-later-at="' + c[1].toISOString() + '" data-id="' + id + '">' + c[0] + '</button>'; }).join('') +
-      '<input type="datetime-local" data-later-pick="' + id + '" min="' + laterLocal(new Date(Date.now() + 120000)) + '" value="' + laterLocal(laterAt(1, 8)) + '" aria-label="Another day and time">' +
+      '<input type="datetime-local" data-later-pick="' + id + '" min="' + laterLocal(new Date(Date.now() + 120000)) + '" value="' + laterLocal(at ? new Date(at) : laterAt(1, 8)) + '" aria-label="Another day and time">' +
       '<button type="button" class="sec" data-later-set="' + id + '">Set</button><button type="button" class="dim" data-later-x="' + id + '">Cancel</button></div>';
   }
   document.addEventListener('click', function (e) {
@@ -822,7 +823,8 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       var id = ' data-id="' + d.id + '"', drop = boxBtn('dim', 'data-dr="drop"' + id, 'Drop', key);
       var off = laterOffered(d);                              // the time the team put on it, for his one tap
       if ((open || stale) && RP && RP.key === key) h += replyHtml(key, false);
-      else if (laterWaiting(d)) h += '<div class="acts">' + boxBtn('go', 'data-dr="approve"' + id, 'Send now', key) + boxBtn('sec', 'data-dr="unschedule"' + id, 'Cancel the timed send', key) + '</div>';
+      else if (laterWaiting(d)) h += '<div class="acts">' + boxBtn('go', 'data-dr="approve"' + id, 'Send now', key) + boxBtn('sec', 'data-later-open="' + d.id + '"', 'Edit time', key) +
+        boxBtn('sec', 'data-dr="unschedule"' + id, 'Cancel the timed send', key) + '</div>' + (LATER.open === d.id ? laterRow(d.id, d.send_at) : '');
       else if (open) h += '<div class="acts">' + (off && !editing ? boxBtn('go', 'data-later-at="' + esc(off) + '"' + id, 'Send ' + laterWhen(off), key) : '') +
         boxBtn(off && !editing ? 'sec' : 'go', 'data-dr="approve"' + id, off && !editing ? 'Send now' : 'Send', key) +
         (editing ? boxBtn('dim', 'data-dr="cancel"' + id, 'Cancel', key)
@@ -868,7 +870,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     var was = d.state, asIs = what === 'approve' && d.channel === 'email' && ATTACH.test(text != null ? text : d.body || '') && !(d.attachments || []).length;      // he saw the warning and sends it as it is
     var wasAt = d.send_at;
     d.state = what === 'approve' ? 'approved' : 'dropped'; if (text) d.body = text;
-    if (what === 'approve') d.send_at = at || null;
+    if (what === 'approve') { d.send_at = at || null; d.send_word = null; }
     drEdit = null; delete drMsg[id];
     // a dropped draft used to vanish; now it stays as the quiet line "Dropped", and comes back as a box if the drop was not saved
     if (what === 'drop') SAID['dr:' + id] = { how: 'drop', at: nowIso(), d: d };

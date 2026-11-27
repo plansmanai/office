@@ -544,7 +544,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261126-172513";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261126-191637";</script>
 </head>
 <body>
 
@@ -632,10 +632,11 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     return out;
   }
   function laterLocal(d) { var p = function (n) { return (n < 10 ? '0' : '') + n; }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()); }
-  function laterRow(id) {
+  // at: the time it is set to go now, when he is changing it (Edit time): the picker starts there
+  function laterRow(id, at) {
     return '<div class="later"><span>Send it</span>' + laterChoices().map(function (c) {
       return '<button type="button" class="sec" data-later-at="' + c[1].toISOString() + '" data-id="' + id + '">' + c[0] + '</button>'; }).join('') +
-      '<input type="datetime-local" data-later-pick="' + id + '" min="' + laterLocal(new Date(Date.now() + 120000)) + '" value="' + laterLocal(laterAt(1, 8)) + '" aria-label="Another day and time">' +
+      '<input type="datetime-local" data-later-pick="' + id + '" min="' + laterLocal(new Date(Date.now() + 120000)) + '" value="' + laterLocal(at ? new Date(at) : laterAt(1, 8)) + '" aria-label="Another day and time">' +
       '<button type="button" class="sec" data-later-set="' + id + '">Set</button><button type="button" class="dim" data-later-x="' + id + '">Cancel</button></div>';
   }
   document.addEventListener('click', function (e) {
@@ -1128,7 +1129,9 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     if (own) h += itemThread(aboutItem(key));
     // The standard's row: Send, Reply, Drop, Edit. Send keeps its guards (a blank to fill, a file it says is attached).
     // Reply goes to Jake with the draft named, which is how he has Jake change it; a stale draft has Reply and Drop.
-    if (CFG && laterWaiting(d)) h += btnRow([btn('go', 'Send now', 'data-draft="approve" data-id="' + d.id + '"'), btn('sec', 'Cancel the timed send', 'data-draft="unschedule" data-id="' + d.id + '"')]);
+    // Waiting for its time: Send now, Edit time (the same picker as Send later, starting at the time it has), Cancel
+    if (CFG && laterWaiting(d)) h += btnRow([btn('go', 'Send now', 'data-draft="approve" data-id="' + d.id + '"'), btn('sec', 'Edit time', 'data-later-open="' + d.id + '"'),
+      btn('sec', 'Cancel the timed send', 'data-draft="unschedule" data-id="' + d.id + '"')]) + (LATER.open === d.id ? laterRow(d.id, d.send_at) : '');
     else if (CFG && (open || d.state === 'stale')) {
       var off = open && !editing && !blanks.length ? laterOffered(d) : null;      // the time the team put on it, for his one tap
       var send = (off ? btn('go', 'Send ' + laterWhen(off), 'data-later-at="' + esc(off) + '" data-id="' + d.id + '"') : '') +
@@ -2918,7 +2921,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     }
     var asIs = what === 'approve' && ATTACH.test(text != null ? text : d.body) && !(d.attachments || []).length;      // he saw the warning on the draft and sends it as it is
     var was = { state: d.state, body: d.body, result: d.result, send_at: d.send_at }, gone = null;
-    if (what === 'approve') { d.state = 'approved'; d.result = null; d.send_at = at || null; if (text) d.body = text; }
+    if (what === 'approve') { d.state = 'approved'; d.result = null; d.send_at = at || null; d.send_word = null; if (text) d.body = text; }
     else {
       // Dropped: its quiet line stays where it was (inside the email or text it sat on, else in the thread)
       var onLoose = !!d.item_key && looseAll().some(function (t) { return looseKey(t.id) === d.item_key; });
