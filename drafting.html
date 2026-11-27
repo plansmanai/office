@@ -336,7 +336,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261126-191637";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261126-201302";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -444,7 +444,17 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   // still what sends it: Send later approves it WITH a time, and the office PC sends it when the time comes, with every
   // check it makes at the moment of sending. A draft the team put a time on (`suggest_at`) offers that time as its first
   // button. One that is waiting for its time says when it goes, with Send now and Cancel. The same in both pages.
-  var LATER = { open: null };                               // the draft whose "when" row is open
+  // open: the draft whose "when" row is open. val: the day and time he has picked in it and not yet set. THE PAGE
+  // REDRAWS ITSELF every few seconds, and a redraw writes the picker again, so what he picked is kept here and put
+  // back (26 Nov 2026: "Edit time doesn't work the set button doesn't save it": the redraw had put the old time back
+  // in the box before he tapped Set, and Set saved the old time).
+  var LATER = { open: null, val: {} };
+  ['input', 'change'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) {
+      var t = e.target, id = t && t.getAttribute ? t.getAttribute('data-later-pick') : null;
+      if (id) LATER.val[id] = t.value;
+    });
+  });
   function laterWhen(iso) {
     var d = new Date(iso); if (isNaN(d)) return '';
     var h = d.getHours(), m = d.getMinutes();
@@ -465,18 +475,18 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   function laterRow(id, at) {
     return '<div class="later"><span>Send it</span>' + laterChoices().map(function (c) {
       return '<button type="button" class="sec" data-later-at="' + c[1].toISOString() + '" data-id="' + id + '">' + c[0] + '</button>'; }).join('') +
-      '<input type="datetime-local" data-later-pick="' + id + '" min="' + laterLocal(new Date(Date.now() + 120000)) + '" value="' + laterLocal(at ? new Date(at) : laterAt(1, 8)) + '" aria-label="Another day and time">' +
+      '<input type="datetime-local" data-later-pick="' + id + '" min="' + laterLocal(new Date(Date.now() + 120000)) + '" value="' + esc(LATER.val[id] || laterLocal(at ? new Date(at) : laterAt(1, 8))) + '" aria-label="Another day and time">' +
       '<button type="button" class="sec" data-later-set="' + id + '">Set</button><button type="button" class="dim" data-later-x="' + id + '">Cancel</button></div>';
   }
   document.addEventListener('click', function (e) {
     var t = e.target && e.target.closest ? e.target.closest('[data-later-open], [data-later-at], [data-later-set], [data-later-x]') : null;
     if (!t || t.disabled) return;
     var id;
-    if (t.hasAttribute('data-later-open')) { id = +t.getAttribute('data-later-open'); LATER.open = LATER.open === id ? null : id; draw(true); return; }
-    if (t.hasAttribute('data-later-x')) { LATER.open = null; draw(true); return; }
+    if (t.hasAttribute('data-later-open')) { id = +t.getAttribute('data-later-open'); LATER.open = LATER.open === id ? null : id; LATER.val = {}; draw(true); return; }
+    if (t.hasAttribute('data-later-x')) { LATER.open = null; LATER.val = {}; draw(true); return; }
     if (t.hasAttribute('data-later-at')) { decideDraft(+t.getAttribute('data-id'), 'approve', t.getAttribute('data-later-at')); return; }
     id = +t.getAttribute('data-later-set');
-    var inp = document.querySelector('[data-later-pick="' + id + '"]'), d = inp && inp.value ? new Date(inp.value) : null;
+    var inp = document.querySelector('[data-later-pick="' + id + '"]'), picked = (inp && inp.value) || LATER.val[id], d = picked ? new Date(picked) : null;
     if (!d || isNaN(d) || d.getTime() < Date.now() + 60000) { if (inp) inp.focus(); return; }      // a time that has passed: he is left in the box
     decideDraft(id, 'approve', d.toISOString());
   });
@@ -855,7 +865,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     var d = DR.filter(function (x) { return x.id === id; })[0];
     if (!d) return;
     if (RP && RP.key === 'dr:' + id) RP = null;                 // one thing open in a box at a time
-    LATER.open = null;
+    LATER.open = null; LATER.val = {};
     if (what === 'unschedule') {                              // Cancel the timed send: it is a draft again
       var held = d.send_at; d.state = 'draft'; d.send_at = null; draw(true);
       rpc('office_draft', { p_token: token, p_id: id, p_decision: 'unschedule' }).then(function (r) {
