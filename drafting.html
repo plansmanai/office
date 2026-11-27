@@ -336,7 +336,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261126-150954";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261126-172513";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -813,7 +813,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       if (files.length) h += fileLine('Attached:', files.filter(function (a) { return !a.link; })) + fileLine('Too large to attach, sent as a Google Drive link:', files.filter(function (a) { return a.link; }));
       h += signLine(d, 'note');
       if (d.state === 'failed' || d.state === 'stale') h += '<div class="note bad">' + esc(d.result || 'Not sent.') + '</div>';
-      else if (laterWaiting(d)) h += '<div class="note"><b>Goes out ' + esc(laterWhen(d.send_at)) + '</b> by itself. It is checked against the thread at that moment, as always.</div>';
+      else if (laterWaiting(d)) h += '<div class="note"><b>Goes out ' + esc(laterWhen(d.send_at)) + '</b> by itself' + (d.send_word ? ', as you said (“' + esc(d.send_word) + '”)' : '') + '. It is checked against the thread at that moment, as always.</div>';
       else if (d.state === 'approved' || d.state === 'sending') h += '<div class="note">' + esc(d.result || (d.channel === 'action' ? 'Doing it…' : 'Sending…')) + '</div>';
       // The wording may promise a file and none is on it: he is told, and acts here, the same as on the dashboard. The
       // paperclip puts a file of his on the draft; Send sends it as it is (db/076).
