@@ -308,6 +308,8 @@ label.clip input { display: none; }
 .later button.dim { border-color: var(--rule); color: var(--muted); }
 .later input { font: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--rule); background: transparent; color: var(--ink); border-radius: 0; min-width: 0; }
 a.flink { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; overflow-wrap: anywhere; cursor: pointer; }
+/* the button that opens a form of his own to fill in and sign (db/098): the black button of a box, as a link */
+a.formgo { display: inline-block; margin: 8px 0 2px; padding: 11px 18px; font-size: .7rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--on-ink, #fff); background: var(--ink); border: 1px solid var(--ink); text-decoration: none; cursor: pointer; }
 .dr a.off { margin-left: 6px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; color: var(--ink); }
 @media (hover: hover) { label.clip:hover { border-color: var(--ink); } }
 .attrow { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; } .attrow:empty { display: none; }
@@ -336,7 +338,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261126-201302";</script>
+<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261127-135647";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -430,8 +432,30 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   // A draft that asks someone to sign on plansman.com/sign (db/094): who signs, where it stands, and a link that shows Lance
   // exactly what they will see, with the boxes where the signature goes. That link records nothing and cannot sign.
   // `d.sign` comes from office_drafts. The same in both pages.
+  // A FORM THAT IS LANCE'S OWN TO FILL IN (db/098; 27 Nov 2026, after Jake sent him to a PDF app for his insurance
+  // renewal: "Can we make this more useful") hangs on the reply it rides back on: a "Fill in and sign" button opens it
+  // on his phone, and when he has done it the filled form is attached to the draft by itself. Until every such form is
+  // done the draft has no Send (formsWait): the reply is for sending the filled form. `own` is the form's own link,
+  // given only while it can still be filled in. A private form (a card number) says it is never filed. The same in
+  // both pages.
+  function formsWait(d) { return (d.sign || []).some(function (s) { return s.returns && s.state !== 'stamped' && s.state !== 'void'; }); }
+  // a signing link written in anything the team says is a button that opens it (a form with no reply to ride on)
+  function signLinks(h) {
+    return String(h).replace(/https:\/\/www\.plansman\.com\/sign\/\?t=[A-Za-z0-9_\-]{30,200}/g, function (u) { return '<a class="formgo" href="' + u + '" target="_blank" rel="noopener">Fill in and sign</a>'; });
+  }
   function signLine(d, cls) {
     return (d.sign || []).map(function (s) {
+      if (s.self) {
+        var done = s.state === 'stamped';
+        var said = done ? 'filled in and signed ' + stamp(s.signed_at) + (s.returns ? ', and attached' : '') + (s.erased ? '. Sent; no copy is kept in P4' : s['private'] ? '. Private: P4 erases its copy once this has gone' : '')
+          : s.state === 'signed' ? 'filled in ' + stamp(s.signed_at) + ', going onto the form now'
+          : s.state === 'failed' ? 'filled in ' + stamp(s.signed_at) + ', but it could NOT be put on the form. Tap Reply and say so'
+          : s.state === 'void' ? 'withdrawn' : s.state === 'expired' ? 'its link has ended. Tap Reply and ask for it again'
+          : 'for you to fill in and sign' + (s['private'] ? '. Private: what you type is never filed' : '');
+        return '<div class="' + cls + '"><b>' + esc(s.title) + ': </b>' + esc(said) +
+          (s.own ? '<br><a class="formgo" href="https://www.plansman.com/sign/?t=' + encodeURIComponent(s.own) + '" target="_blank" rel="noopener">Fill in and sign</a>'
+            : done && !s.erased ? ' · <a class="flink" href="https://www.plansman.com/sign/?t=' + encodeURIComponent(s.preview) + '" target="_blank" rel="noopener">See it</a>' : '') + '</div>';
+      }
       var st = s.state === 'stamped' ? 'signed ' + stamp(s.signed_at) + ', and on the file' : s.state === 'signed' ? 'signed ' + stamp(s.signed_at) + ', going onto the file'
         : s.state === 'failed' ? 'signed ' + stamp(s.signed_at) + ', but NOT on the file (see the conversation)' : s.state === 'void' ? 'link withdrawn' : s.state === 'expired' ? 'the link has ended'
         : d.state !== 'sent' ? 'not sent yet' : s.opened_at ? 'opened ' + stamp(s.opened_at) + ', not signed yet' : 'not opened yet';
@@ -828,17 +852,19 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       else if (d.state === 'approved' || d.state === 'sending') h += '<div class="note">' + esc(d.result || (d.channel === 'action' ? 'Doing it…' : 'Sending…')) + '</div>';
       // The wording may promise a file and none is on it: he is told, and acts here, the same as on the dashboard. The
       // paperclip puts a file of his on the draft; Send sends it as it is (db/076).
-      if (open && !editing && d.channel === 'email' && ATTACH.test(d.body || '') && !files.length) h += '<div class="note">It says something is attached, and no file is on it. Put one on with the paperclip, or Send sends it as it is.</div>';
+      var pend = formsWait(d);                              // a form of his own rides back on it and is not filled in yet: no Send until it is
+      if (open && !editing && pend) h += '<div class="note">Send shows here as soon as the form is filled in and signed.</div>';
+      if (open && !editing && !pend && d.channel === 'email' && ATTACH.test(d.body || '') && !files.length) h += '<div class="note">It says something is attached, and no file is on it. Put one on with the paperclip, or Send sends it as it is.</div>';
       if (open && d.channel === 'email') h += ATT.row('d:' + d.id);
       var id = ' data-id="' + d.id + '"', drop = boxBtn('dim', 'data-dr="drop"' + id, 'Drop', key);
-      var off = laterOffered(d);                              // the time the team put on it, for his one tap
+      var off = pend ? null : laterOffered(d);                // the time the team put on it, for his one tap
       if ((open || stale) && RP && RP.key === key) h += replyHtml(key, false);
       else if (laterWaiting(d)) h += '<div class="acts">' + boxBtn('go', 'data-dr="approve"' + id, 'Send now', key) + boxBtn('sec', 'data-later-open="' + d.id + '"', 'Edit time', key) +
         boxBtn('sec', 'data-dr="unschedule"' + id, 'Cancel the timed send', key) + '</div>' + (LATER.open === d.id ? laterRow(d.id, d.send_at) : '');
       else if (open) h += '<div class="acts">' + (off && !editing ? boxBtn('go', 'data-later-at="' + esc(off) + '"' + id, 'Send ' + laterWhen(off), key) : '') +
-        boxBtn(off && !editing ? 'sec' : 'go', 'data-dr="approve"' + id, off && !editing ? 'Send now' : 'Send', key) +
+        (pend && !editing ? '' : boxBtn(off && !editing ? 'sec' : 'go', 'data-dr="approve"' + id, off && !editing ? 'Send now' : 'Send', key)) +
         (editing ? boxBtn('dim', 'data-dr="cancel"' + id, 'Cancel', key)
-                 : boxBtn('sec', 'data-later-open="' + d.id + '"', 'Send later', key) + replyBtn(key) + drop + (d.channel === 'action' ? '' : boxBtn('dim', 'data-dr="edit"' + id, 'Edit', key))) + (d.channel === 'email' ? ATT.clip('d:' + d.id, NO) : '') + '</div>' +
+                 : (pend ? '' : boxBtn('sec', 'data-later-open="' + d.id + '"', 'Send later', key)) + replyBtn(key) + drop + (d.channel === 'action' ? '' : boxBtn('dim', 'data-dr="edit"' + id, 'Edit', key))) + (d.channel === 'email' ? ATT.clip('d:' + d.id, NO) : '') + '</div>' +
         (LATER.open === d.id && !editing ? laterRow(d.id) : '') +
         (d.channel === 'action' && !editing ? '<div class="note">To change it, tell ' + T.name + '.</div>' : '');
       else if (stale) h += '<div class="acts">' + replyBtn(key) + drop + '</div>';      // it cannot be sent as it is, so there is no black button: Reply is first
@@ -944,7 +970,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       if (key && BXN[key] && extra.indexOf('<button') >= 0) extra += line(esc(BXN[key]), true);      // why a tap was not saved, while the box still waits
       if (key && RP && RP.key === key && extra.indexOf('data-rp-text') >= 0) cls += ' rpo';
       return '<div class="msg ' + cls + '">' + (m.kind === 'progress' ? '' : '<div class="lbl">' + who + is + ' · ' + esc(stamp(m.created_at)) + '</div>') +
-        '<div class="txt">' + ATT.show(listy(esc(m.body).replace(/\*\*([^*]+?)\*\*/g, '<b>$1</b>'), '\n')) + '</div>' + (m.files && m.files.checkin && m.who === WHO ? '<a class="open" data-sheet="' + m.files.checkin + '">Open check-in</a>' : '') + extra + '</div>';
+        '<div class="txt">' + ATT.show(signLinks(listy(esc(m.body).replace(/\*\*([^*]+?)\*\*/g, '<b>$1</b>'), '\n'))) + '</div>' + (m.files && m.files.checkin && m.who === WHO ? '<a class="open" data-sheet="' + m.files.checkin + '">Open check-in</a>' : '') + extra + '</div>';
     }).join('') : DR.length ? '' : '<p class="empty">Nothing said here yet. ' + T.empty + '</p>') + draftsHtml();
     if (atEnd || sending) box.scrollTop = box.scrollHeight;
   }

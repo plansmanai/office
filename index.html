@@ -69,6 +69,8 @@ a.go.drafting { display: inline-block; font-family: var(--sans); text-transform:
 .later button.dim { border-color: var(--rule); color: var(--muted); }
 .later input { font: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--rule); background: transparent; color: var(--ink); border-radius: 0; min-width: 0; }
 a.flink { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; overflow-wrap: anywhere; cursor: pointer; }
+/* the button that opens a form of his own to fill in and sign (db/098): the black button of a box, as a link */
+a.formgo { display: inline-block; margin: 8px 0 2px; padding: 11px 18px; font-size: .7rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--on-ink, #fff); background: var(--ink); border: 1px solid var(--ink); text-decoration: none; cursor: pointer; }
 button.text { background: none; border: 0; padding: 0; font: inherit; color: var(--ink); cursor: pointer; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
 input, textarea { font: inherit; color: var(--ink); background: transparent; border: 1px solid var(--rule); }
 input:focus, textarea:focus { border-color: var(--ink); outline: none; }
@@ -544,7 +546,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261126-201302";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261127-135647";</script>
 </head>
 <body>
 
@@ -601,8 +603,30 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   // A draft that asks someone to sign on plansman.com/sign (db/094): who signs, where it stands, and a link that shows Lance
   // exactly what they will see, with the boxes where the signature goes. That link records nothing and cannot sign.
   // `d.sign` comes from office_drafts. The same in both pages.
+  // A FORM THAT IS LANCE'S OWN TO FILL IN (db/098; 27 Nov 2026, after Jake sent him to a PDF app for his insurance
+  // renewal: "Can we make this more useful") hangs on the reply it rides back on: a "Fill in and sign" button opens it
+  // on his phone, and when he has done it the filled form is attached to the draft by itself. Until every such form is
+  // done the draft has no Send (formsWait): the reply is for sending the filled form. `own` is the form's own link,
+  // given only while it can still be filled in. A private form (a card number) says it is never filed. The same in
+  // both pages.
+  function formsWait(d) { return (d.sign || []).some(function (s) { return s.returns && s.state !== 'stamped' && s.state !== 'void'; }); }
+  // a signing link written in anything the team says is a button that opens it (a form with no reply to ride on)
+  function signLinks(h) {
+    return String(h).replace(/https:\/\/www\.plansman\.com\/sign\/\?t=[A-Za-z0-9_\-]{30,200}/g, function (u) { return '<a class="formgo" href="' + u + '" target="_blank" rel="noopener">Fill in and sign</a>'; });
+  }
   function signLine(d, cls) {
     return (d.sign || []).map(function (s) {
+      if (s.self) {
+        var done = s.state === 'stamped';
+        var said = done ? 'filled in and signed ' + stamp(s.signed_at) + (s.returns ? ', and attached' : '') + (s.erased ? '. Sent; no copy is kept in P4' : s['private'] ? '. Private: P4 erases its copy once this has gone' : '')
+          : s.state === 'signed' ? 'filled in ' + stamp(s.signed_at) + ', going onto the form now'
+          : s.state === 'failed' ? 'filled in ' + stamp(s.signed_at) + ', but it could NOT be put on the form. Tap Reply and say so'
+          : s.state === 'void' ? 'withdrawn' : s.state === 'expired' ? 'its link has ended. Tap Reply and ask for it again'
+          : 'for you to fill in and sign' + (s['private'] ? '. Private: what you type is never filed' : '');
+        return '<div class="' + cls + '"><b>' + esc(s.title) + ': </b>' + esc(said) +
+          (s.own ? '<br><a class="formgo" href="https://www.plansman.com/sign/?t=' + encodeURIComponent(s.own) + '" target="_blank" rel="noopener">Fill in and sign</a>'
+            : done && !s.erased ? ' · <a class="flink" href="https://www.plansman.com/sign/?t=' + encodeURIComponent(s.preview) + '" target="_blank" rel="noopener">See it</a>' : '') + '</div>';
+      }
       var st = s.state === 'stamped' ? 'signed ' + stamp(s.signed_at) + ', and on the file' : s.state === 'signed' ? 'signed ' + stamp(s.signed_at) + ', going onto the file'
         : s.state === 'failed' ? 'signed ' + stamp(s.signed_at) + ', but NOT on the file (see the conversation)' : s.state === 'void' ? 'link withdrawn' : s.state === 'expired' ? 'the link has ended'
         : d.state !== 'sent' ? 'not sent yet' : s.opened_at ? 'opened ' + stamp(s.opened_at) + ', not signed yet' : 'not opened yet';
@@ -1113,6 +1137,8 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   function draftBlock(d, onItem, own) {
     var open = d.state === 'draft' || d.state === 'failed', editing = open && state.editDraft === d.id, blanks = blanksIn(d.body), files = d.attachments || [], file = d.channel !== 'action' && ATTACH.test(d.body || '') && !files.length;     // a prepared action attaches its own file when it runs: only a plain draft is held for this
     var key = 'draft:' + d.id, proj = d.proj_no && BY[d.proj_no] ? d.proj_no : 'office';
+    var pend = formsWait(d);                           // a form of his own rides back on it and is not filled in yet: no Send until it is
+    if (pend) file = false;                            // the file it speaks of is that form
     // Jake's one line on what he needs from Lance comes first; the subject is not repeated under the email it answers
     var h = (d.note && d.state !== 'sent' ? '<div class="body"><b>Jake: </b>' + para(d.note) + '</div>' : '') +
       '<div class="draft mail">' + (own ? '' : '<div class="lbl">' + esc(draftLabel(d)) + '</div>') +
@@ -1132,6 +1158,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     else if (d.state === 'approved' || d.state === 'sending') h += '<div class="body note">' + esc(d.result || (d.channel === 'action' ? 'Doing it…' : 'Sending…')) + '</div>';
     else if (d.state === 'sent') h += '<div class="body ok">' + esc(d.result || 'Sent.') + '</div>';
     if (open && !editing && blanks.length) h += '<div class="body note">Fill in ' + esc(blanks.join(', ')) + ' before it can go: tap Edit.</div>';
+    if (open && !editing && pend) h += '<div class="body note">Send shows here as soon as the form is filled in and signed.</div>';
     // The wording may promise a file and none is on it: he is told, and acts here. The paperclip puts a file of his on
     // the draft; Send sends it as it is (his tap with this in front of him is the judgment: db/076).
     if (open && !editing && file) h += '<div class="body note">It says something is attached, and no file is on it. Put one on with the paperclip, or Send sends it as it is.</div>';
@@ -1143,14 +1170,14 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     if (CFG && laterWaiting(d)) h += btnRow([btn('go', 'Send now', 'data-draft="approve" data-id="' + d.id + '"'), btn('sec', 'Edit time', 'data-later-open="' + d.id + '"'),
       btn('sec', 'Cancel the timed send', 'data-draft="unschedule" data-id="' + d.id + '"')]) + (LATER.open === d.id ? laterRow(d.id, d.send_at) : '');
     else if (CFG && (open || d.state === 'stale')) {
-      var off = open && !editing && !blanks.length ? laterOffered(d) : null;      // the time the team put on it, for his one tap
+      var off = open && !editing && !blanks.length && !pend ? laterOffered(d) : null;      // the time the team put on it, for his one tap
       var send = (off ? btn('go', 'Send ' + laterWhen(off), 'data-later-at="' + esc(off) + '" data-id="' + d.id + '"') : '') +
         btn(off ? 'sec' : 'go', off ? 'Send now' : 'Send', 'data-draft="approve" data-id="' + d.id + '"');
       if (editing) h += btnRow([send, btn('dim', 'Cancel', 'data-draft="cancel" data-id="' + d.id + '"')]);
       else if (state.needReply === key) h += replyBox(key, 'Tell Jake what to do', 'data-need-text="' + esc(key) + '" data-proj="' + esc(proj) + '"', state.needText[key],
         'data-need-send="' + esc(key) + '" data-proj="' + esc(proj) + '"');
       else h += (open && d.channel === 'action' ? '<div class="body note">To change it, tap Reply and tell Jake.</div>' : '') +
-        btnRow([open && !blanks.length ? send : '', open && !blanks.length ? btn('sec', 'Send later', 'data-later-open="' + d.id + '"') : '', replyBtn(key), btn('dim', 'Drop', 'data-draft="drop" data-id="' + d.id + '"'),
+        btnRow([open && !blanks.length && !pend ? send : '', open && !blanks.length && !pend ? btn('sec', 'Send later', 'data-later-open="' + d.id + '"') : '', replyBtn(key), btn('dim', 'Drop', 'data-draft="drop" data-id="' + d.id + '"'),
           open && d.channel !== 'action' ? btn('dim', 'Edit', 'data-draft="edit" data-id="' + d.id + '"') : '', open && d.channel === 'email' ? ATT.clip('d:' + d.id, proj) : '']) +
         (LATER.open === d.id && open && !blanks.length ? laterRow(d.id) : '');
     }
@@ -1781,7 +1808,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     });
     return s;
   }
-  function para(t) { return ATT.show(listy(esc(t).replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>'), '<br>')); }      // a picture he sent shows as the picture
+  function para(t) { return ATT.show(signLinks(listy(esc(t).replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>'), '<br>'))); }      // a picture he sent shows as the picture
   function shadowItem(x) {
     var h = '<div class="item"><div class="head"><b>' + esc(x.from || 'Message') + ': ' + esc(x.subject || '') + '</b><span>' + esc(day(x.received)) + '</span></div>';
     h += '<div class="body">' + esc(x.what_happened) + '</div>';
