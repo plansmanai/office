@@ -338,7 +338,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261127-232853";</script>
+<script>window.WHO = "cora"; window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261127-234532";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -1730,7 +1730,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       $('s-img').src = 'data:' + (d.mime || 'image/jpeg') + ';base64,' + d.image;
     }).catch(function () { $('s-title').textContent = 'Could not open it.'; });
   }
-  function closeSheet() { clearTimeout(SH.wait); SH.tries = 0; $('s-ok').hidden = false; document.querySelector('#sheet-open .sanswer').hidden = false; SH.open = null; $('sheet-open').hidden = true; $('sheet-list').hidden = false; loadSheets(); }
+  function closeSheet() { lifted(); clearTimeout(SH.wait); SH.tries = 0; $('s-ok').hidden = false; document.querySelector('#sheet-open .sanswer').hidden = false; SH.open = null; $('sheet-open').hidden = true; $('sheet-list').hidden = false; loadSheets(); }
   function frac(e) { var r = $('s-img').getBoundingClientRect(); return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))]; }
   var cvs = $('s-canvas');
   cvs.classList.add('draw');
@@ -1738,7 +1738,26 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   // way a phone does everywhere else; the stroke the first finger had started is dropped.
   var fingers = {}, gest = null, spent = false, sc = $('s-scroll');
   function two() { var k = Object.keys(fingers); return k.length >= 2 ? [fingers[k[0]], fingers[k[1]]] : null; }
+  // A FINGER THE PHONE NEVER REPORTED AS LIFTED MUST NOT STAY IN THE COUNT (27 Nov 2026: "This page won't let me draw it just
+  // keeps moving": with one stale finger counted, every single finger was the second of two, so it moved the sheet and
+  // nothing could be drawn until the page was loaded again). The first finger of a new touch is marked by the phone
+  // (isPrimary): no other finger is down, so the count starts from nothing. And the phone's own list of fingers that
+  // are down (touch events) is believed over this count.
+  function lifted() { fingers = {}; gest = null; spent = false; }
+  ['touchstart', 'touchend', 'touchcancel'].forEach(function (n) {
+    cvs.addEventListener(n, function (e) {
+      var down = e.touches ? e.touches.length : 0;
+      if (!down) { if (Object.keys(fingers).length || gest) { lifted(); paint(); } }
+      else if (down === 1 && Object.keys(fingers).length > 1) {          // one finger is really down, and more are counted: keep the newest only
+        var k = Object.keys(fingers), last = k[k.length - 1], keep = fingers[last];
+        fingers = {}; fingers[last] = keep; gest = null;
+      }
+    }, { passive: true });
+  });
+  window.addEventListener('blur', lifted);
+  document.addEventListener('visibilitychange', function () { if (document.hidden) lifted(); });
   cvs.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'touch' && e.isPrimary) lifted();
     if (e.pointerType === 'touch') fingers[e.pointerId] = { x: e.clientX, y: e.clientY };
     var t = two();
     if (t) {                                             // a second finger: this is a move, not a mark
