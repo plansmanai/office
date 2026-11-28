@@ -546,7 +546,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261127-135647";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261127-195610";</script>
 </head>
 <body>
 
@@ -613,6 +613,25 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   // a signing link written in anything the team says is a button that opens it (a form with no reply to ride on)
   function signLinks(h) {
     return String(h).replace(/https:\/\/www\.plansman\.com\/sign\/\?t=[A-Za-z0-9_\-]{30,200}/g, function (u) { return '<a class="formgo" href="' + u + '" target="_blank" rel="noopener">Fill in and sign</a>'; });
+  }
+  // WHAT A DRAFT COMMITS TO (db/099), shown before he sends it: that it REPEATS (his Send on it is his Send for the
+  // series; it stops by itself when the person answers), and what it PROMISES (who keeps each one, by what day; one
+  // on his own time is marked as his). The same code on both pages.
+  function cmDay(iso) { var m = /^(\d{4})-(\d\d)-(\d\d)/.exec(iso || ''); if (!m) return iso || ''; var d = new Date(+m[1], +m[2] - 1, +m[3]);
+    return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()] + ' ' + d.getDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()]; }
+  function cmCap(w) { return w ? w.charAt(0).toUpperCase() + w.slice(1) : ''; }
+  function commitLine(d, cls) {
+    var h = '', r = d.repeat, n = d.series_n || 1, who = (d.to_names || [])[0] || 'the person';
+    if (r && d.state !== 'sent' && d.state !== 'stale') {
+      var every = +r.every === 1 ? 'every day' : +r.every === 7 ? 'every week' : 'every ' + (+r.every) + ' days';
+      var ends = 'It stops by itself when ' + who + ' answers' + (r.pay ? ', or a payment lands' : '') + (r.stop ? ' (' + r.stop + ')' : '') + '.';
+      h += '<div class="' + cls + '"><b>' + (n > 1 ? 'Reminder ' + n + ' of up to ' + esc(r.times) + ', ' + esc(every) + '.' : 'It repeats ' + esc(every) + (r.weekdays ? ', weekdays' : '') + ', up to ' + esc(r.times) + ' times in all.') + '</b> ' +
+        esc(ends) + (n > 1 ? '' : ' Your Send starts all of them.') + '</div>';
+    } else if (r && d.state === 'sent' && n < +r.times) h += '<div class="' + cls + '">It repeats: the next one is made as its own draft, waiting for its time.</div>';
+    var ps = d.promises || [];
+    if (ps.length && d.state !== 'stale') h += '<div class="' + cls + '"><b>' + (d.state === 'sent' ? 'It promised: ' : 'It promises: ') + '</b>' + ps.map(function (p) {
+      return esc(p.what) + ' (' + (p.owner === 'lance' ? '<b>on your time</b>' : esc(cmCap(p.owner))) + ', by ' + esc(cmDay(p.due)) + (p.after ? ', ' + esc(p.after) : '') + ')'; }).join('; ') + '</div>';
+    return h;
   }
   function signLine(d, cls) {
     return (d.sign || []).map(function (s) {
@@ -1106,6 +1125,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   }
   // DRAFTS: emails Jake has drafted (db/015). One goes out only after Lance taps Send on it; he can edit
   // the wording first, or drop it. A draft answering an email that waits on him is shown on that email.
+  var PROMS = [];                                       // open promises that are his own to keep, or that are late (db/099)
   var DRAFTS = [], PUSHED = null, WAITING = null;      // WAITING: what Drew and Cora have waiting on him, read live with the drafts
   var BLANK = /\[[A-Z][^\]\[a-z]{1,200}\]/g;                  // [FEE]: a fact only he has, left for him to fill
   var ATTACH = /\battach(?:ed|ment|ments|ing)?\b|\benclosed\b/i;     // wording that may promise a file: a draft with none on it says so (a warning, not a stop)
@@ -1152,7 +1172,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     };
     // a file too large to email goes as a link to it on Google Drive, made when he taps Send (anyone with the link can look)
     if (files.length && d.state !== 'sent') h += fileLine('Attached:', files.filter(function (a) { return !a.link; })) + fileLine('Too large to attach, sent as a Google Drive link:', files.filter(function (a) { return a.link; }));
-    h += signLine(d, 'body');
+    h += signLine(d, 'body') + commitLine(d, 'body');
     if (d.state === 'failed' || d.state === 'stale') h += '<div class="body late">' + esc(d.result || 'Not sent.') + '</div>';
     else if (laterWaiting(d)) h += '<div class="body note"><b>Goes out ' + esc(laterWhen(d.send_at)) + '</b> by itself' + (d.send_word ? ', as you said (“' + esc(d.send_word) + '”)' : '') + '. It is checked against the thread at that moment, as always.</div>';
     else if (d.state === 'approved' || d.state === 'sending') h += '<div class="body note">' + esc(d.result || (d.channel === 'action' ? 'Doing it…' : 'Sending…')) + '</div>';
@@ -1168,7 +1188,8 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     // Reply goes to Jake with the draft named, which is how he has Jake change it; a stale draft has Reply and Drop.
     // Waiting for its time: Send now, Edit time (the same picker as Send later, starting at the time it has), Cancel
     if (CFG && laterWaiting(d)) h += btnRow([btn('go', 'Send now', 'data-draft="approve" data-id="' + d.id + '"'), btn('sec', 'Edit time', 'data-later-open="' + d.id + '"'),
-      btn('sec', 'Cancel the timed send', 'data-draft="unschedule" data-id="' + d.id + '"')]) + (LATER.open === d.id ? laterRow(d.id, d.send_at) : '');
+      d.series ? btn('dim', 'Stop the reminders', 'data-draft="drop" data-id="' + d.id + '"') : btn('sec', 'Cancel the timed send', 'data-draft="unschedule" data-id="' + d.id + '"'),
+      d.repeat && !d.series ? btn('dim', 'Do not repeat', 'data-draft="once" data-id="' + d.id + '"') : '']) + (LATER.open === d.id ? laterRow(d.id, d.send_at) : '');
     else if (CFG && (open || d.state === 'stale')) {
       var off = open && !editing && !blanks.length && !pend ? laterOffered(d) : null;      // the time the team put on it, for his one tap
       var send = (off ? btn('go', 'Send ' + laterWhen(off), 'data-later-at="' + esc(off) + '" data-id="' + d.id + '"') : '') +
@@ -1178,7 +1199,8 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
         'data-need-send="' + esc(key) + '" data-proj="' + esc(proj) + '"');
       else h += (open && d.channel === 'action' ? '<div class="body note">To change it, tap Reply and tell Jake.</div>' : '') +
         btnRow([open && !blanks.length && !pend ? send : '', open && !blanks.length && !pend ? btn('sec', 'Send later', 'data-later-open="' + d.id + '"') : '', replyBtn(key), btn('dim', 'Drop', 'data-draft="drop" data-id="' + d.id + '"'),
-          open && d.channel !== 'action' ? btn('dim', 'Edit', 'data-draft="edit" data-id="' + d.id + '"') : '', open && d.channel === 'email' ? ATT.clip('d:' + d.id, proj) : '']) +
+          open && d.channel !== 'action' ? btn('dim', 'Edit', 'data-draft="edit" data-id="' + d.id + '"') : '', open && d.repeat ? btn('dim', 'Do not repeat', 'data-draft="once" data-id="' + d.id + '"') : '',
+          open && d.channel === 'email' ? ATT.clip('d:' + d.id, proj) : '']) +
         (LATER.open === d.id && open && !blanks.length ? laterRow(d.id) : '');
     }
     if (state.draftMsg && state.draftMsgId === d.id) h += '<p class="note">' + esc(state.draftMsg) + '</p>';
@@ -1563,6 +1585,18 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
                days: daysSince(d.created_at), at: d.created_at };
     }));
   }
+  // A PROMISE OF THE OFFICE (db/099) that is his own to keep, or that one of the team is more than a day late on: on the
+  // list like everything else, with Done, Later and Not needed. One the team is keeping on time is not his business.
+  function promiseNeeds(p) {
+    return PROMS.filter(function (r) { return r.proj_no === p.no; }).map(function (r) {
+      return { key: 'promise:' + r.id, kind: 'promise', prom: r, title: r.what, detail: r.what + (r.after ? ' (' + r.after + ')' : ''), days: daysSince(r.said_at), at: r.said_at };
+    });
+  }
+  function decidePromise(id, what) {
+    var was = PROMS; PROMS = PROMS.filter(function (r) { return r.id !== id; }); render();
+    rpc('office_promise', { p_token: token, p_id: id, p_decision: what }).then(function (r) { if (!(r && r.ok && r.saved)) { PROMS = was; render(); } loadDrafts(); })
+      .catch(function () { PROMS = was; render(); });
+  }
   // A rule proposed from what was said on this job, waiting for his OK: in this job's thread, with its buttons.
   function ruleNeeds(p) {
     return ASKS.rules.filter(function (r) { return r.proj_no === p.no; }).map(function (r) {
@@ -1584,7 +1618,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     });
     return c;
   }
-  function openNeeds(p) { return actionNeeds(p).concat(decisionNeeds(p), questionNeeds(p), draftNeeds(p), ruleNeeds(p), teamNeeds(p), (p.needs || []).filter(function (n) { return !MARKS[n.key]; })); }
+  function openNeeds(p) { return actionNeeds(p).concat(decisionNeeds(p), questionNeeds(p), draftNeeds(p), ruleNeeds(p), teamNeeds(p), promiseNeeds(p), (p.needs || []).filter(function (n) { return !MARKS[n.key]; })); }
   function wait(n) { return n.days == null ? '' : n.days === 0 ? 'since today' : n.days + (n.days === 1 ? ' day' : ' days'); }
   function longest(ns) { var m = -1; ns.forEach(function (n) { if (n.days != null && n.days > m) m = n.days; }); return m; }
   function whoHasWhat(p) {
@@ -1864,9 +1898,10 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     function needHtml(n) {
       if (n.kind === 'rule') return ruleItem(n.rule);
       var ask = n.kind === 'decision' || n.kind === 'question';
-      var todo = !ask && n.kind !== 'action' && n.kind !== 'draft' && n.kind !== 'team';
+      var todo = !ask && n.kind !== 'action' && n.kind !== 'draft' && n.kind !== 'team' && n.kind !== 'promise';
       var label = n.kind === 'decision' ? askName(n.dec) + ' asks' : n.kind === 'question' ? cap(n.agent || 'jake') + ' asks' : n.kind === 'action' ? 'Jake wants to change the schedule' :
-        n.kind === 'draft' ? draftLabel(n.draft) : n.kind === 'team' ? n.label : 'To do';
+        n.kind === 'draft' ? draftLabel(n.draft) : n.kind === 'team' ? n.label :
+        n.kind === 'promise' ? (n.prom.owner === 'lance' ? 'Promised on your time' : cap(n.prom.owner) + ' is late on a promise') : 'To do';
       var h3 = '<div class="item' + (n.days != null ? ' s' + sev(n) : '') + '">' +
         labLine(label, n.kind === 'draft' ? '' : (n.at || n.since), n.days != null ? bub(n, (isReply(n) ? 'Reply ' : 'Waiting ') + dtext(n.days)) : '') +      // a draft's label has its own "written" time
         (todo ? '<div class="head"><b>' + esc(n.title) + '</b></div>' : ask ? '<div class="head"><b>' + esc(n.detail) + '</b></div>' : '');
@@ -1886,6 +1921,12 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
         h3 += actLines(n.act) + actRow(n.act);
       } else if (n.kind === 'decision') {
         h3 += decAsk(n.dec);
+      } else if (n.kind === 'promise') {                    // what was promised, to whom, by when; Done, Later (two days), Not needed
+        var pr = n.prom;
+        h3 += '<div class="body note">' + esc(cap(pr.made_by)) + ' told ' + esc(pr.to_whom || 'them') + (pr.said_at ? ' on ' + esc(stamp(pr.said_at).split(',')[0]) : '') + '. ' +
+          (pr.late ? '<span class="late">It was due ' + esc(cmDay(pr.due)) + '.</span>' : 'Due ' + esc(cmDay(pr.due)) + '.') + '</div>';
+        if (CFG) h3 += btnRow([btn('go', 'Done', 'data-promise="kept" data-id="' + pr.id + '"'), btn('sec', 'Later', 'data-promise="later" data-id="' + pr.id + '"'),
+          btn('dim', 'Not needed', 'data-promise="drop" data-id="' + pr.id + '"')]);
       } else if (n.kind === 'team') {                       // Drew's or Cora's: the thing itself, and the talk about it, is in that one's window
         h3 += btnRow(['<a class="go drafting" href="' + (n.who === 'cora' ? 'permitting' : 'drafting') + '.html#' + encodeURIComponent(p.no) + '" target="' + (n.who === 'cora' ? 'permitting-' : 'drafting-') + esc(p.no) + '">Open ' + (n.who === 'cora' ? 'Cora' : 'Drew') + '</a>']);
       } else if (n.kind === 'question') {
@@ -2368,6 +2409,9 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     }
     Array.prototype.forEach.call(document.querySelectorAll('#detail [data-draft], #listbody [data-draft], #chatlog [data-draft]'), function (b) {
       b.addEventListener('click', function () { decideDraft(+b.getAttribute('data-id'), b.getAttribute('data-draft')); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#detail [data-promise], #listbody [data-promise]'), function (b) {
+      b.addEventListener('click', function () { decidePromise(+b.getAttribute('data-id'), b.getAttribute('data-promise')); });
     });
     Array.prototype.forEach.call(document.querySelectorAll('[data-rule-text]'), function (t) {
       var fitR = function () { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; };
@@ -2904,9 +2948,10 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       if (!d || !d.ok) return;
       var before = JSON.stringify(DRAFTS);
       DRAFTS = d.drafts || [];
-      var wasWaiting = JSON.stringify(WAITING);
+      var wasWaiting = JSON.stringify(WAITING) + JSON.stringify(PROMS);
       if (d.waiting) WAITING = d.waiting;
-      if ((JSON.stringify(DRAFTS) !== before || JSON.stringify(WAITING) !== wasWaiting) && !typing()) render();
+      PROMS = d.promises || [];
+      if ((JSON.stringify(DRAFTS) !== before || JSON.stringify(WAITING) + JSON.stringify(PROMS) !== wasWaiting) && !typing()) render();
       if (d.pushed_at && PUSHED && d.pushed_at !== PUSHED) refreshData();
       PUSHED = d.pushed_at || PUSHED;
     }).catch(function () {});
@@ -2940,6 +2985,14 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     var d = DRAFTS.filter(function (x) { return x.id === id; })[0];
     if (!d) return;
     state.draftMsg = ''; state.draftMsgId = id; LATER.open = null; LATER.val = {};
+    if (what === 'once') {                                  // Do not repeat: it goes once, and nothing follows it
+      var rep = d.repeat; d.repeat = null; render();
+      rpc('office_draft', { p_token: token, p_id: id, p_decision: 'once' }).then(function (r) {
+        if (!(r && r.ok && r.saved)) { d.repeat = rep; state.draftMsg = r && r.ok ? 'Not changed: ' + (r.why || 'try again') + '.' : 'Signed out. Reload and sign in.'; render(); }
+        loadDrafts();
+      }).catch(function (e) { d.repeat = rep; state.draftMsg = 'Not changed (' + e.message + ').'; render(); });
+      return;
+    }
     if (what === 'unschedule') {                            // Cancel the timed send: it is a draft again
       var held = d.send_at; d.state = 'draft'; d.send_at = null; render();
       rpc('office_draft', { p_token: token, p_id: id, p_decision: 'unschedule' }).then(function (r) {

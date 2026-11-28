@@ -338,7 +338,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 860px) { #say .bar { flex-wrap: wrap; } #say .bar #note { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261127-135647";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV"}; window.BUILD = "20261127-195610";</script>
 </head>
 <body>
 <div class="gate" id="gate" hidden></div>
@@ -442,6 +442,25 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   // a signing link written in anything the team says is a button that opens it (a form with no reply to ride on)
   function signLinks(h) {
     return String(h).replace(/https:\/\/www\.plansman\.com\/sign\/\?t=[A-Za-z0-9_\-]{30,200}/g, function (u) { return '<a class="formgo" href="' + u + '" target="_blank" rel="noopener">Fill in and sign</a>'; });
+  }
+  // WHAT A DRAFT COMMITS TO (db/099), shown before he sends it: that it REPEATS (his Send on it is his Send for the
+  // series; it stops by itself when the person answers), and what it PROMISES (who keeps each one, by what day; one
+  // on his own time is marked as his). The same code on both pages.
+  function cmDay(iso) { var m = /^(\d{4})-(\d\d)-(\d\d)/.exec(iso || ''); if (!m) return iso || ''; var d = new Date(+m[1], +m[2] - 1, +m[3]);
+    return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()] + ' ' + d.getDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()]; }
+  function cmCap(w) { return w ? w.charAt(0).toUpperCase() + w.slice(1) : ''; }
+  function commitLine(d, cls) {
+    var h = '', r = d.repeat, n = d.series_n || 1, who = (d.to_names || [])[0] || 'the person';
+    if (r && d.state !== 'sent' && d.state !== 'stale') {
+      var every = +r.every === 1 ? 'every day' : +r.every === 7 ? 'every week' : 'every ' + (+r.every) + ' days';
+      var ends = 'It stops by itself when ' + who + ' answers' + (r.pay ? ', or a payment lands' : '') + (r.stop ? ' (' + r.stop + ')' : '') + '.';
+      h += '<div class="' + cls + '"><b>' + (n > 1 ? 'Reminder ' + n + ' of up to ' + esc(r.times) + ', ' + esc(every) + '.' : 'It repeats ' + esc(every) + (r.weekdays ? ', weekdays' : '') + ', up to ' + esc(r.times) + ' times in all.') + '</b> ' +
+        esc(ends) + (n > 1 ? '' : ' Your Send starts all of them.') + '</div>';
+    } else if (r && d.state === 'sent' && n < +r.times) h += '<div class="' + cls + '">It repeats: the next one is made as its own draft, waiting for its time.</div>';
+    var ps = d.promises || [];
+    if (ps.length && d.state !== 'stale') h += '<div class="' + cls + '"><b>' + (d.state === 'sent' ? 'It promised: ' : 'It promises: ') + '</b>' + ps.map(function (p) {
+      return esc(p.what) + ' (' + (p.owner === 'lance' ? '<b>on your time</b>' : esc(cmCap(p.owner))) + ', by ' + esc(cmDay(p.due)) + (p.after ? ', ' + esc(p.after) : '') + ')'; }).join('; ') + '</div>';
+    return h;
   }
   function signLine(d, cls) {
     return (d.sign || []).map(function (s) {
@@ -846,7 +865,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
         (a.upload && open ? ' <a class="off" data-dr-off="' + d.id + '" data-upload="' + a.upload + '">Take off</a>' : ''); }).join('; ') + '</div>' : ''; };
       // a file too large to email goes as a link to it on Google Drive, made when he taps Send (anyone with the link can look)
       if (files.length) h += fileLine('Attached:', files.filter(function (a) { return !a.link; })) + fileLine('Too large to attach, sent as a Google Drive link:', files.filter(function (a) { return a.link; }));
-      h += signLine(d, 'note');
+      h += signLine(d, 'note') + commitLine(d, 'note');
       if (d.state === 'failed' || d.state === 'stale') h += '<div class="note bad">' + esc(d.result || 'Not sent.') + '</div>';
       else if (laterWaiting(d)) h += '<div class="note"><b>Goes out ' + esc(laterWhen(d.send_at)) + '</b> by itself' + (d.send_word ? ', as you said (“' + esc(d.send_word) + '”)' : '') + '. It is checked against the thread at that moment, as always.</div>';
       else if (d.state === 'approved' || d.state === 'sending') h += '<div class="note">' + esc(d.result || (d.channel === 'action' ? 'Doing it…' : 'Sending…')) + '</div>';
@@ -860,11 +879,13 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       var off = pend ? null : laterOffered(d);                // the time the team put on it, for his one tap
       if ((open || stale) && RP && RP.key === key) h += replyHtml(key, false);
       else if (laterWaiting(d)) h += '<div class="acts">' + boxBtn('go', 'data-dr="approve"' + id, 'Send now', key) + boxBtn('sec', 'data-later-open="' + d.id + '"', 'Edit time', key) +
-        boxBtn('sec', 'data-dr="unschedule"' + id, 'Cancel the timed send', key) + '</div>' + (LATER.open === d.id ? laterRow(d.id, d.send_at) : '');
+        (d.series ? boxBtn('dim', 'data-dr="drop"' + id, 'Stop the reminders', key) : boxBtn('sec', 'data-dr="unschedule"' + id, 'Cancel the timed send', key)) +
+        (d.repeat && !d.series ? boxBtn('dim', 'data-dr="once"' + id, 'Do not repeat', key) : '') + '</div>' + (LATER.open === d.id ? laterRow(d.id, d.send_at) : '');
       else if (open) h += '<div class="acts">' + (off && !editing ? boxBtn('go', 'data-later-at="' + esc(off) + '"' + id, 'Send ' + laterWhen(off), key) : '') +
         (pend && !editing ? '' : boxBtn(off && !editing ? 'sec' : 'go', 'data-dr="approve"' + id, off && !editing ? 'Send now' : 'Send', key)) +
         (editing ? boxBtn('dim', 'data-dr="cancel"' + id, 'Cancel', key)
-                 : (pend ? '' : boxBtn('sec', 'data-later-open="' + d.id + '"', 'Send later', key)) + replyBtn(key) + drop + (d.channel === 'action' ? '' : boxBtn('dim', 'data-dr="edit"' + id, 'Edit', key))) + (d.channel === 'email' ? ATT.clip('d:' + d.id, NO) : '') + '</div>' +
+                 : (pend ? '' : boxBtn('sec', 'data-later-open="' + d.id + '"', 'Send later', key)) + replyBtn(key) + drop + (d.channel === 'action' ? '' : boxBtn('dim', 'data-dr="edit"' + id, 'Edit', key))) +
+        (d.repeat && !editing ? boxBtn('dim', 'data-dr="once"' + id, 'Do not repeat', key) : '') + (d.channel === 'email' ? ATT.clip('d:' + d.id, NO) : '') + '</div>' +
         (LATER.open === d.id && !editing ? laterRow(d.id) : '') +
         (d.channel === 'action' && !editing ? '<div class="note">To change it, tell ' + T.name + '.</div>' : '');
       else if (stale) h += '<div class="acts">' + replyBtn(key) + drop + '</div>';      // it cannot be sent as it is, so there is no black button: Reply is first
@@ -892,6 +913,13 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     if (!d) return;
     if (RP && RP.key === 'dr:' + id) RP = null;                 // one thing open in a box at a time
     LATER.open = null; LATER.val = {};
+    if (what === 'once') {                                    // Do not repeat: it goes once, and nothing follows it
+      var rep = d.repeat; d.repeat = null; draw(true);
+      rpc('office_draft', { p_token: token, p_id: id, p_decision: 'once' }).then(function (r) {
+        if (!(r && r.ok && r.saved)) { d.repeat = rep; drMsg[id] = r && r.ok ? 'Not changed: ' + (r.why || 'try again') + '.' : 'Signed out. Open the dashboard and sign in.'; }
+      }).catch(function (e) { d.repeat = rep; drMsg[id] = 'Not changed (' + e.message + ').'; }).then(function () { loadDrafts(); });
+      return;
+    }
     if (what === 'unschedule') {                              // Cancel the timed send: it is a draft again
       var held = d.send_at; d.state = 'draft'; d.send_at = null; draw(true);
       rpc('office_draft', { p_token: token, p_id: id, p_decision: 'unschedule' }).then(function (r) {
