@@ -546,7 +546,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
 #attview button.sec { align-self: flex-start; }
 @media (max-width: 719px) { #ask .bar { flex-wrap: wrap; } #ask .bar span { order: 9; flex: 1 1 100%; } }      /* on a phone the hint goes under the buttons */
 </style>
-<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261127-195610";</script>
+<script>window.OFFICE = {"url": "https://pinqkmfhartdpolgdnvj.supabase.co", "key": "sb_publishable_myK56aZrCk5PLTJLHMtp6Q_xDl-UNkV", "push": "BOutmFtTl1_2WGs5Ao36A11HHKvIxGGI21wKdTmt1s0sOgKo6os-GU73aXOe7SsQ06E3YSmXbzXde1bl9ZlxUuc"}; window.BUILD = "20261127-232853";</script>
 </head>
 <body>
 
@@ -814,6 +814,16 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       (rows.length ? rows.join('') : '<div class="empty">Nothing here.</div>') + '</div>';
   }
   function byDays(a, b) { return (a.days == null ? 9999 : a.days) - (b.days == null ? 9999 : b.days); }
+  // IN OUR COURT THE DATE IS OURS TO MEET (Lance, 27 Nov 2026, on a backcheck 25 days past its date that was listed under
+  // "Nothing open for you": it "should show as I'm behind on those corrections"). Past its date such a job is BEHIND, and
+  // says so in red wherever its row is drawn: the Queue, a search, the job's own page. With the client or at the city the
+  // date is only when an answer was expected, so those are never behind.
+  function behind(p) { return p.court === 'ours' && p.days != null && p.days < 0 ? (-p.days) + (p.days === -1 ? ' day behind' : ' days behind') : ''; }
+  function oursWhen(p) {
+    var b = behind(p);
+    return b ? { t: b, late: true } : p.days == null ? { t: 'no date set', late: false } : p.days === 0 ? { t: 'due today', late: true } :
+      { t: 'due in ' + p.days + (p.days === 1 ? ' day' : ' days'), late: false };
+  }
 
   // The queue, by project (Lance, 19 Nov 2026: "i like it being structured by project and then it opens up").
   // "Needs you" is every project with something waiting on him to move it forward, longest wait first:
@@ -1638,7 +1648,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
     var needRows = need.map(function (x) {
       var p = x.p;
       var ready = x.ns.some(function (n) { var d = isMsg(n) && draftOn(p, n.key); return d && d.state === 'draft'; });
-      return row(p, x.ns.map(function (n) { return n.summary || n.title; }).concat(ready ? ['Draft ready'] : []).join(' · '), '', false, p.phase || 'No phase', bubsFor(x.ns) || ' ', worstSev(x.ns));
+      return row(p, x.ns.map(function (n) { return n.summary || n.title; }).concat(ready ? ['Draft ready'] : []).join(' · '), behind(p), !!behind(p), p.phase || 'No phase', bubsFor(x.ns) || ' ', worstSev(x.ns));
     });
     // how the list divides by how long things have waited: one bar, three counts
     var cnt = { r: 0, a: 0, g: 0 };
@@ -1654,12 +1664,17 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
         return row(p, [l, p.status].filter(Boolean).join(' · '), court === 'ours' ? '' : t, false, p.phase || 'No phase');
       });
     }
-    var cleared = group('ours');
+    // OUR OWN WORK, with no question in it for him: behind first (longest first), then what is still on time. The work is
+    // owed whether or not anything in it waits on his answer, so it is never called "nothing open".
+    var ours = live.filter(function (p) { return p.court === 'ours'; }).sort(byDays);
+    function ourRow(p) { var w = oursWhen(p); return row(p, [whoHasWhat(p), p.status].filter(Boolean).join(' · '), w.t, w.late, p.phase || 'No phase', '', behind(p) ? 'r' : ''); }
+    var late = ours.filter(function (p) { return behind(p); }).map(ourRow), onTime = ours.filter(function (p) { return !behind(p); }).map(ourRow);
     // WHAT IS ON NO PROJECT IS NOT HERE: the Queue is the jobs. A text, voicemail or email Jake could not tie to a job is
     // a box in Chat, counted by its Pending button (Lance, 25 Nov 2026, circling it here: "This should be on the general
     // chat, not here, and it should show up under pending"). See looseBox.
     return section('Needs you', '', needRows, dist) +
-      (cleared.length ? section('Nothing open for you', 'In our court. You marked everything handled or not yours.', cleared) : '') +
+      (late.length ? section('Behind', 'In our court and past its date. Longest first.', late) : '') +
+      (onTime.length ? section('Our work, on time', 'In our court. Nothing in it waits on your answer.', onTime) : '') +
       section('Waiting on the client', '', group('client')) +
       section('At the city', '', group('city')) +
       section('Approved', '', group('approved')) +
@@ -1669,7 +1684,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
   }
   // Jobs by year, newest first: what a search shows.
   function byNewest(a, b) { return a.no.slice(0, 2) === b.no.slice(0, 2) ? (parseFloat(b.no.slice(3)) || 0) - (parseFloat(a.no.slice(3)) || 0) : (a.no.slice(0, 2) < b.no.slice(0, 2) ? 1 : -1); }
-  function plainRow(p) { var ns = openNeeds(p); return row(p, who(p), '', false, p.phase || 'No phase', bubsFor(ns), worstSev(ns)); }
+  function plainRow(p) { var ns = openNeeds(p); return row(p, who(p), behind(p), !!behind(p), p.phase || 'No phase', bubsFor(ns), worstSev(ns) || (behind(p) ? 'r' : '')); }
   function projects(list) {
     var years = {};
     list.forEach(function (p) { var y = '20' + p.no.slice(0, 2); (years[y] = years[y] || []).push(p); });
@@ -1879,7 +1894,7 @@ a.filechip span { min-width: 0; overflow-wrap: anywhere; }
       fact('Phase', phaseTag(p, (p.phase || 'No phase set') + (p.signed ? '' : ' · not signed'))) +
       fact('Needs you', pb ? '<span class="bubs">' + pb + '</span>' : '<span class="note">Nothing</span>') +
       fact('Balance due', bal == null ? '<span class="note">Not on record</span>' : usd(bal) || '$0') +
-      fact('Schedule date', p.due ? esc(p.due) : '<span class="note">None</span>') + '</div>';
+      fact('Schedule date', p.due ? esc(p.due) + (behind(p) ? ' <span class="late">· ' + esc(behind(p)) + '</span>' : '') : '<span class="note">None</span>') + '</div>';
     h += '<!--TEAM-->';                                   // the Jake / Drew / Cora row and Jake's conversation go here, at the top
 
     // 1. ONE THREAD (Lance, 22 Nov 2026: "make the needs you just part of the messaging area ... have a button to show
